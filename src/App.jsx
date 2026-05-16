@@ -1,0 +1,120 @@
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { useState } from "react";
+
+// 🔹 Contextos y Providers
+import { AuthProvider } from "./context/AuthContext";
+import { UserProvider } from "./context/UserContext";
+import { OrdenServicioProvider } from "./context/OrdenServicioContext";
+import { ClienteProvider } from "./context/ClienteContext";
+import { UnidadProvider } from "./context/UnidadContext";
+import { ConductorProvider } from "./context/ConductorContext";
+import { ProgramacionViajeProvider } from "./context/ProgramacionViajeContext";
+import { GuiaTransportistaProvider } from "./context/GuiaTransportistaContext";
+
+// 🔹 Componentes
+import Sidebar from "./components/Sidebar";
+import Navbar from "./components/NavBar";
+import Footer from "./components/Footer"; // 👈 Footer agregado
+import ProtectedRoute from "./ProtectedRoute";
+import RouteChangeLoader from "./components/RouteChangeLoader";
+import OrdenServicioFormPage from "./components/modals/OrdenServicioModal";
+
+
+// 🔹 Páginas
+import LoginPage from "./pages/LoginPage";
+import ProfileTask from "./pages/ProfilePage";
+import GestionUsuarios from "./pages/GestionUsuarios";
+import UsuariosPage from "./pages/UsuariosPage";
+import UnauthorizedPage from "./pages/UnauthorizedPage";
+import OrdenesServicioPage from "./pages/OrdenesServicioPage";
+import ClientesPage from "./pages/ClientesPage";
+import ProgramacionViajePage from "./pages/ProgramacionViajePage";
+import UnidadesPage from "./pages/UnidadesPage";
+import ConductoresPage from "./pages/ConductoresPage";
+import GuiaTransportistaPage from "./pages/GuiaTransportistaPage";
+
+
+
+
+
+// 🔹 Layout con Sidebar + Navbar + Footer sticky
+function Layout() {
+  const [collapsed, setCollapsed] = useState(false);
+
+  return (
+    <div className="min-h-screen flex bg-gray-950 text-white">
+      {/* Sidebar */}
+      <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
+
+      {/* Contenedor derecho */}
+      <div className="flex flex-col flex-1 min-h-screen">
+        {/* Navbar fijo */}
+        <Navbar collapsed={collapsed} />
+
+        {/* Contenido principal + footer dentro del mismo fondo */}
+        <div className="flex flex-col flex-1">
+          <main
+            className={`flex-1 overflow-y-auto p-6 pt-20 transition-all duration-300 ${collapsed ? "md:ml-20" : "md:ml-64"
+              }`}
+          >
+            <Routes>
+              <Route path="/profile" element={<ProfileTask />} />
+              <Route path="/admin/usuarios" element={<GestionUsuarios />} />
+              <Route path="/usuarios" element={<UsuariosPage />} />
+              <Route path="/ordenes-servicio" element={<OrdenesServicioPage />} />
+              <Route path="/ordenes-servicio/nueva" element={<OrdenServicioFormPage />} />
+              <Route path="/clientes" element={<ClientesPage />} />
+              <Route path="/programacion-viaje" element={<ProgramacionViajePage />} />
+              <Route path="/unidades" element={<UnidadesPage />} />
+              <Route path="/conductores" element={<ConductoresPage />} />
+              <Route path="/guia-transportista" element={<GuiaTransportistaPage />} />
+
+            </Routes>
+          </main>
+
+          {/* Footer fijo en la parte inferior */}
+          <Footer />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// 🔹 App principal
+function App() {
+  return (
+    <AuthProvider>
+      <UserProvider>
+        <OrdenServicioProvider>
+          <ClienteProvider>
+            <UnidadProvider>
+              <ConductorProvider>
+                <ProgramacionViajeProvider>
+                  <Router>
+                    <RouteChangeLoader />
+                    <GuiaTransportistaProvider>
+                      <Routes>
+                        {/* Rutas públicas */}
+                        <Route
+                          path="/unauthorized"
+                          element={<UnauthorizedPage />}
+                        />
+                        <Route path="/login" element={<LoginPage />} />
+                        {/* Rutas protegidas */}
+                        <Route element={<ProtectedRoute />}>
+                          <Route path="/*" element={<Layout />} />
+                        </Route>
+                      </Routes>
+                    </GuiaTransportistaProvider>
+                  </Router>
+                </ProgramacionViajeProvider>
+              </ConductorProvider>
+            </UnidadProvider>
+          </ClienteProvider>
+        </OrdenServicioProvider>
+      </UserProvider>
+    </AuthProvider>
+  );
+}
+
+export default App;

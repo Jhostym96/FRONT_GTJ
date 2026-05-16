@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded transition duration-200 shadow-sm;
+  }
+
+  .btn-primary {
+    @apply btn bg-button-primary text-white hover:bg-highlight;
+  }
+
+  .btn-secondary {
+    @apply btn bg-button-secondary text-white hover:bg-button-primary;
+  }
+
+  .btn-danger {
+    @apply btn bg-button-danger text-white hover:bg-red-500;
+  }
+
+  .btn-success {
+    @apply btn bg-button-success text-white hover:bg-green-500;
+  }
+
+  .input {
+    @apply w-full bg-input border border-gray-600 text-text-primary px-3 py-2 rounded focus:ring-2 focus:ring-focus text-sm;
+  }
+
+  .card {
+    @apply bg-surface p-6 rounded shadow-md animate-fade-in;
+  }
+
+  .table-head {
+    @apply bg-surface text-text-secondary uppercase text-xs tracking-wide;
+  }
+
+  /* 🔹 Estados con estilo neón solo en el texto */
+  .estado-pendiente {
+    @apply text-yellow-400 font-bold drop-shadow-[0_0_6px_#facc15];
+  }
+
+  .estado-anulada {
+    @apply text-red-500 font-bold drop-shadow-[0_0_6px_#f87171];
+  }
+
+  .estado-concluido {
+    @apply text-green-400 font-bold drop-shadow-[0_0_6px_#4ade80];
+  }
+
+  /* Estados de facturación */
+
+
+}
