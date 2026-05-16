@@ -1,8 +1,10 @@
 import { createContext, useContext, useState } from "react";
 import {
   crearGuiaTransportistaRequest,
+  validarGuiaTransportistaRequest,
   obtenerGuiasTransportistaRequest,
   obtenerGuiaTransportistaRequest,
+  obtenerHistorialGuiaTransportistaRequest,
   generarJsonGuiaTransportistaRequest,
   consultarGuiaTransportistaRequest,
   actualizarGuiaTransportistaRequest,
@@ -186,12 +188,12 @@ export const GuiaTransportistaProvider = ({ children }) => {
     }
   };
 
-  const anularGuiaTransportista = async (id) => {
+  const anularGuiaTransportista = async (id, datos = {}) => {
     try {
       setLoadingGuia(true);
       limpiarErroresGuia();
 
-      const res = await anularGuiaTransportistaRequest(id);
+      const res = await anularGuiaTransportistaRequest(id, datos);
 
       setGuiasTransportista((prev) =>
         prev.map((guia) => (guia._id === id ? res.data.guia : guia))
@@ -226,6 +228,49 @@ export const GuiaTransportistaProvider = ({ children }) => {
       const mensaje =
         error.response?.data?.message ||
         "Error al obtener el PDF oficial de Nubefact";
+
+      setErrorsGuia([mensaje]);
+      throw error;
+    } finally {
+      setLoadingGuia(false);
+    }
+  };
+
+  const validarGuiaTransportista = async (guia) => {
+    try {
+      setLoadingGuia(true);
+      limpiarErroresGuia();
+
+      const res = await validarGuiaTransportistaRequest(guia);
+
+      setJsonGuia(res.data.json || null);
+
+      return res.data;
+    } catch (error) {
+      const errores = error.response?.data?.errores;
+      const mensaje =
+        error.response?.data?.message ||
+        "La guía tiene datos pendientes por corregir";
+
+      setErrorsGuia(Array.isArray(errores) && errores.length ? errores : [mensaje]);
+      throw error;
+    } finally {
+      setLoadingGuia(false);
+    }
+  };
+
+  const obtenerHistorialGuiaTransportista = async (id) => {
+    try {
+      setLoadingGuia(true);
+      limpiarErroresGuia();
+
+      const res = await obtenerHistorialGuiaTransportistaRequest(id);
+
+      return res.data;
+    } catch (error) {
+      const mensaje =
+        error.response?.data?.message ||
+        "Error al obtener el historial de la guía";
 
       setErrorsGuia([mensaje]);
       throw error;
@@ -276,6 +321,8 @@ export const GuiaTransportistaProvider = ({ children }) => {
         errorsGuia,
         obtenerGuiasTransportista,
         obtenerGuiaTransportista,
+        validarGuiaTransportista,
+        obtenerHistorialGuiaTransportista,
         crearGuiaTransportista,
         actualizarGuiaTransportista,
         generarJsonGuiaTransportista,

@@ -29,6 +29,13 @@ const convertirFechaDdmmyyyyAInput = (fecha) => {
   return fecha;
 };
 
+const DOCUMENTOS_RELACIONADOS_OPTIONS = [
+  { value: "01", label: "01 - Factura" },
+  { value: "03", label: "03 - Boleta de venta" },
+  { value: "09", label: "09 - Guía de remisión remitente" },
+  { value: "31", label: "31 - Guía de remisión transportista" },
+];
+
 const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
   const isView = mode === "view";
   const isEdit = mode === "edit";
@@ -36,6 +43,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
   const {
     crearGuiaTransportista,
     actualizarGuiaTransportista,
+    validarGuiaTransportista,
     obtenerGuiasTransportista,
     loadingGuia,
   } = useGuiaTransportista();
@@ -86,6 +94,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
           codigo: "001",
           descripcion: "",
           cantidad: "1",
+          codigo_dam: "",
         },
       ],
 
@@ -153,6 +162,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
                   codigo: "001",
                   descripcion: "",
                   cantidad: "1",
+                  codigo_dam: "",
                 },
               ],
 
@@ -232,6 +242,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
           codigo: String(prev.items.length + 1).padStart(3, "0"),
           descripcion: "",
           cantidad: "1",
+          codigo_dam: "",
         },
       ],
     }));
@@ -349,6 +360,22 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
           error.response?.data?.error ||
           "Error al guardar la guía"
       );
+    }
+  };
+
+  const handleValidar = async () => {
+    try {
+      const data = limpiarPayloadGuia();
+      await validarGuiaTransportista(data);
+      toast.success("La guía está lista para emitir");
+    } catch (error) {
+      const errores = error.response?.data?.errores;
+      const mensaje =
+        Array.isArray(errores) && errores.length
+          ? errores[0]
+          : error.response?.data?.message || "La guía tiene datos por corregir";
+
+      toast.error(mensaje);
     }
   };
 
@@ -569,6 +596,14 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
                     value: "03",
                     label: "03 - Pagador flete: Tercero",
                   },
+                  {
+                    value: "04",
+                    label: "04 - Flete por cobrar",
+                  },
+                  {
+                    value: "05",
+                    label: "05 - Flete por pagar",
+                  },
                 ]}
               />
             </div>
@@ -711,7 +746,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
                     />
                   </div>
 
-                  <div className="md:col-span-6">
+                  <div className="md:col-span-4">
                     <Input
                       label="Descripción"
                       name="descripcion"
@@ -730,6 +765,16 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
                       onChange={(e) => handleItemChange(index, e)}
                       disabled={isView}
                       required
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <Input
+                      label="Código DAM/DS"
+                      name="codigo_dam"
+                      value={item.codigo_dam || ""}
+                      onChange={(e) => handleItemChange(index, e)}
+                      disabled={isView}
                     />
                   </div>
 
@@ -778,12 +823,13 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
                     className="grid gap-3 rounded-xl border border-neutral-800 bg-neutral-950/70 p-3 md:grid-cols-12"
                   >
                     <div className="md:col-span-3">
-                      <Input
+                      <Select
                         label="Tipo"
                         name="tipo"
                         value={doc.tipo}
                         onChange={(e) => handleDocumentoChange(index, e)}
                         disabled={isView}
+                        options={DOCUMENTOS_RELACIONADOS_OPTIONS}
                       />
                     </div>
 
@@ -834,17 +880,30 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
             </button>
 
             {!isView && (
-              <button
-                type="submit"
-                disabled={loadingGuia}
-                className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-blue-950/30 hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-neutral-700"
-              >
-                {loadingGuia
-                  ? "Guardando..."
-                  : isEdit
-                  ? "Actualizar guía"
-                  : "Emitir guía"}
-              </button>
+              <>
+                {!isEdit && (
+                  <button
+                    type="button"
+                    onClick={handleValidar}
+                    disabled={loadingGuia}
+                    className="rounded-xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-neutral-700"
+                  >
+                    Validar
+                  </button>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loadingGuia}
+                  className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-blue-950/30 hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-neutral-700"
+                >
+                  {loadingGuia
+                    ? "Guardando..."
+                    : isEdit
+                    ? "Actualizar guía"
+                    : "Emitir guía"}
+                </button>
+              </>
             )}
           </div>
         </form>
