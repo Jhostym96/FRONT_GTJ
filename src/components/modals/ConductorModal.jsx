@@ -75,14 +75,14 @@ function ConductorModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4">
-      <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-3xl p-6 text-white">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-4 backdrop-blur-sm">
+      <div className="panel w-full max-w-3xl p-6">
         <div className="flex justify-between items-center mb-5">
           <div>
             <h2 className="text-xl font-bold">
               {mode === "create" ? "Nuevo conductor" : "Editar conductor"}
             </h2>
-            <p className="text-sm text-gray-400">
+            <p className="text-muted text-sm">
               Complete los datos del conductor.
             </p>
           </div>
@@ -91,7 +91,7 @@ function ConductorModal({
             type="button"
             onClick={onClose}
             disabled={loading}
-            className="text-gray-400 hover:text-white text-xl"
+            className="text-muted text-xl hover:text-blue-500"
           >
             ×
           </button>
@@ -109,90 +109,122 @@ function ConductorModal({
           onSubmit={handleSubmit}
           className="grid grid-cols-1 md:grid-cols-2 gap-4"
         >
-          <select
-            name="tipoDocumento"
-            value={form.tipoDocumento}
-            onChange={handleChange}
-            className="bg-gray-800 border border-gray-700 rounded-lg p-3 outline-none"
-            required
-          >
-            <option value="1">DNI</option>
-            <option value="4">Carnet de extranjería</option>
-            <option value="6">RUC</option>
-            <option value="7">Pasaporte</option>
-            <option value="A">Cédula diplomática</option>
-            <option value="0">Otro</option>
-          </select>
+          <div>
+            <label className="text-muted mb-1 block text-sm">
+              Tipo de documento
+            </label>
+            <select
+              name="tipoDocumento"
+              value={form.tipoDocumento}
+              onChange={handleChange}
+              className="input p-3"
+              required
+            >
+              <option value="1">DNI</option>
+              <option value="4">Carnet de extranjería</option>
+              <option value="6">RUC</option>
+              <option value="7">Pasaporte</option>
+              <option value="A">Cédula diplomática</option>
+              <option value="0">Otro</option>
+            </select>
+          </div>
 
-          <input
-            name="numeroDocumento"
-            value={form.numeroDocumento}
-            onChange={handleChange}
-            placeholder="Número de documento"
-            className="bg-gray-800 border border-gray-700 rounded-lg p-3 outline-none"
-            required
-          />
+          <div>
+            <label className="text-muted mb-1 block text-sm">
+              Número de documento
+            </label>
+            <input
+              name="numeroDocumento"
+              value={form.numeroDocumento}
+              onChange={handleChange}
+              placeholder="Ingrese el número de documento"
+              className="input p-3"
+              required
+            />
+          </div>
 
-          <input
-            name="nombres"
-            value={form.nombres}
-            onChange={handleChange}
-            placeholder="Nombres"
-            className="bg-gray-800 border border-gray-700 rounded-lg p-3 outline-none"
-            required
-          />
+          <div>
+            <label className="text-muted mb-1 block text-sm">Nombres</label>
+            <input
+              name="nombres"
+              value={form.nombres}
+              onChange={handleChange}
+              placeholder="Ingrese los nombres del conductor"
+              className="input p-3"
+              required
+            />
+          </div>
 
-          <input
-            name="apellidos"
-            value={form.apellidos}
-            onChange={handleChange}
-            placeholder="Apellidos"
-            className="bg-gray-800 border border-gray-700 rounded-lg p-3 outline-none"
-            required
-          />
+          <div>
+            <label className="text-muted mb-1 block text-sm">Apellidos</label>
+            <input
+              name="apellidos"
+              value={form.apellidos}
+              onChange={handleChange}
+              placeholder="Ingrese los apellidos del conductor"
+              className="input p-3"
+              required
+            />
+          </div>
 
-          <input
-            name="numeroLicencia"
-            value={form.numeroLicencia}
-            onChange={handleChange}
-            placeholder="Número de licencia"
-            className="bg-gray-800 border border-gray-700 rounded-lg p-3 outline-none"
-            required
-          />
+          <div>
+            <label className="text-muted mb-1 block text-sm">
+              Número de licencia
+            </label>
+            <input
+              name="numeroLicencia"
+              value={form.numeroLicencia}
+              onChange={handleChange}
+              placeholder="Ingrese el número de licencia"
+              className="input p-3"
+              required
+            />
+          </div>
 
-          <input
-            name="telefono"
-            value={form.telefono}
-            onChange={handleChange}
-            placeholder="Teléfono"
-            className="bg-gray-800 border border-gray-700 rounded-lg p-3 outline-none"
-          />
+          <div>
+            <label className="text-muted mb-1 block text-sm">Teléfono</label>
+            <input
+              name="telefono"
+              value={form.telefono}
+              onChange={handleChange}
+              placeholder="Ingrese el teléfono de contacto"
+              className="input p-3"
+            />
+          </div>
 
-          <select
-            name="estado"
-            value={form.estado}
-            onChange={handleChange}
-            className="bg-gray-800 border border-gray-700 rounded-lg p-3 outline-none"
-          >
-            <option value="ACTIVO">ACTIVO</option>
-            <option value="INACTIVO">INACTIVO</option>
-          </select>
+          <div>
+            <label className="text-muted mb-1 block text-sm">Estado</label>
+            <select
+              name="estado"
+              value={form.estado}
+              onChange={handleChange}
+              className="input p-3"
+            >
+              <option value="ACTIVO">ACTIVO</option>
+              <option value="INACTIVO">INACTIVO</option>
+            </select>
+          </div>
 
-          <textarea
-            name="observaciones"
-            value={form.observaciones}
-            onChange={handleChange}
-            placeholder="Observaciones"
-            className="md:col-span-2 bg-gray-800 border border-gray-700 rounded-lg p-3 outline-none resize-none"
-            rows="3"
-          />
+          <div className="md:col-span-2">
+            <label className="text-muted mb-1 block text-sm">
+              Observaciones
+            </label>
+            <textarea
+              name="observaciones"
+              value={form.observaciones}
+              onChange={handleChange}
+              placeholder="Indique observaciones del conductor"
+              className="input resize-none p-3"
+              rows="3"
+            />
+          </div>
 
           <div className="md:col-span-2 flex justify-end gap-3 mt-4">
             <button
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg disabled:cursor-not-allowed disabled:opacity-60"
+              className="btn-secondary px-4 py-2"
             >
               Cancelar
             </button>
@@ -200,7 +232,7 @@ function ConductorModal({
             <button
               type="submit"
               disabled={loading}
-              className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+              className="btn-success px-4 py-2"
             >
               {loading
                 ? "Guardando..."

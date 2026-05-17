@@ -80,7 +80,7 @@ const ProgramacionViajePage = () => {
         return "bg-red-500/10 text-red-300 border-red-500/30";
 
       default:
-        return "bg-neutral-700/40 text-neutral-300 border-neutral-600";
+        return "text-muted";
     }
   };
 
@@ -179,151 +179,245 @@ const ProgramacionViajePage = () => {
     ? programaciones
     : [];
 
-  return (
-    <div className="p-6 text-white">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Programación de Viajes</h1>
+  const EstadoBadge = ({ estado }) => (
+    <span
+      className={`inline-flex items-center justify-center rounded-full border px-3 py-1 text-[11px] font-bold tracking-wide ${getEstadoStyle(
+        estado
+      )}`}
+    >
+      {estado || "SIN ESTADO"}
+    </span>
+  );
 
-          <p className="text-sm text-zinc-400">
-            Total de programaciones: {total}
-          </p>
-        </div>
+  const AccionesViaje = ({ viaje, mobile = false }) => {
+    const viajeId = getId(viaje);
 
+    return (
+      <div
+        className={`flex ${
+          mobile ? "w-full flex-col sm:flex-row" : "justify-start"
+        } flex-wrap gap-2`}
+      >
         <button
           type="button"
-          onClick={abrirCrear}
-          className="rounded-lg bg-green-600 px-4 py-2 font-semibold text-white hover:bg-green-700"
+          onClick={() => abrirVer(viaje)}
+          className="btn-secondary px-3 py-2 text-xs"
         >
-          + Nueva Programación
+          Ver
         </button>
+
+        {puedeMarcarEnRuta(viaje.estado) && (
+          <button
+            type="button"
+            disabled={cambiandoEstado[viajeId]}
+            onClick={() => handleCambiarEstado(viaje, "EN_RUTA")}
+            className="btn-primary bg-purple-600 px-3 py-2 text-xs hover:bg-purple-500"
+          >
+            En ruta
+          </button>
+        )}
+
+        {puedeFinalizar(viaje.estado) && (
+          <button
+            type="button"
+            disabled={cambiandoEstado[viajeId]}
+            onClick={() => handleCambiarEstado(viaje, "FINALIZADO")}
+            className="btn-success px-3 py-2 text-xs"
+          >
+            Finalizar
+          </button>
+        )}
+
+        {puedeAnular(viaje.estado) && (
+          <button
+            type="button"
+            disabled={cambiandoEstado[viajeId]}
+            onClick={() => handleCambiarEstado(viaje, "ANULADO")}
+            className="btn-danger px-3 py-2 text-xs"
+          >
+            Anular
+          </button>
+        )}
       </div>
+    );
+  };
 
-      <div className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900">
-        <table className="w-full text-sm">
-          <thead className="bg-zinc-800 text-zinc-300">
-            <tr>
-              <th className="p-3 text-left">Orden</th>
-              <th className="p-3 text-left">Tracto</th>
-              <th className="p-3 text-left">Carreta</th>
-              <th className="p-3 text-left">Conductor</th>
-              <th className="p-3 text-left">Fecha Inicio</th>
-              <th className="p-3 text-left">Estado</th>
-              <th className="p-3 text-left">Acciones</th>
-            </tr>
-          </thead>
+  return (
+    <div className="w-full py-4">
+      <div className="page-wrap">
+        <header className="page-hero">
+          <div className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <div className="eyebrow">Gestión de viajes</div>
 
-          <tbody>
-            {listaProgramaciones.length === 0 ? (
-              <tr>
-                <td colSpan="7" className="p-6 text-center text-zinc-400">
-                  No hay programaciones registradas
-                </td>
-              </tr>
-            ) : (
-              listaProgramaciones.map((viaje) => {
+              <h1 className="page-title">Programación de Viajes</h1>
+
+              <p className="page-description">
+                Asigna órdenes de servicio a unidades y conductores para iniciar
+                el flujo operativo.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="info-tile border px-4 py-3">
+                <p className="text-faint text-xs">Total programaciones</p>
+                <p className="text-main text-xl font-bold">{total}</p>
+              </div>
+
+              <button
+                type="button"
+                onClick={abrirCrear}
+                className="btn-primary px-5 py-3"
+              >
+                Nueva programación
+              </button>
+            </div>
+          </div>
+        </header>
+
+        {listaProgramaciones.length === 0 ? (
+          <div className="empty-panel">
+            <h2 className="text-main text-lg font-semibold">
+              No hay programaciones registradas
+            </h2>
+
+            <p className="text-muted mt-1 text-sm">
+              Crea una programación para asignar unidad y conductor a una orden.
+            </p>
+
+            <button
+              type="button"
+              onClick={abrirCrear}
+              className="btn-primary mt-5 px-5 py-3"
+            >
+              Crear programación
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="grid gap-4 lg:hidden">
+              {listaProgramaciones.map((viaje) => {
                 const viajeId = getId(viaje);
 
                 return (
-                  <tr
-                    key={viajeId}
-                    className="border-b border-zinc-800 hover:bg-zinc-800/60"
-                  >
-                    <td className="p-3">
-                      {viaje.ordenServicio?.numeroOrden || "-"}
-                    </td>
-
-                    <td className="p-3">
-                      {viaje.vehiculoPrincipal?.placa || "-"}
-                    </td>
-
-                    <td className="p-3">
-                      {viaje.vehiculoSecundario?.placa || "-"}
-                    </td>
-
-                    <td className="p-3">
-                      {obtenerNombreConductor(viaje.conductor)}
-                    </td>
-
-                    <td className="p-3">
-                      {formatearFecha(viaje.fechaInicioTraslado)}
-                    </td>
-
-                    <td className="p-3">
-                      <span
-                        className={`rounded border px-2 py-1 text-xs font-semibold ${getEstadoStyle(
-                          viaje.estado
-                        )}`}
-                      >
-                        {viaje.estado || "-"}
-                      </span>
-                    </td>
-
-                    <td className="p-3">
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          onClick={() => abrirVer(viaje)}
-                          className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-500"
-                        >
-                          Ver
-                        </button>
-
-                        {puedeMarcarEnRuta(viaje.estado) && (
-                          <button
-                            type="button"
-                            disabled={cambiandoEstado[viajeId]}
-                            onClick={() =>
-                              handleCambiarEstado(viaje, "EN_RUTA")
-                            }
-                            className="rounded-lg bg-purple-600 px-3 py-2 text-xs font-semibold text-white hover:bg-purple-500 disabled:cursor-not-allowed disabled:bg-zinc-700"
-                          >
-                            En ruta
-                          </button>
-                        )}
-
-                        {puedeFinalizar(viaje.estado) && (
-                          <button
-                            type="button"
-                            disabled={cambiandoEstado[viajeId]}
-                            onClick={() =>
-                              handleCambiarEstado(viaje, "FINALIZADO")
-                            }
-                            className="rounded-lg bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-500 disabled:cursor-not-allowed disabled:bg-zinc-700"
-                          >
-                            Finalizar
-                          </button>
-                        )}
-
-                        {puedeAnular(viaje.estado) && (
-                          <button
-                            type="button"
-                            disabled={cambiandoEstado[viajeId]}
-                            onClick={() =>
-                              handleCambiarEstado(viaje, "ANULADO")
-                            }
-                            className="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:bg-zinc-700"
-                          >
-                            Anular
-                          </button>
-                        )}
+                  <article key={viajeId} className="mobile-card">
+                    <div className="mb-4 flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-faint text-xs font-medium">Orden</p>
+                        <h2 className="text-main text-lg font-bold">
+                          {viaje.ordenServicio?.numeroOrden || "-"}
+                        </h2>
                       </div>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
 
-      <ProgramacionViajeModal
-        isOpen={openModal}
-        open={openModal}
-        onClose={cerrarModal}
-        mode={modalMode}
-        data={viajeSeleccionado}
-      />
+                      <EstadoBadge estado={viaje.estado} />
+                    </div>
+
+                    <div className="grid gap-3 text-sm sm:grid-cols-2">
+                      <div className="info-tile">
+                        <p className="text-faint text-xs">Tracto</p>
+                        <p className="text-main font-semibold">
+                          {viaje.vehiculoPrincipal?.placa || "-"}
+                        </p>
+                      </div>
+
+                      <div className="info-tile">
+                        <p className="text-faint text-xs">Carreta</p>
+                        <p className="text-main font-semibold">
+                          {viaje.vehiculoSecundario?.placa || "-"}
+                        </p>
+                      </div>
+
+                      <div className="info-tile">
+                        <p className="text-faint text-xs">Conductor</p>
+                        <p className="text-main font-semibold">
+                          {obtenerNombreConductor(viaje.conductor)}
+                        </p>
+                      </div>
+
+                      <div className="info-tile">
+                        <p className="text-faint text-xs">Fecha inicio</p>
+                        <p className="text-main font-semibold">
+                          {formatearFecha(viaje.fechaInicioTraslado)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 border-t pt-4">
+                      <AccionesViaje viaje={viaje} mobile />
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+
+            <div className="data-table-wrap">
+              <div className="overflow-x-auto">
+                <table className="data-table w-full min-w-[1000px] text-sm">
+                  <thead>
+                    <tr>
+                      <th className="px-4 py-4 text-left">Orden</th>
+                      <th className="px-4 py-4 text-left">Tracto</th>
+                      <th className="px-4 py-4 text-left">Carreta</th>
+                      <th className="px-4 py-4 text-left">Conductor</th>
+                      <th className="px-4 py-4 text-left">Fecha Inicio</th>
+                      <th className="px-4 py-4 text-center">Estado</th>
+                      <th className="px-4 py-4 text-left">Acciones</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {listaProgramaciones.map((viaje) => {
+                      const viajeId = getId(viaje);
+
+                      return (
+                        <tr key={viajeId}>
+                          <td className="px-4 py-4">
+                            <p className="text-main font-bold">
+                              {viaje.ordenServicio?.numeroOrden || "-"}
+                            </p>
+                          </td>
+
+                          <td className="text-muted px-4 py-4">
+                            {viaje.vehiculoPrincipal?.placa || "-"}
+                          </td>
+
+                          <td className="text-muted px-4 py-4">
+                            {viaje.vehiculoSecundario?.placa || "-"}
+                          </td>
+
+                          <td className="text-muted min-w-[220px] px-4 py-4">
+                            {obtenerNombreConductor(viaje.conductor)}
+                          </td>
+
+                          <td className="text-muted whitespace-nowrap px-4 py-4">
+                            {formatearFecha(viaje.fechaInicioTraslado)}
+                          </td>
+
+                          <td className="whitespace-nowrap px-4 py-4 text-center">
+                            <EstadoBadge estado={viaje.estado} />
+                          </td>
+
+                          <td className="px-4 py-4">
+                            <AccionesViaje viaje={viaje} />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
+
+        <ProgramacionViajeModal
+          isOpen={openModal}
+          open={openModal}
+          onClose={cerrarModal}
+          mode={modalMode}
+          data={viajeSeleccionado}
+        />
+      </div>
     </div>
   );
 };

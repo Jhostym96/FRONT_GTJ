@@ -30,6 +30,7 @@ function ConductoresPage() {
 
   useEffect(() => {
     cargarConductores();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const abrirCrear = () => {
@@ -61,108 +62,280 @@ function ConductoresPage() {
       }
 
       cerrarModal();
+      await cargarConductores();
     } catch (error) {
       console.error("Error al guardar conductor:", error);
     }
   };
 
-  return (
-    <div className="p-6 text-white">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">Conductores</h1>
-          <p className="text-gray-400 text-sm">
-            Registro y mantenimiento de conductores.
-          </p>
-        </div>
+  const EstadoBadge = ({ estado }) => {
+    if (estado === "ACTIVO") {
+      return (
+        <span className="inline-flex items-center justify-center rounded-full border border-green-500/30 bg-green-500/10 px-3 py-1 text-[11px] font-bold tracking-wide text-green-300">
+          ACTIVO
+        </span>
+      );
+    }
 
+    return (
+      <span className="inline-flex items-center justify-center rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1 text-[11px] font-bold tracking-wide text-red-300">
+        {estado || "INACTIVO"}
+      </span>
+    );
+  };
+
+  const AccionesConductor = ({ conductor, mobile = false }) => {
+    return (
+      <div
+        className={`flex ${
+          mobile ? "w-full flex-col sm:flex-row" : "justify-end"
+        } gap-2`}
+      >
         <button
-          onClick={abrirCrear}
-          className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg font-semibold"
+          type="button"
+          onClick={() => abrirEditar(conductor)}
+          className="btn-primary px-3 py-2 text-xs"
         >
-          Nuevo conductor
+          Editar
         </button>
       </div>
+    );
+  };
 
-      <div className="bg-gray-900 border border-gray-700 rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-800 text-gray-300">
-            <tr>
-              <th className="p-3 text-left">Documento</th>
-              <th className="p-3 text-left">Conductor</th>
-              <th className="p-3 text-left">Licencia</th>
-              <th className="p-3 text-left">Teléfono</th>
-              <th className="p-3 text-left">Estado</th>
-              <th className="p-3 text-right">Acciones</th>
-            </tr>
-          </thead>
+  return (
+    <div className="w-full py-4">
+      <div className="page-wrap">
+        <header className="page-hero">
+          <div className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <div className="eyebrow">
+                Gestión de transporte
+              </div>
 
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan="6" className="p-6 text-center text-gray-400">
-                  Cargando conductores...
-                </td>
-              </tr>
-            ) : conductores.length === 0 ? (
-              <tr>
-                <td colSpan="6" className="p-6 text-center text-gray-400">
-                  No hay conductores registrados.
-                </td>
-              </tr>
-            ) : (
-              conductores.map((conductor) => (
-                <tr
+              <h1 className="page-title">
+                Conductores
+              </h1>
+
+              <p className="page-description">
+                Administra los datos de los conductores para la programación de
+                viajes y emisión de guías de transportista.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={abrirCrear}
+              className="btn-primary px-5 py-3"
+            >
+              Nuevo conductor
+            </button>
+          </div>
+        </header>
+
+        {errors?.length > 0 && (
+          <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300 shadow-lg">
+            {errors.map((error, index) => (
+              <p key={index}>{error}</p>
+            ))}
+          </div>
+        )}
+
+        {loading ? (
+          <div className="panel p-8 text-center">
+            <div className="mx-auto mb-3 h-9 w-9 animate-spin rounded-full border-2 border-neutral-700 border-t-blue-500" />
+            <p className="text-muted text-sm">
+              Cargando conductores...
+            </p>
+          </div>
+        ) : conductores.length === 0 ? (
+          <div className="empty-panel">
+            <h2 className="text-main text-lg font-semibold">
+              No hay conductores registrados
+            </h2>
+
+            <p className="text-muted mt-1 text-sm">
+              Registra tu primer conductor para poder asignarlo en una
+              programación de viaje.
+            </p>
+
+            <button
+              type="button"
+              onClick={abrirCrear}
+              className="btn-primary mt-5 px-5 py-3"
+            >
+              Crear conductor
+            </button>
+          </div>
+        ) : (
+          <>
+            {/* Cards en móvil */}
+            <div className="grid gap-4 lg:hidden">
+              {conductores.map((conductor) => (
+                <article
                   key={conductor.id}
-                  className="border-t border-gray-800 hover:bg-gray-800/60"
+                  className="mobile-card"
                 >
-                  <td className="p-3">{conductor.numeroDocumento}</td>
+                  <div className="mb-4 flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-faint text-xs font-medium">
+                        Conductor
+                      </p>
 
-                  <td className="p-3">
-                    {conductor.nombres} {conductor.apellidos}
-                  </td>
+                      <h2 className="text-main text-lg font-bold">
+                        {conductor.nombres || "-"} {conductor.apellidos || ""}
+                      </h2>
+                    </div>
 
-                  <td className="p-3">{conductor.numeroLicencia}</td>
+                    <EstadoBadge estado={conductor.estado} />
+                  </div>
 
-                  <td className="p-3">{conductor.telefono || "-"}</td>
+                  <div className="grid gap-3 text-sm">
+                    <div className="info-tile">
+                      <p className="text-faint text-xs">Documento</p>
 
-                  <td className="p-3">
-                    <span
-                      className={`px-2 py-1 rounded text-xs font-semibold ${
-                        conductor.estado === "ACTIVO"
-                          ? "bg-green-600/20 text-green-400"
-                          : "bg-red-600/20 text-red-400"
-                      }`}
-                    >
-                      {conductor.estado}
-                    </span>
-                  </td>
+                      <p className="text-main font-semibold">
+                        {conductor.numeroDocumento || "-"}
+                      </p>
 
-                  <td className="p-3 text-right">
-                    <button
-                      onClick={() => abrirEditar(conductor)}
-                      className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded"
-                    >
-                      Editar
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+                      <p className="text-faint text-xs">
+                        Tipo:{" "}
+                        {obtenerTipoDocumentoTexto(conductor.tipoDocumento)}
+                      </p>
+                    </div>
+
+                    <div className="info-tile">
+                      <p className="text-faint text-xs">Licencia</p>
+
+                      <p className="text-main font-semibold">
+                        {conductor.numeroLicencia || "-"}
+                      </p>
+                    </div>
+
+                    <div className="info-tile">
+                      <p className="text-faint text-xs">Teléfono</p>
+
+                      <p className="text-main font-semibold">
+                        {conductor.telefono || "-"}
+                      </p>
+                    </div>
+
+                    {conductor.observaciones && (
+                      <div className="info-tile">
+                        <p className="text-faint text-xs">
+                          Observaciones
+                        </p>
+
+                        <p className="text-muted mt-1">
+                          {conductor.observaciones}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mt-4 border-t pt-4">
+                    <AccionesConductor conductor={conductor} mobile />
+                  </div>
+                </article>
+              ))}
+            </div>
+
+            {/* Tabla en desktop */}
+            <div className="data-table-wrap">
+              <div className="overflow-x-auto">
+                <table className="data-table w-full min-w-[1000px] text-sm">
+                  <thead>
+                    <tr>
+                      <th className="px-4 py-4 text-left">Conductor</th>
+                      <th className="px-4 py-4 text-left">Documento</th>
+                      <th className="px-4 py-4 text-left">Licencia</th>
+                      <th className="px-4 py-4 text-left">Teléfono</th>
+                      <th className="px-4 py-4 text-left">Observaciones</th>
+                      <th className="px-4 py-4 text-center">Estado</th>
+                      <th className="px-4 py-4 text-right">Acciones</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {conductores.map((conductor) => (
+                      <tr
+                        key={conductor.id}
+                      >
+                        <td className="min-w-[230px] px-4 py-4">
+                          <p className="text-main max-w-[260px] truncate font-bold">
+                            {conductor.nombres || "-"}{" "}
+                            {conductor.apellidos || ""}
+                          </p>
+                        </td>
+
+                        <td className="text-muted whitespace-nowrap px-4 py-4">
+                          <p className="font-semibold">
+                            {conductor.numeroDocumento || "-"}
+                          </p>
+
+                          <p className="text-faint text-xs">
+                            Tipo:{" "}
+                            {obtenerTipoDocumentoTexto(
+                              conductor.tipoDocumento
+                            )}
+                          </p>
+                        </td>
+
+                        <td className="text-muted whitespace-nowrap px-4 py-4">
+                          <p className="font-semibold">
+                            {conductor.numeroLicencia || "-"}
+                          </p>
+                        </td>
+
+                        <td className="text-muted whitespace-nowrap px-4 py-4">
+                          {conductor.telefono || "-"}
+                        </td>
+
+                        <td className="text-muted min-w-[260px] px-4 py-4">
+                          <p className="max-w-[320px] truncate">
+                            {conductor.observaciones || "-"}
+                          </p>
+                        </td>
+
+                        <td className="whitespace-nowrap px-4 py-4 text-center">
+                          <EstadoBadge estado={conductor.estado} />
+                        </td>
+
+                        <td className="whitespace-nowrap px-4 py-4">
+                          <AccionesConductor conductor={conductor} />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
+
+        <ConductorModal
+          open={modalOpen}
+          onClose={cerrarModal}
+          mode={mode}
+          data={selectedConductor}
+          onSubmit={handleSubmit}
+          errors={errors}
+        />
       </div>
-
-      <ConductorModal
-        open={modalOpen}
-        onClose={cerrarModal}
-        mode={mode}
-        data={selectedConductor}
-        onSubmit={handleSubmit}
-        errors={errors}
-      />
     </div>
   );
 }
+
+const obtenerTipoDocumentoTexto = (tipoDocumento) => {
+  const tipos = {
+    1: "DNI",
+    4: "Carnet de extranjería",
+    6: "RUC",
+    7: "Pasaporte",
+    A: "Cédula diplomática",
+    0: "Sin documento",
+  };
+
+  return tipos[tipoDocumento] || tipoDocumento || "-";
+};
 
 export default ConductoresPage;

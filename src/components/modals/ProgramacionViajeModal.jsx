@@ -3,15 +3,16 @@ import { useOrdenServicio } from "../../context/OrdenServicioContext";
 import { useUnidades } from "../../context/UnidadContext";
 import { useConductores } from "../../context/ConductorContext";
 import { useProgramacionViaje } from "../../context/ProgramacionViajeContext";
+import { getTodayInputDate } from "../../utils/date";
 
-const initialForm = {
+const createInitialForm = () => ({
   ordenServicioId: "",
   vehiculoPrincipalId: "",
   vehiculoSecundarioId: "",
   conductorId: "",
-  fechaInicioTraslado: "",
+  fechaInicioTraslado: getTodayInputDate(),
   observaciones: "",
-};
+});
 
 function ProgramacionViajeModal({
   isOpen,
@@ -57,7 +58,7 @@ function ProgramacionViajeModal({
     getConductores,
   ]);
 
-  const [form, setForm] = useState(initialForm);
+  const [form, setForm] = useState(createInitialForm);
   const [error, setError] = useState("");
 
   const isView = mode === "view";
@@ -123,7 +124,7 @@ function ProgramacionViajeModal({
         observaciones: data.observaciones || "",
       });
     } else {
-      setForm(initialForm);
+      setForm(createInitialForm());
     }
   }, [modalOpen, isView, data]);
 
@@ -181,7 +182,7 @@ function ProgramacionViajeModal({
   };
 
   const cerrarModal = () => {
-    setForm(initialForm);
+    setForm(createInitialForm());
     setError("");
     onClose?.();
   };
@@ -265,8 +266,8 @@ function ProgramacionViajeModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-      <div className="w-full max-w-3xl rounded-xl border border-gray-700 bg-gray-900 p-6 text-white shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-4 backdrop-blur-sm">
+      <div className="panel w-full max-w-3xl p-6">
         <div className="mb-5 flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold">
@@ -275,7 +276,7 @@ function ProgramacionViajeModal({
                 : "Nueva programación de viaje"}
             </h2>
 
-            <p className="text-sm text-gray-400">
+            <p className="text-muted text-sm">
               Asigna orden, tracto, carreta y conductor.
             </p>
           </div>
@@ -283,7 +284,7 @@ function ProgramacionViajeModal({
           <button
             type="button"
             onClick={cerrarModal}
-            className="text-2xl text-gray-400 hover:text-white"
+            className="text-muted text-2xl hover:text-blue-500"
           >
             ×
           </button>
@@ -300,7 +301,7 @@ function ProgramacionViajeModal({
           className="grid grid-cols-1 gap-4 md:grid-cols-2"
         >
           <div className="md:col-span-2">
-            <label className="mb-1 block text-sm text-gray-300">
+            <label className="text-muted mb-1 block text-sm">
               Orden de servicio
             </label>
 
@@ -309,7 +310,7 @@ function ProgramacionViajeModal({
               value={form.ordenServicioId}
               onChange={handleChange}
               disabled={isView}
-              className="w-full rounded-lg border border-gray-700 bg-gray-800 p-3 outline-none disabled:opacity-70"
+              className="input p-3"
               required
             >
               <option value="">Seleccionar orden de servicio</option>
@@ -332,7 +333,7 @@ function ProgramacionViajeModal({
           </div>
 
           <div>
-            <label className="mb-1 block text-sm text-gray-300">
+            <label className="text-muted mb-1 block text-sm">
               Vehículo principal / Tracto
             </label>
 
@@ -341,7 +342,7 @@ function ProgramacionViajeModal({
               value={form.vehiculoPrincipalId}
               onChange={handleChange}
               disabled={isView}
-              className="w-full rounded-lg border border-gray-700 bg-gray-800 p-3 outline-none disabled:opacity-70"
+              className="input p-3"
               required
             >
               <option value="">Seleccionar TRACTO</option>
@@ -362,7 +363,7 @@ function ProgramacionViajeModal({
           </div>
 
           <div>
-            <label className="mb-1 block text-sm text-gray-300">
+            <label className="text-muted mb-1 block text-sm">
               Vehículo secundario / Carreta
             </label>
 
@@ -371,7 +372,7 @@ function ProgramacionViajeModal({
               value={form.vehiculoSecundarioId}
               onChange={handleChange}
               disabled={isView}
-              className="w-full rounded-lg border border-gray-700 bg-gray-800 p-3 outline-none disabled:opacity-70"
+              className="input p-3"
             >
               <option value="">Seleccionar CARRETA</option>
 
@@ -391,7 +392,7 @@ function ProgramacionViajeModal({
           </div>
 
           <div>
-            <label className="mb-1 block text-sm text-gray-300">
+            <label className="text-muted mb-1 block text-sm">
               Conductor
             </label>
 
@@ -400,7 +401,7 @@ function ProgramacionViajeModal({
               value={form.conductorId}
               onChange={handleChange}
               disabled={isView}
-              className="w-full rounded-lg border border-gray-700 bg-gray-800 p-3 outline-none disabled:opacity-70"
+              className="input p-3"
               required
             >
               <option value="">Seleccionar conductor</option>
@@ -420,7 +421,7 @@ function ProgramacionViajeModal({
           </div>
 
           <div>
-            <label className="mb-1 block text-sm text-gray-300">
+            <label className="text-muted mb-1 block text-sm">
               Fecha inicio traslado
             </label>
 
@@ -430,13 +431,13 @@ function ProgramacionViajeModal({
               value={form.fechaInicioTraslado}
               onChange={handleChange}
               disabled={isView}
-              className="w-full rounded-lg border border-gray-700 bg-gray-800 p-3 outline-none disabled:opacity-70"
+              className="input p-3"
               required
             />
           </div>
 
           <div className="md:col-span-2">
-            <label className="mb-1 block text-sm text-gray-300">
+            <label className="text-muted mb-1 block text-sm">
               Observaciones
             </label>
 
@@ -445,8 +446,8 @@ function ProgramacionViajeModal({
               value={form.observaciones}
               onChange={handleChange}
               disabled={isView}
-              placeholder="Observaciones"
-              className="w-full resize-none rounded-lg border border-gray-700 bg-gray-800 p-3 outline-none disabled:opacity-70"
+              placeholder="Indique una observación para la programación"
+              className="input resize-none p-3"
               rows="3"
             />
           </div>
@@ -455,7 +456,7 @@ function ProgramacionViajeModal({
             <button
               type="button"
               onClick={cerrarModal}
-              className="rounded-lg bg-gray-700 px-4 py-2 hover:bg-gray-600"
+              className="btn-secondary px-4 py-2"
             >
               {isView ? "Cerrar" : "Cancelar"}
             </button>
@@ -463,7 +464,7 @@ function ProgramacionViajeModal({
             {!isView && (
               <button
                 type="submit"
-                className="rounded-lg bg-blue-600 px-4 py-2 font-semibold hover:bg-blue-700"
+                className="btn-primary px-4 py-2"
               >
                 Guardar programación
               </button>

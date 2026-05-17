@@ -10,6 +10,7 @@ import { UnidadProvider } from "./context/UnidadContext";
 import { ConductorProvider } from "./context/ConductorContext";
 import { ProgramacionViajeProvider } from "./context/ProgramacionViajeContext";
 import { GuiaTransportistaProvider } from "./context/GuiaTransportistaContext";
+import { ThemeProvider } from "./context/ThemeContext";
 
 // 🔹 Componentes
 import Sidebar from "./components/Sidebar";
@@ -32,6 +33,7 @@ import ProgramacionViajePage from "./pages/ProgramacionViajePage";
 import UnidadesPage from "./pages/UnidadesPage";
 import ConductoresPage from "./pages/ConductoresPage";
 import GuiaTransportistaPage from "./pages/GuiaTransportistaPage";
+import DevolucionesPage from "./pages/DevolucionesPage";
 
 
 
@@ -42,7 +44,7 @@ function Layout() {
   const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <div className="min-h-screen flex bg-gray-950 text-white">
+    <div className="app-shell flex">
       {/* Sidebar */}
       <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
 
@@ -54,7 +56,7 @@ function Layout() {
         {/* Contenido principal + footer dentro del mismo fondo */}
         <div className="flex flex-col flex-1">
           <main
-            className={`flex-1 overflow-y-auto p-6 pt-20 transition-all duration-300 ${collapsed ? "md:ml-20" : "md:ml-64"
+            className={`app-main ${collapsed ? "md:ml-20" : "md:ml-64"
               }`}
           >
             <Routes>
@@ -68,6 +70,7 @@ function Layout() {
               <Route path="/unidades" element={<UnidadesPage />} />
               <Route path="/conductores" element={<ConductoresPage />} />
               <Route path="/guia-transportista" element={<GuiaTransportistaPage />} />
+              <Route path="/devoluciones" element={<DevolucionesPage />} />
 
             </Routes>
           </main>
@@ -83,37 +86,39 @@ function Layout() {
 // 🔹 App principal
 function App() {
   return (
-    <AuthProvider>
-      <UserProvider>
-        <OrdenServicioProvider>
-          <ClienteProvider>
-            <UnidadProvider>
-              <ConductorProvider>
-                <ProgramacionViajeProvider>
-                  <Router>
-                    <RouteChangeLoader />
-                    <GuiaTransportistaProvider>
-                      <Routes>
-                        {/* Rutas públicas */}
-                        <Route
-                          path="/unauthorized"
-                          element={<UnauthorizedPage />}
-                        />
-                        <Route path="/login" element={<LoginPage />} />
-                        {/* Rutas protegidas */}
-                        <Route element={<ProtectedRoute />}>
-                          <Route path="/*" element={<Layout />} />
-                        </Route>
-                      </Routes>
-                    </GuiaTransportistaProvider>
-                  </Router>
-                </ProgramacionViajeProvider>
-              </ConductorProvider>
-            </UnidadProvider>
-          </ClienteProvider>
-        </OrdenServicioProvider>
-      </UserProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <UserProvider>
+          <OrdenServicioProvider>
+            <ClienteProvider>
+              <UnidadProvider>
+                <ConductorProvider>
+                  <ProgramacionViajeProvider>
+                    <Router>
+                      <RouteChangeLoader />
+                      <GuiaTransportistaProvider>
+                        <Routes>
+                          {/* Rutas públicas */}
+                          <Route
+                            path="/unauthorized"
+                            element={<UnauthorizedPage />}
+                          />
+                          <Route path="/login" element={<LoginPage />} />
+                          {/* Rutas protegidas */}
+                          <Route element={<ProtectedRoute />}>
+                            <Route path="/*" element={<Layout />} />
+                          </Route>
+                        </Routes>
+                      </GuiaTransportistaProvider>
+                    </Router>
+                  </ProgramacionViajeProvider>
+                </ConductorProvider>
+              </UnidadProvider>
+            </ClienteProvider>
+          </OrdenServicioProvider>
+        </UserProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

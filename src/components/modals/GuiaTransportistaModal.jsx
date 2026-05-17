@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useGuiaTransportista } from "../../context/GuiaTransportistaContext";
 import { useProgramacionViaje } from "../../context/ProgramacionViajeContext";
+import { getTodayInputDate } from "../../utils/date";
 
 const convertirFechaInputADdmmyyyy = (fecha) => {
   if (!fecha) return "";
@@ -61,7 +62,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
   const initialForm = useMemo(
     () => ({
       programacionViaje: "",
-      fecha_de_emision: "",
+      fecha_de_emision: getTodayInputDate(),
       observaciones: "",
       peso_bruto_total: "",
       peso_bruto_unidad_de_medida: "KGM",
@@ -353,16 +354,16 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-3 py-4">
-      <div className="max-h-[95vh] w-full max-w-6xl overflow-y-auto rounded-2xl border border-neutral-800 bg-neutral-950 shadow-2xl">
-        <div className="sticky top-0 z-10 border-b border-neutral-800 bg-neutral-950 px-5 py-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-3 py-4 backdrop-blur-sm">
+      <div className="panel max-h-[95vh] w-full max-w-6xl overflow-y-auto">
+        <div className="sticky top-0 z-10 border-b px-5 py-4" style={{ background: "var(--app-surface)" }}>
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-blue-400">
                 Guía de transportista
               </p>
 
-              <h2 className="text-xl font-bold text-gray-100">
+              <h2 className="text-main text-xl font-bold">
                 {isView ? "Ver guía" : isEdit ? "Editar guía" : "Nueva guía"}
               </h2>
             </div>
@@ -370,7 +371,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg bg-neutral-800 px-3 py-2 text-sm font-bold text-gray-200 hover:bg-neutral-700"
+              className="btn-secondary px-3 py-2 text-sm"
             >
               X
             </button>
@@ -378,8 +379,8 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5 p-5">
-          <section className="rounded-2xl border border-neutral-800 bg-neutral-900/50 p-4">
-            <h3 className="mb-4 text-sm font-bold uppercase tracking-wide text-neutral-300">
+          <section className="panel p-4">
+            <h3 className="text-muted mb-4 text-sm font-bold uppercase tracking-wide">
               Programación de viaje
             </h3>
 
@@ -388,7 +389,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
               value={form.programacionViaje}
               onChange={handleChange}
               disabled={isView || isEdit}
-              className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-sm text-gray-100 outline-none focus:border-blue-500 disabled:cursor-not-allowed disabled:opacity-70"
+              className="input px-4 py-3"
               required
             >
               <option value="">
@@ -486,8 +487,8 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
             )}
           </section>
 
-          <section className="rounded-2xl border border-neutral-800 bg-neutral-900/50 p-4">
-            <h3 className="mb-4 text-sm font-bold uppercase tracking-wide text-neutral-300">
+          <section className="panel p-4">
+            <h3 className="text-muted mb-4 text-sm font-bold uppercase tracking-wide">
               Datos de emisión
             </h3>
 
@@ -653,7 +654,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
             )}
 
             <div className="mt-4">
-              <label className="mb-1 block text-xs font-semibold text-neutral-400">
+              <label className="text-muted mb-1 block text-xs font-semibold">
                 Observaciones
               </label>
 
@@ -663,14 +664,14 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
                 onChange={handleChange}
                 disabled={isView}
                 rows="3"
-                className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-sm text-gray-100 outline-none focus:border-blue-500 disabled:opacity-70"
+                className="input resize-none px-4 py-3"
               />
             </div>
           </section>
 
-          <section className="rounded-2xl border border-neutral-800 bg-neutral-900/50 p-4">
+          <section className="panel p-4">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-sm font-bold uppercase tracking-wide text-neutral-300">
+              <h3 className="text-muted text-sm font-bold uppercase tracking-wide">
                 Items
               </h3>
 
@@ -678,7 +679,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
                 <button
                   type="button"
                   onClick={agregarItem}
-                  className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white hover:bg-blue-500"
+                  className="btn-primary px-3 py-2 text-xs"
                 >
                   Agregar item
                 </button>
@@ -689,7 +690,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
               {form.items.map((item, index) => (
                 <div
                   key={index}
-                  className="grid gap-3 rounded-xl border border-neutral-800 bg-neutral-950/70 p-3 md:grid-cols-12"
+                  className="info-tile grid gap-3 border p-3 md:grid-cols-12"
                 >
                   <div className="md:col-span-2">
                     <Input
@@ -738,7 +739,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
                       <button
                         type="button"
                         onClick={() => eliminarItem(index)}
-                        className="w-full rounded-lg bg-red-600 px-3 py-3 text-xs font-bold text-white hover:bg-red-500"
+                        className="btn-danger w-full px-3 py-3 text-xs"
                       >
                         X
                       </button>
@@ -749,9 +750,9 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
             </div>
           </section>
 
-          <section className="rounded-2xl border border-neutral-800 bg-neutral-900/50 p-4">
+          <section className="panel p-4">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-sm font-bold uppercase tracking-wide text-neutral-300">
+              <h3 className="text-muted text-sm font-bold uppercase tracking-wide">
                 Documentos relacionados
               </h3>
 
@@ -759,7 +760,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
                 <button
                   type="button"
                   onClick={agregarDocumento}
-                  className="rounded-lg bg-neutral-700 px-3 py-2 text-xs font-bold text-white hover:bg-neutral-600"
+                  className="btn-secondary px-3 py-2 text-xs"
                 >
                   Agregar documento
                 </button>
@@ -767,7 +768,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
             </div>
 
             {form.documento_relacionado.length === 0 ? (
-              <p className="text-sm text-neutral-500">
+              <p className="text-faint text-sm">
                 No hay documentos relacionados.
               </p>
             ) : (
@@ -775,7 +776,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
                 {form.documento_relacionado.map((doc, index) => (
                   <div
                     key={index}
-                    className="grid gap-3 rounded-xl border border-neutral-800 bg-neutral-950/70 p-3 md:grid-cols-12"
+                    className="info-tile grid gap-3 border p-3 md:grid-cols-12"
                   >
                     <div className="md:col-span-3">
                       <Input
@@ -812,7 +813,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
                         <button
                           type="button"
                           onClick={() => eliminarDocumento(index)}
-                          className="w-full rounded-lg bg-red-600 px-3 py-3 text-xs font-bold text-white hover:bg-red-500"
+                          className="btn-danger w-full px-3 py-3 text-xs"
                         >
                           X
                         </button>
@@ -824,11 +825,11 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
             )}
           </section>
 
-          <div className="sticky bottom-0 flex flex-col gap-3 border-t border-neutral-800 bg-neutral-950 py-4 sm:flex-row sm:justify-end">
+          <div className="sticky bottom-0 flex flex-col gap-3 border-t py-4 sm:flex-row sm:justify-end" style={{ background: "var(--app-surface)" }}>
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl bg-neutral-800 px-5 py-3 text-sm font-bold text-gray-200 hover:bg-neutral-700"
+              className="btn-secondary px-5 py-3 text-sm"
             >
               {isView ? "Cerrar" : "Cancelar"}
             </button>
@@ -837,7 +838,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
               <button
                 type="submit"
                 disabled={loadingGuia}
-                className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-blue-950/30 hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-neutral-700"
+                className="btn-primary px-5 py-3 text-sm"
               >
                 {loadingGuia
                   ? "Guardando..."
@@ -864,7 +865,7 @@ const Input = ({
   placeholder = "",
 }) => (
   <div>
-    <label className="mb-1 block text-xs font-semibold text-neutral-400">
+    <label className="text-muted mb-1 block text-xs font-semibold">
       {label}
     </label>
 
@@ -875,15 +876,15 @@ const Input = ({
       onChange={onChange}
       disabled={disabled}
       required={required}
-      placeholder={placeholder}
-      className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-sm text-gray-100 outline-none focus:border-blue-500 disabled:cursor-not-allowed disabled:opacity-70"
+      placeholder={placeholder || (disabled ? "" : `Ingrese ${label.toLowerCase()}`)}
+      className="input px-4 py-3"
     />
   </div>
 );
 
 const Select = ({ label, name, value, onChange, disabled, options = [] }) => (
   <div>
-    <label className="mb-1 block text-xs font-semibold text-neutral-400">
+    <label className="text-muted mb-1 block text-xs font-semibold">
       {label}
     </label>
 
@@ -892,7 +893,7 @@ const Select = ({ label, name, value, onChange, disabled, options = [] }) => (
       value={value || ""}
       onChange={onChange}
       disabled={disabled}
-      className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-sm text-gray-100 outline-none focus:border-blue-500 disabled:cursor-not-allowed disabled:opacity-70"
+      className="input px-4 py-3"
     >
       {options.map((option) => (
         <option key={option.value} value={option.value}>
@@ -904,10 +905,10 @@ const Select = ({ label, name, value, onChange, disabled, options = [] }) => (
 );
 
 const Info = ({ label, value }) => (
-  <div className="rounded-xl border border-neutral-800 bg-neutral-950/70 p-3">
-    <p className="text-xs text-neutral-500">{label}</p>
+  <div className="info-tile border p-3">
+    <p className="text-faint text-xs">{label}</p>
 
-    <p className="truncate text-sm font-semibold text-gray-200">
+    <p className="text-main truncate text-sm font-semibold">
       {value || "-"}
     </p>
   </div>

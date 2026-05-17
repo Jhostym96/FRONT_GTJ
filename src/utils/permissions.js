@@ -8,6 +8,7 @@ import {
   FaDatabase,
   FaIdCard,
   FaFileInvoice,
+  FaUndoAlt,
 } from "react-icons/fa";
 
 const dashboardMenu = {
@@ -36,6 +37,11 @@ const operacionesMenu = {
       path: "/guia-transportista",
       label: "Guías de Transportista",
       icon: FaFileInvoice,
+    },
+    {
+      path: "/devoluciones",
+      label: "Devoluciones",
+      icon: FaUndoAlt,
     },
   ],
 };

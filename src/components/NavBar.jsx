@@ -1,32 +1,46 @@
 import { FaUserCircle, FaSignOutAlt } from "react-icons/fa";
 import { useAuth } from "../context/AuthContext";
+import { useTheme } from "../context/ThemeContext";
+import { Moon, Sun } from "lucide-react";
 
 function Navbar({ collapsed }) {
   const { user, logout } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
 
   return (
     <header
       className={`fixed top-0 right-0 left-0
         ${collapsed ? "md:left-20" : "md:left-64"}
-        h-12 bg-zinc-800/90 backdrop-blur-md border-b border-zinc-700
-        flex items-center justify-between px-6 shadow-md z-30`}
+        app-navbar h-14 flex items-center justify-between px-4 shadow-sm z-30 sm:px-6`}
     >
-      {/* 👇 Puedes poner un título o dejar vacío */}
-      <h2 className="text-white font-semibold text-sm tracking-wide">
+      <h2 className="text-main hidden text-sm font-semibold tracking-wide sm:block">
+        TRANSPORTES J EIRL
       </h2>
 
       {/* Usuario + Logout */}
-      <div className="flex items-center gap-4">
+      <div className="ml-auto flex items-center gap-3">
+        <button
+          type="button"
+          onClick={toggleTheme}
+          className="btn-secondary h-9 w-9 px-0"
+          title={isDark ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+          aria-label={isDark ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+        >
+          {isDark ? <Sun size={17} /> : <Moon size={17} />}
+        </button>
+
         <div className="flex items-center gap-2">
-          <FaUserCircle className="text-white text-xl" />
-          <span className="text-gray-300 text-sm hidden sm:block">
+          <FaUserCircle className="text-main text-xl" />
+          <span className="text-muted text-sm hidden sm:block">
             {user?.role || "Invitado"}
           </span>
         </div>
 
         <button
           onClick={logout}
-          className="flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white px-3 py-1 rounded-md text-xs font-medium transition-colors"
+          className="btn-danger h-9 px-3 text-xs"
+          title="Cerrar sesión"
+          aria-label="Cerrar sesión"
         >
           <FaSignOutAlt />
         </button>

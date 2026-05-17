@@ -1,38 +1,194 @@
-@tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer components {
+  .app-shell {
+    @apply min-h-screen transition-colors duration-300;
+    background:
+      radial-gradient(circle at top right, color-mix(in srgb, var(--app-primary) 12%, transparent), transparent 34rem),
+      var(--app-bg);
+    color: var(--app-text);
+  }
+
+  .app-main {
+    @apply flex-1 overflow-y-auto px-4 pb-8 pt-20 transition-all duration-300 sm:px-6 lg:px-8;
+  }
+
+  .app-sidebar {
+    @apply fixed inset-y-0 left-0 z-40 border-r shadow-xl backdrop-blur-xl transition-all duration-300;
+    background: color-mix(in srgb, var(--app-elevated) 94%, transparent);
+    border-color: var(--app-border);
+  }
+
+  .app-navbar,
+  .app-footer {
+    @apply border-b backdrop-blur-xl transition-all duration-300;
+    background: color-mix(in srgb, var(--app-elevated) 88%, transparent);
+    border-color: var(--app-border);
+    color: var(--app-muted);
+  }
+
+  .app-footer {
+    @apply border-b-0 border-t;
+  }
+
+  .nav-item {
+    @apply flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition;
+    color: var(--app-muted);
+  }
+
+  .nav-item:hover {
+    background: var(--app-surface-muted);
+    color: var(--app-text);
+  }
+
+  .nav-item-active {
+    background: var(--app-primary);
+    color: #fff;
+    box-shadow: 0 10px 24px color-mix(in srgb, var(--app-primary) 28%, transparent);
+  }
+
+  .page-wrap {
+    @apply mx-auto flex w-full max-w-[1500px] flex-col gap-5;
+  }
+
+  .page-hero {
+    @apply overflow-hidden rounded-2xl border p-5 shadow-sm sm:p-6;
+    background:
+      linear-gradient(135deg, color-mix(in srgb, var(--app-primary) 10%, var(--app-surface)), var(--app-surface) 48%, var(--app-surface-muted));
+    border-color: var(--app-border);
+    box-shadow: var(--app-shadow);
+  }
+
+  .eyebrow {
+    @apply mb-2 inline-flex rounded-full border px-3 py-1 text-xs font-semibold;
+    background: var(--app-primary-soft);
+    border-color: color-mix(in srgb, var(--app-primary) 28%, transparent);
+    color: var(--app-primary);
+  }
+
+  .page-title {
+    @apply text-2xl font-bold tracking-tight sm:text-3xl;
+    color: var(--app-text);
+  }
+
+  .page-description {
+    @apply mt-1 max-w-2xl text-sm;
+    color: var(--app-muted);
+  }
+
+  .panel {
+    @apply rounded-2xl border shadow-sm;
+    background: var(--app-surface);
+    border-color: var(--app-border);
+    box-shadow: var(--app-shadow);
+  }
+
+  .empty-panel {
+    @apply rounded-2xl border border-dashed p-8 text-center shadow-sm;
+    background: var(--app-surface);
+    border-color: var(--app-border-strong);
+  }
+
+  .mobile-card {
+    @apply rounded-2xl border p-4 shadow-sm;
+    background: var(--app-surface);
+    border-color: var(--app-border);
+    box-shadow: var(--app-shadow);
+  }
+
+  .info-tile {
+    @apply rounded-xl p-3;
+    background: var(--app-surface-muted);
+  }
+
+  .data-table-wrap {
+    @apply hidden overflow-hidden rounded-2xl border shadow-sm lg:block;
+    background: var(--app-surface);
+    border-color: var(--app-border);
+    box-shadow: var(--app-shadow);
+  }
+
+  .data-table thead {
+    background: var(--app-surface-muted);
+  }
+
+  .data-table thead tr {
+    @apply border-b text-xs uppercase tracking-wide;
+    color: var(--app-muted);
+    border-color: var(--app-border);
+  }
+
+  .data-table tbody {
+    @apply divide-y;
+    border-color: var(--app-border);
+  }
+
+  .data-table tbody tr {
+    @apply transition;
+  }
+
+  .data-table tbody tr:hover {
+    background: var(--app-surface-muted);
+  }
+
+  .text-main {
+    color: var(--app-text);
+  }
+
+  .text-muted {
+    color: var(--app-muted);
+  }
+
+  .text-faint {
+    color: var(--app-faint);
+  }
+
   .btn {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded transition duration-200 shadow-sm;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition duration-200 disabled:cursor-not-allowed disabled:opacity-60;
   }
 
   .btn-primary {
-    @apply btn bg-button-primary text-white hover:bg-highlight;
+    @apply btn text-white;
+    background: var(--app-primary);
+    box-shadow: 0 10px 24px color-mix(in srgb, var(--app-primary) 22%, transparent);
+  }
+
+  .btn-primary:hover {
+    background: var(--app-primary-hover);
   }
 
   .btn-secondary {
-    @apply btn bg-button-secondary text-white hover:bg-button-primary;
+    @apply btn border;
+    background: var(--app-surface-muted);
+    border-color: var(--app-border);
+    color: var(--app-text);
   }
 
   .btn-danger {
-    @apply btn bg-button-danger text-white hover:bg-red-500;
+    @apply btn bg-red-600 text-white hover:bg-red-500;
   }
 
   .btn-success {
-    @apply btn bg-button-success text-white hover:bg-green-500;
+    @apply btn bg-emerald-600 text-white hover:bg-emerald-500;
   }
 
   .input {
-    @apply w-full bg-input border border-gray-600 text-text-primary px-3 py-2 rounded focus:ring-2 focus:ring-focus text-sm;
+    @apply w-full rounded-lg border px-3 py-2 text-sm outline-none transition focus:ring-2 disabled:cursor-not-allowed disabled:opacity-70;
+    background: var(--app-surface-muted);
+    border-color: var(--app-border);
+    color: var(--app-text);
+    --tw-ring-color: color-mix(in srgb, var(--app-primary) 32%, transparent);
   }
 
   .card {
-    @apply bg-surface p-6 rounded shadow-md animate-fade-in;
+    @apply panel p-6 animate-fade-in;
   }
 
   .table-head {
-    @apply bg-surface text-text-secondary uppercase text-xs tracking-wide;
+    @apply text-xs uppercase tracking-wide;
+    background: var(--app-surface-muted);
+    color: var(--app-muted);
   }
 
   /* 🔹 Estados con estilo neón solo en el texto */

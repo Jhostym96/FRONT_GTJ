@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 
 const initialForm = {
@@ -11,6 +11,7 @@ const initialForm = {
 };
 
 const initialEntidad = {
+  tipo: "REMITENTE",
   tipoDocumento: "6",
   numeroDocumento: "",
   razonSocial: "",
@@ -26,12 +27,89 @@ const initialDireccion = {
   codigoEstablecimientoSunat: "0000",
 };
 
-function TipoDocumentoSelect({
-  value,
-  onChange,
-  disabled = false,
-  inputClass,
-}) {
+const styles = {
+  input:
+    "input px-3 py-2 placeholder:text-gray-500",
+  inputSoft:
+    "input px-3 py-2 placeholder:text-gray-500",
+  label: "text-muted mb-1 block text-sm font-medium",
+  section: "panel p-5",
+  card: "mobile-card p-4",
+  smallCard: "info-tile border p-3 text-sm",
+};
+
+function normalizarMayuscula(valor) {
+  if (typeof valor !== "string") return "";
+  return valor.trim().toUpperCase();
+}
+
+function normalizarTexto(valor) {
+  if (typeof valor !== "string") return "";
+  return valor.trim();
+}
+
+function validarUbigeo(ubigeo) {
+  return /^\d{6}$/.test(String(ubigeo || ""));
+}
+
+function validarCodigoSunat(codigo) {
+  return /^\d{4}$/.test(String(codigo || ""));
+}
+
+function normalizarDireccion(direccion) {
+  return {
+    id: direccion?.id,
+    nombre: normalizarMayuscula(direccion?.nombre),
+    ubigeo: normalizarTexto(direccion?.ubigeo),
+    direccion: normalizarMayuscula(direccion?.direccion),
+    referencia: normalizarMayuscula(direccion?.referencia),
+    codigoEstablecimientoSunat:
+      normalizarTexto(direccion?.codigoEstablecimientoSunat) || "0000",
+  };
+}
+
+function normalizarEntidad(entidad, tipo) {
+  const direcciones = Array.isArray(entidad?.direcciones)
+    ? entidad.direcciones.map(normalizarDireccion)
+    : [];
+
+  return {
+    id: entidad?.id,
+    tipo,
+    tipoDocumento: entidad?.tipoDocumento || "6",
+    numeroDocumento: normalizarTexto(entidad?.numeroDocumento),
+    razonSocial: normalizarMayuscula(entidad?.razonSocial),
+    direccionFiscal:
+      normalizarMayuscula(entidad?.direccionFiscal) || direcciones?.[0]?.direccion || "",
+    direcciones,
+  };
+}
+
+function obtenerEntidadesPorTipo(cliente, tipo) {
+  if (!cliente) return [];
+
+  const desdeEntidadesRelacionadas = Array.isArray(cliente.entidadesRelacionadas)
+    ? cliente.entidadesRelacionadas.filter((entidad) => entidad.tipo === tipo)
+    : [];
+
+  const desdeCampoDirecto =
+    tipo === "REMITENTE"
+      ? Array.isArray(cliente.remitentes)
+        ? cliente.remitentes
+        : []
+      : Array.isArray(cliente.destinatarios)
+      ? cliente.destinatarios
+      : [];
+
+  const origen =
+    desdeEntidadesRelacionadas.length > 0
+      ? desdeEntidadesRelacionadas
+      : desdeCampoDirecto;
+
+  return origen.map((entidad) => normalizarEntidad(entidad, tipo));
+}
+
+function TipoDocumentoSelect({ value, onChange, disabled = false, inputClass }) {
   return (
     <select
       name="tipoDocumento"
@@ -50,321 +128,445 @@ function TipoDocumentoSelect({
   );
 }
 
-function DireccionesTemporales({
-  direcciones,
-  onRemove,
-  isView,
-  smallCardClass,
-}) {
-  if (!direcciones || direcciones.length === 0) return null;
-
+function EmptyState({ text }) {
   return (
-    <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
-      {direcciones.map((dir, index) => (
-        <div key={dir.id || index} className={smallCardClass}>
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="font-semibold text-white">{dir.nombre}</p>
-              <p className="mt-1 text-gray-300">{dir.direccion}</p>
-              <p className="text-gray-500">Ubigeo: {dir.ubigeo}</p>
-
-              {dir.referencia && (
-                <p className="text-gray-500">Ref: {dir.referencia}</p>
-              )}
-
-              {dir.codigoEstablecimientoSunat && (
-                <p className="text-gray-500">
-                  Cod. SUNAT: {dir.codigoEstablecimientoSunat}
-                </p>
-              )}
-            </div>
-
-            {!isView && (
-              <button
-                type="button"
-                onClick={() => onRemove(index)}
-                className="text-sm text-red-400 hover:text-red-300"
-              >
-                Quitar
-              </button>
-            )}
-          </div>
-        </div>
-      ))}
+    <div className="empty-panel p-5">
+      <p className="text-muted text-sm">{text}</p>
     </div>
   );
 }
 
-function FormDireccion({
-  titulo,
-  direccion,
-  onChange,
-  onAdd,
-  direcciones,
-  onRemove,
-  placeholderNombre,
-  inputDarkClass,
-  subSectionClass,
-  smallCardClass,
-  isView,
-}) {
+function DireccionCard({ direccion, onRemove, isView }) {
   return (
-    <div className={subSectionClass}>
-      <h4 className="mb-3 font-semibold text-white">{titulo}</h4>
-
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-12">
-        <div className="md:col-span-2">
-          <input
-            type="text"
-            name="nombre"
-            value={direccion.nombre}
-            onChange={onChange}
-            disabled={isView}
-            className={`${inputDarkClass} uppercase`}
-            placeholder={placeholderNombre}
-          />
+    <div className={styles.smallCard}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-main font-semibold">{direccion.nombre}</p>
+          <p className="text-muted mt-1 break-words">{direccion.direccion}</p>
+          <div className="mt-2 flex flex-wrap gap-2 text-xs">
+            <span className="info-tile rounded-full px-2 py-1 text-muted">
+              Ubigeo: {direccion.ubigeo}
+            </span>
+            <span className="info-tile rounded-full px-2 py-1 text-muted">
+              SUNAT: {direccion.codigoEstablecimientoSunat || "0000"}
+            </span>
+          </div>
+          {direccion.referencia && (
+            <p className="text-faint mt-2 break-words">
+              Ref: {direccion.referencia}
+            </p>
+          )}
         </div>
 
-        <div className="md:col-span-2">
-          <input
-            type="text"
-            name="ubigeo"
-            value={direccion.ubigeo}
-            onChange={onChange}
-            disabled={isView}
-            maxLength={6}
-            className={inputDarkClass}
-            placeholder="Ubigeo"
-          />
-        </div>
+        {!isView && onRemove && (
+          <button
+            type="button"
+            onClick={onRemove}
+            className="shrink-0 text-sm text-red-400 hover:text-red-300"
+          >
+            Quitar
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
 
-        <div className="md:col-span-4">
-          <input
-            type="text"
-            name="direccion"
-            value={direccion.direccion}
-            onChange={onChange}
-            disabled={isView}
-            className={`${inputDarkClass} uppercase`}
-            placeholder="Dirección"
-          />
-        </div>
+function EntidadesResumen({ tipo, entidades, onAdd, onEdit, onRemove, isView }) {
+  const titulo = tipo === "REMITENTE" ? "Remitentes" : "Destinatarios";
+  const emptyText =
+    tipo === "REMITENTE"
+      ? "Aún no hay remitentes registrados para este cliente."
+      : "Aún no hay destinatarios registrados para este cliente.";
 
-        <div className="md:col-span-2">
-          <input
-            type="text"
-            name="codigoEstablecimientoSunat"
-            value={direccion.codigoEstablecimientoSunat}
-            onChange={onChange}
-            disabled={isView}
-            maxLength={4}
-            className={inputDarkClass}
-            placeholder="0000"
-          />
+  return (
+    <section className={styles.section}>
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h3 className="text-main text-lg font-semibold">{titulo}</h3>
+          <p className="text-muted text-sm">
+            Se usarán en órdenes de servicio y guías de transportista.
+          </p>
         </div>
 
         {!isView && (
-          <div className="md:col-span-2">
-            <button
-              type="button"
-              onClick={onAdd}
-              className="w-full rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-            >
-              Agregar
-            </button>
-          </div>
-        )}
-
-        <div className={isView ? "md:col-span-12" : "md:col-span-10"}>
-          <input
-            type="text"
-            name="referencia"
-            value={direccion.referencia}
-            onChange={onChange}
-            disabled={isView}
-            className={`${inputDarkClass} uppercase`}
-            placeholder="Referencia"
-          />
-        </div>
-      </div>
-
-      <DireccionesTemporales
-        direcciones={direcciones}
-        onRemove={onRemove}
-        isView={isView}
-        smallCardClass={smallCardClass}
-      />
-    </div>
-  );
-}
-
-function EntidadForm({
-  tipo,
-  entidad,
-  direccion,
-  onEntidadChange,
-  onDireccionChange,
-  onAddDireccion,
-  onRemoveDireccion,
-  onAddEntidad,
-  placeholderRazonSocial,
-  placeholderDireccion,
-  inputClass,
-  inputDarkClass,
-  labelClass,
-  sectionClass,
-  subSectionClass,
-  smallCardClass,
-  isView,
-}) {
-  return (
-    <section className={sectionClass}>
-      <div className="mb-4">
-        <h3 className="text-lg font-semibold text-white">Agregar {tipo}</h3>
-        <p className="text-sm text-gray-400">
-          Registra los datos del {tipo} y sus direcciones frecuentes.
-        </p>
-      </div>
-
-      <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-12">
-        <div className="md:col-span-2">
-          <label className={labelClass}>Tipo doc.</label>
-          <TipoDocumentoSelect
-            value={entidad.tipoDocumento}
-            onChange={onEntidadChange}
-            disabled={isView}
-            inputClass={inputClass}
-          />
-        </div>
-
-        <div className="md:col-span-3">
-          <label className={labelClass}>N° documento</label>
-          <input
-            type="text"
-            name="numeroDocumento"
-            value={entidad.numeroDocumento}
-            onChange={onEntidadChange}
-            disabled={isView}
-            className={inputClass}
-            placeholder={`RUC ${tipo}`}
-          />
-        </div>
-
-        <div className="md:col-span-7">
-          <label className={labelClass}>Razón social</label>
-          <input
-            type="text"
-            name="razonSocial"
-            value={entidad.razonSocial}
-            onChange={onEntidadChange}
-            disabled={isView}
-            className={`${inputClass} uppercase`}
-            placeholder={placeholderRazonSocial}
-          />
-        </div>
-      </div>
-
-      <FormDireccion
-        titulo={`Dirección del ${tipo}`}
-        direccion={direccion}
-        onChange={onDireccionChange}
-        onAdd={onAddDireccion}
-        direcciones={entidad.direcciones}
-        onRemove={onRemoveDireccion}
-        placeholderNombre={placeholderDireccion}
-        inputDarkClass={inputDarkClass}
-        subSectionClass={subSectionClass}
-        smallCardClass={smallCardClass}
-        isView={isView}
-      />
-
-      {!isView && (
-        <div className="mt-4 flex justify-end">
           <button
             type="button"
-            onClick={onAddEntidad}
-            className="rounded-lg bg-emerald-600 px-4 py-2 text-white hover:bg-emerald-700"
+            onClick={onAdd}
+            className="btn-primary px-4 py-2 text-sm"
           >
-            Agregar {tipo} al cliente
+            + Agregar {tipo === "REMITENTE" ? "remitente" : "destinatario"}
           </button>
-        </div>
-      )}
-    </section>
-  );
-}
-
-function ListaEntidades({
-  titulo,
-  emptyText,
-  entidades,
-  onRemove,
-  isView,
-  sectionClass,
-  cardClass,
-  smallCardClass,
-}) {
-  return (
-    <section className={sectionClass}>
-      <div className="mb-4">
-        <h3 className="text-lg font-semibold text-white">{titulo}</h3>
-        <p className="text-sm text-gray-400">
-          Direcciones disponibles para órdenes de servicio y guías.
-        </p>
+        )}
       </div>
 
       {!entidades || entidades.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-gray-700 bg-gray-900 p-4 text-center">
-          <p className="text-sm text-gray-400">{emptyText}</p>
-        </div>
+        <EmptyState text={emptyText} />
       ) : (
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           {entidades.map((entidad, index) => (
-            <div key={entidad.id || index} className={cardClass}>
+            <div key={entidad.id || `${tipo}-${index}`} className={styles.card}>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <p className="font-semibold text-white">
+                <div className="min-w-0">
+                  <div className="mb-2 flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-emerald-900/60 px-2.5 py-1 text-xs font-semibold text-emerald-300">
+                      {tipo}
+                    </span>
+                    <span className="info-tile rounded-full px-2.5 py-1 text-xs text-muted">
+                      {entidad.tipoDocumento === "6" ? "RUC" : "DOC"}: {entidad.numeroDocumento}
+                    </span>
+                  </div>
+
+                  <p className="text-main break-words font-semibold">
                     {entidad.razonSocial}
                   </p>
-                  <p className="text-sm text-gray-400">
-                    {entidad.numeroDocumento} - {entidad.razonSocial}
+
+                  <p className="text-muted mt-1 text-sm">
+                    {entidad.direcciones?.length || 0} dirección(es) registrada(s)
                   </p>
                 </div>
 
                 {!isView && (
-                  <button
-                    type="button"
-                    onClick={() => onRemove(index)}
-                    className="text-sm text-red-400 hover:text-red-300"
-                  >
-                    Eliminar
-                  </button>
+                  <div className="flex shrink-0 gap-3 text-sm">
+                    <button
+                      type="button"
+                      onClick={() => onEdit(index)}
+                      className="text-blue-400 hover:text-blue-300"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onRemove(index)}
+                      className="text-red-400 hover:text-red-300"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
                 )}
               </div>
 
-              <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
-                {entidad.direcciones?.map((dir, i) => (
-                  <div key={dir.id || i} className={smallCardClass}>
-                    <p className="font-medium text-white">{dir.nombre}</p>
-                    <p className="text-gray-300">{dir.direccion}</p>
-                    <p className="text-gray-500">Ubigeo: {dir.ubigeo}</p>
-
-                    {dir.referencia && (
-                      <p className="text-gray-500">Ref: {dir.referencia}</p>
-                    )}
-
-                    {dir.codigoEstablecimientoSunat && (
-                      <p className="text-gray-500">
-                        Cod. SUNAT: {dir.codigoEstablecimientoSunat}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
+              {entidad.direcciones?.length > 0 && (
+                <div className="mt-4 grid grid-cols-1 gap-3">
+                  {entidad.direcciones.map((direccion, i) => (
+                    <DireccionCard
+                      key={direccion.id || `${tipo}-dir-${index}-${i}`}
+                      direccion={direccion}
+                      isView
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>
       )}
     </section>
+  );
+}
+
+function EntidadRelacionadaModal({
+  isOpen,
+  tipo,
+  entidadInicial,
+  editIndex,
+  entidadesExistentes,
+  onClose,
+  onSave,
+}) {
+  const [entidad, setEntidad] = useState({ ...initialEntidad, tipo });
+  const [direccionTemp, setDireccionTemp] = useState(initialDireccion);
+
+  const esEdicion = editIndex !== null && editIndex !== undefined;
+
+  const titulo = useMemo(() => {
+    const nombre = tipo === "REMITENTE" ? "remitente" : "destinatario";
+    return esEdicion ? `Editar ${nombre}` : `Nuevo ${nombre}`;
+  }, [tipo, esEdicion]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    if (entidadInicial) {
+      setEntidad({
+        ...initialEntidad,
+        ...entidadInicial,
+        tipo,
+        direcciones: Array.isArray(entidadInicial.direcciones)
+          ? entidadInicial.direcciones
+          : [],
+      });
+    } else {
+      setEntidad({ ...initialEntidad, tipo });
+    }
+
+    setDireccionTemp(initialDireccion);
+  }, [isOpen, entidadInicial, tipo]);
+
+  if (!isOpen) return null;
+
+  const handleEntidadChange = (e) => {
+    const { name, value } = e.target;
+    setEntidad((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleDireccionChange = (e) => {
+    const { name, value } = e.target;
+    setDireccionTemp((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const agregarDireccion = () => {
+    const direccionNormalizada = normalizarDireccion(direccionTemp);
+
+    if (
+      !direccionNormalizada.nombre ||
+      !direccionNormalizada.ubigeo ||
+      !direccionNormalizada.direccion
+    ) {
+      toast.error("Completa nombre, ubigeo y dirección");
+      return;
+    }
+
+    if (!validarUbigeo(direccionNormalizada.ubigeo)) {
+      toast.error("El ubigeo debe tener 6 dígitos numéricos");
+      return;
+    }
+
+    if (!validarCodigoSunat(direccionNormalizada.codigoEstablecimientoSunat)) {
+      toast.error("El código SUNAT debe tener 4 dígitos numéricos");
+      return;
+    }
+
+    setEntidad((prev) => ({
+      ...prev,
+      direcciones: [...prev.direcciones, direccionNormalizada],
+    }));
+
+    setDireccionTemp(initialDireccion);
+  };
+
+  const eliminarDireccion = (index) => {
+    setEntidad((prev) => ({
+      ...prev,
+      direcciones: prev.direcciones.filter((_, i) => i !== index),
+    }));
+  };
+
+  const guardarEntidad = () => {
+    const entidadNormalizada = normalizarEntidad(entidad, tipo);
+
+    if (!entidadNormalizada.numeroDocumento || !entidadNormalizada.razonSocial) {
+      toast.error("Completa el documento y la razón social");
+      return;
+    }
+
+    if (entidadNormalizada.direcciones.length === 0) {
+      toast.error("Agrega al menos una dirección");
+      return;
+    }
+
+    const existe = entidadesExistentes.some((item, index) => {
+      if (esEdicion && index === editIndex) return false;
+      return normalizarTexto(item.numeroDocumento) === entidadNormalizada.numeroDocumento;
+    });
+
+    if (existe) {
+      toast.error(
+        tipo === "REMITENTE"
+          ? "Este remitente ya fue agregado"
+          : "Este destinatario ya fue agregado"
+      );
+      return;
+    }
+
+    onSave(entidadNormalizada, editIndex);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-3 py-4 backdrop-blur-sm sm:px-4">
+      <div className="panel flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden">
+        <div className="flex items-start justify-between gap-4 border-b px-5 py-4 sm:px-6">
+          <div>
+            <h3 className="text-main text-xl font-bold">{titulo}</h3>
+            <p className="text-muted text-sm">
+              Registra la entidad y sus direcciones frecuentes.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-muted text-2xl hover:text-blue-500"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="flex-1 space-y-5 overflow-y-auto p-4 sm:p-6">
+          <section className={styles.section}>
+            <h4 className="text-main mb-4 font-semibold">Datos principales</h4>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
+              <div className="md:col-span-2">
+                <label className={styles.label}>Tipo doc.</label>
+                <TipoDocumentoSelect
+                  value={entidad.tipoDocumento}
+                  onChange={handleEntidadChange}
+                  inputClass={styles.input}
+                />
+              </div>
+
+              <div className="md:col-span-3">
+                <label className={styles.label}>N° documento</label>
+                <input
+                  type="text"
+                  name="numeroDocumento"
+                  value={entidad.numeroDocumento}
+                  onChange={handleEntidadChange}
+                  className={styles.input}
+                  placeholder="Ingrese el número de documento"
+                />
+              </div>
+
+              <div className="md:col-span-7">
+                <label className={styles.label}>Razón social</label>
+                <input
+                  type="text"
+                  name="razonSocial"
+                  value={entidad.razonSocial}
+                  onChange={handleEntidadChange}
+                  className={`${styles.input} uppercase`}
+                  placeholder={
+                    tipo === "REMITENTE"
+                      ? "Ingrese la razón social del remitente"
+                      : "Ingrese la razón social del destinatario"
+                  }
+                />
+              </div>
+            </div>
+          </section>
+
+          <section className={styles.section}>
+            <div className="mb-4">
+              <h4 className="text-main font-semibold">Agregar dirección</h4>
+              <p className="text-muted text-sm">
+                El ubigeo debe tener 6 dígitos y el código SUNAT 4 dígitos.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-12">
+              <div className="md:col-span-2">
+                <label className={styles.label}>Nombre</label>
+                <input
+                  type="text"
+                  name="nombre"
+                  value={direccionTemp.nombre}
+                  onChange={handleDireccionChange}
+                  className={`${styles.inputSoft} uppercase`}
+                  placeholder="Nombre corto de la dirección"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className={styles.label}>Ubigeo</label>
+                <input
+                  type="text"
+                  name="ubigeo"
+                  value={direccionTemp.ubigeo}
+                  onChange={handleDireccionChange}
+                  maxLength={6}
+                  className={styles.inputSoft}
+                  placeholder="Ingrese el ubigeo de 6 dígitos"
+                />
+              </div>
+
+              <div className="md:col-span-4">
+                <label className={styles.label}>Dirección</label>
+                <input
+                  type="text"
+                  name="direccion"
+                  value={direccionTemp.direccion}
+                  onChange={handleDireccionChange}
+                  className={`${styles.inputSoft} uppercase`}
+                  placeholder="Ingrese la dirección completa"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className={styles.label}>Cód. SUNAT</label>
+                <input
+                  type="text"
+                  name="codigoEstablecimientoSunat"
+                  value={direccionTemp.codigoEstablecimientoSunat}
+                  onChange={handleDireccionChange}
+                  maxLength={4}
+                  className={styles.inputSoft}
+                  placeholder="Ingrese el código SUNAT"
+                />
+              </div>
+
+              <div className="md:col-span-2 md:self-end">
+                <button
+                  type="button"
+                  onClick={agregarDireccion}
+                  className="btn-success w-full px-4 py-2"
+                >
+                  Agregar
+                </button>
+              </div>
+
+              <div className="md:col-span-12">
+                <label className={styles.label}>Referencia</label>
+                <input
+                  type="text"
+                  name="referencia"
+                  value={direccionTemp.referencia}
+                  onChange={handleDireccionChange}
+                  className={`${styles.inputSoft} uppercase`}
+                  placeholder="Ingrese una referencia opcional"
+                />
+              </div>
+            </div>
+
+            <div className="mt-4">
+              {entidad.direcciones.length === 0 ? (
+                <EmptyState text="Aún no agregaste direcciones." />
+              ) : (
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  {entidad.direcciones.map((direccion, index) => (
+                    <DireccionCard
+                      key={direccion.id || `dir-temp-${index}`}
+                      direccion={direccion}
+                      onRemove={() => eliminarDireccion(index)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
+
+        <div className="border-t px-5 py-4 sm:px-6">
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              onClick={onClose}
+              className="btn-secondary px-5 py-2"
+            >
+              Cancelar
+            </button>
+
+            <button
+              type="button"
+              onClick={guardarEntidad}
+              className="btn-primary px-5 py-2"
+            >
+              {esEdicion ? "Guardar cambios" : "Agregar al cliente"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -377,77 +579,39 @@ function ClienteModal({
   loading = false,
 }) {
   const [form, setForm] = useState(initialForm);
-  const [remitenteTemp, setRemitenteTemp] = useState(initialEntidad);
-  const [destinatarioTemp, setDestinatarioTemp] = useState(initialEntidad);
-  const [direccionRemitenteTemp, setDireccionRemitenteTemp] =
-    useState(initialDireccion);
-  const [direccionDestinatarioTemp, setDireccionDestinatarioTemp] =
-    useState(initialDireccion);
+  const [submodal, setSubmodal] = useState({
+    open: false,
+    tipo: "REMITENTE",
+    editIndex: null,
+    entidad: null,
+  });
 
   const isView = mode === "view";
   const isEdit = mode === "edit";
   const isCreate = mode === "create";
 
-  const normalizarMayuscula = (valor) => {
-    if (typeof valor !== "string") return "";
-    return valor.trim().toUpperCase();
-  };
-
-  const normalizarTexto = (valor) => {
-    if (typeof valor !== "string") return "";
-    return valor.trim();
-  };
-
-  const obtenerEntidadesPorTipo = (cliente, tipo) => {
-    const entidades =
-      cliente?.entidadesRelacionadas ||
-      cliente?.remitentes ||
-      cliente?.destinatarios ||
-      [];
-
-    if (!Array.isArray(entidades)) return [];
-
-    return entidades
-      .filter((entidad) => entidad.tipo === tipo)
-      .map((entidad) => ({
-        id: entidad.id,
-        tipo: entidad.tipo,
-        tipoDocumento: entidad.tipoDocumento || "6",
-        numeroDocumento: entidad.numeroDocumento || "",
-        razonSocial: entidad.razonSocial || "",
-        direccionFiscal: entidad.direccionFiscal || "",
-        direcciones: entidad.direcciones || [],
-      }));
-  };
-
   useEffect(() => {
     if (!isOpen) return;
 
     if (clienteSeleccionado && (isEdit || isView)) {
-      const remitentes =
-        clienteSeleccionado.remitentes ||
-        obtenerEntidadesPorTipo(clienteSeleccionado, "REMITENTE");
-
-      const destinatarios =
-        clienteSeleccionado.destinatarios ||
-        obtenerEntidadesPorTipo(clienteSeleccionado, "DESTINATARIO");
-
       setForm({
         tipoDocumento: clienteSeleccionado.tipoDocumento || "6",
         numeroDocumento: clienteSeleccionado.numeroDocumento || "",
         razonSocial: clienteSeleccionado.razonSocial || "",
         direccionFiscal: clienteSeleccionado.direccionFiscal || "",
-        remitentes,
-        destinatarios,
+        remitentes: obtenerEntidadesPorTipo(clienteSeleccionado, "REMITENTE"),
+        destinatarios: obtenerEntidadesPorTipo(clienteSeleccionado, "DESTINATARIO"),
       });
     } else if (isCreate) {
       setForm(initialForm);
     }
 
-    setRemitenteTemp(initialEntidad);
-    setDestinatarioTemp(initialEntidad);
-    setDireccionRemitenteTemp(initialDireccion);
-    setDireccionDestinatarioTemp(initialDireccion);
+    setSubmodal({
+      open: false,
+      tipo: "REMITENTE",
+      editIndex: null,
+      entidad: null,
+    });
   }, [isOpen, clienteSeleccionado, mode, isCreate, isEdit, isView]);
 
   if (!isOpen) return null;
@@ -458,296 +622,82 @@ function ClienteModal({
     view: "Detalle del cliente",
   }[mode];
 
-  const inputClass =
-    "w-full mt-1 bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white disabled:opacity-70 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500/40";
-
-  const inputDarkClass =
-    "w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-white disabled:opacity-70 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500/40";
-
-  const labelClass = "text-sm text-gray-300";
-  const sectionClass = "bg-gray-950 border border-gray-800 rounded-xl p-5";
-  const subSectionClass = "bg-gray-900 border border-gray-800 rounded-xl p-4";
-  const cardClass = "bg-gray-900 border border-gray-800 rounded-xl p-4";
-  const smallCardClass =
-    "bg-gray-950 border border-gray-800 rounded-lg p-3 text-sm";
-
-  const validarUbigeo = (ubigeo) => {
-    return /^\d{6}$/.test(ubigeo);
-  };
-
-  const validarCodigoSunat = (codigo) => {
-    return /^\d{4}$/.test(codigo);
-  };
-
   const handleClienteChange = (e) => {
     if (isView) return;
-
     const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const abrirNuevo = (tipo) => {
+    setSubmodal({
+      open: true,
+      tipo,
+      editIndex: null,
+      entidad: null,
+    });
+  };
+
+  const abrirEditar = (tipo, index) => {
+    const lista = tipo === "REMITENTE" ? form.remitentes : form.destinatarios;
+    setSubmodal({
+      open: true,
+      tipo,
+      editIndex: index,
+      entidad: lista[index],
+    });
+  };
+
+  const cerrarSubmodal = () => {
+    setSubmodal((prev) => ({ ...prev, open: false }));
+  };
+
+  const guardarEntidadRelacionada = (entidad, editIndex) => {
+    const campo = entidad.tipo === "REMITENTE" ? "remitentes" : "destinatarios";
+
+    setForm((prev) => {
+      const listaActual = Array.isArray(prev[campo]) ? prev[campo] : [];
+
+      if (editIndex !== null && editIndex !== undefined) {
+        return {
+          ...prev,
+          [campo]: listaActual.map((item, index) =>
+            index === editIndex ? entidad : item
+          ),
+        };
+      }
+
+      return {
+        ...prev,
+        [campo]: [...listaActual, entidad],
+      };
+    });
+
+    cerrarSubmodal();
+  };
+
+  const eliminarEntidad = (tipo, index) => {
+    const campo = tipo === "REMITENTE" ? "remitentes" : "destinatarios";
 
     setForm((prev) => ({
       ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleRemitenteChange = (e) => {
-    if (isView) return;
-
-    const { name, value } = e.target;
-
-    setRemitenteTemp((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleDestinatarioChange = (e) => {
-    if (isView) return;
-
-    const { name, value } = e.target;
-
-    setDestinatarioTemp((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleDireccionRemitenteChange = (e) => {
-    if (isView) return;
-
-    const { name, value } = e.target;
-
-    setDireccionRemitenteTemp((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleDireccionDestinatarioChange = (e) => {
-    if (isView) return;
-
-    const { name, value } = e.target;
-
-    setDireccionDestinatarioTemp((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const normalizarDireccion = (direccion) => ({
-    nombre: normalizarMayuscula(direccion.nombre),
-    ubigeo: normalizarTexto(direccion.ubigeo),
-    direccion: normalizarMayuscula(direccion.direccion),
-    referencia: normalizarMayuscula(direccion.referencia),
-    codigoEstablecimientoSunat:
-      normalizarTexto(direccion.codigoEstablecimientoSunat) || "0000",
-  });
-
-  const agregarDireccionRemitenteTemp = () => {
-    if (isView) return;
-
-    const direccionNormalizada = normalizarDireccion(direccionRemitenteTemp);
-
-    if (
-      !direccionNormalizada.nombre ||
-      !direccionNormalizada.ubigeo ||
-      !direccionNormalizada.direccion
-    ) {
-      toast.error("Completa nombre, ubigeo y dirección del remitente");
-      return;
-    }
-
-    if (!validarUbigeo(direccionNormalizada.ubigeo)) {
-      toast.error("El ubigeo debe tener 6 dígitos numéricos");
-      return;
-    }
-
-    if (!validarCodigoSunat(direccionNormalizada.codigoEstablecimientoSunat)) {
-      toast.error("El código de establecimiento SUNAT debe tener 4 dígitos numéricos");
-      return;
-    }
-
-    setRemitenteTemp((prev) => ({
-      ...prev,
-      direcciones: [...prev.direcciones, direccionNormalizada],
-    }));
-
-    setDireccionRemitenteTemp(initialDireccion);
-  };
-
-  const agregarDireccionDestinatarioTemp = () => {
-    if (isView) return;
-
-    const direccionNormalizada = normalizarDireccion(direccionDestinatarioTemp);
-
-    if (
-      !direccionNormalizada.nombre ||
-      !direccionNormalizada.ubigeo ||
-      !direccionNormalizada.direccion
-    ) {
-      toast.error("Completa nombre, ubigeo y dirección del destinatario");
-      return;
-    }
-
-    if (!validarUbigeo(direccionNormalizada.ubigeo)) {
-      toast.error("El ubigeo debe tener 6 dígitos numéricos");
-      return;
-    }
-
-    if (!validarCodigoSunat(direccionNormalizada.codigoEstablecimientoSunat)) {
-      toast.error("El código de establecimiento SUNAT debe tener 4 dígitos numéricos");
-      return;
-    }
-
-    setDestinatarioTemp((prev) => ({
-      ...prev,
-      direcciones: [...prev.direcciones, direccionNormalizada],
-    }));
-
-    setDireccionDestinatarioTemp(initialDireccion);
-  };
-
-  const eliminarDireccionRemitenteTemp = (index) => {
-    if (isView) return;
-
-    setRemitenteTemp((prev) => ({
-      ...prev,
-      direcciones: prev.direcciones.filter((_, i) => i !== index),
-    }));
-  };
-
-  const eliminarDireccionDestinatarioTemp = (index) => {
-    if (isView) return;
-
-    setDestinatarioTemp((prev) => ({
-      ...prev,
-      direcciones: prev.direcciones.filter((_, i) => i !== index),
-    }));
-  };
-
-  const agregarRemitente = () => {
-    if (isView) return;
-
-    const primeraDireccion = remitenteTemp.direcciones?.[0];
-
-    const remitenteNormalizado = {
-      tipo: "REMITENTE",
-      tipoDocumento: remitenteTemp.tipoDocumento || "6",
-      numeroDocumento: normalizarTexto(remitenteTemp.numeroDocumento),
-      razonSocial: normalizarMayuscula(remitenteTemp.razonSocial),
-      direccionFiscal: primeraDireccion?.direccion || "",
-      direcciones: remitenteTemp.direcciones || [],
-    };
-
-    if (
-      !remitenteNormalizado.numeroDocumento ||
-      !remitenteNormalizado.razonSocial
-    ) {
-      toast.error("Completa los datos del remitente");
-      return;
-    }
-
-    if (remitenteNormalizado.direcciones.length === 0) {
-      toast.error("Agrega al menos una dirección para el remitente");
-      return;
-    }
-
-    const existe = form.remitentes.some(
-      (item) =>
-        normalizarTexto(item.numeroDocumento) ===
-        remitenteNormalizado.numeroDocumento
-    );
-
-    if (existe) {
-      toast.error("Este remitente ya fue agregado");
-      return;
-    }
-
-    setForm((prev) => ({
-      ...prev,
-      remitentes: [...prev.remitentes, remitenteNormalizado],
-    }));
-
-    setRemitenteTemp(initialEntidad);
-    setDireccionRemitenteTemp(initialDireccion);
-  };
-
-  const agregarDestinatario = () => {
-    if (isView) return;
-
-    const primeraDireccion = destinatarioTemp.direcciones?.[0];
-
-    const destinatarioNormalizado = {
-      tipo: "DESTINATARIO",
-      tipoDocumento: destinatarioTemp.tipoDocumento || "6",
-      numeroDocumento: normalizarTexto(destinatarioTemp.numeroDocumento),
-      razonSocial: normalizarMayuscula(destinatarioTemp.razonSocial),
-      direccionFiscal: primeraDireccion?.direccion || "",
-      direcciones: destinatarioTemp.direcciones || [],
-    };
-
-    if (
-      !destinatarioNormalizado.numeroDocumento ||
-      !destinatarioNormalizado.razonSocial
-    ) {
-      toast.error("Completa los datos del destinatario");
-      return;
-    }
-
-    if (destinatarioNormalizado.direcciones.length === 0) {
-      toast.error("Agrega al menos una dirección para el destinatario");
-      return;
-    }
-
-    const existe = form.destinatarios.some(
-      (item) =>
-        normalizarTexto(item.numeroDocumento) ===
-        destinatarioNormalizado.numeroDocumento
-    );
-
-    if (existe) {
-      toast.error("Este destinatario ya fue agregado");
-      return;
-    }
-
-    setForm((prev) => ({
-      ...prev,
-      destinatarios: [...prev.destinatarios, destinatarioNormalizado],
-    }));
-
-    setDestinatarioTemp(initialEntidad);
-    setDireccionDestinatarioTemp(initialDireccion);
-  };
-
-  const eliminarRemitente = (index) => {
-    if (isView) return;
-
-    setForm((prev) => ({
-      ...prev,
-      remitentes: prev.remitentes.filter((_, i) => i !== index),
-    }));
-  };
-
-  const eliminarDestinatario = (index) => {
-    if (isView) return;
-
-    setForm((prev) => ({
-      ...prev,
-      destinatarios: prev.destinatarios.filter((_, i) => i !== index),
+      [campo]: prev[campo].filter((_, i) => i !== index),
     }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (isView) return;
 
     const data = {
+      id: clienteSeleccionado?.id,
       tipoDocumento: form.tipoDocumento || "6",
       numeroDocumento: normalizarTexto(form.numeroDocumento),
       razonSocial: normalizarMayuscula(form.razonSocial),
       direccionFiscal: normalizarMayuscula(form.direccionFiscal),
-      entidadesRelacionadas: [...form.remitentes, ...form.destinatarios],
+      entidadesRelacionadas: [
+        ...form.remitentes.map((item) => normalizarEntidad(item, "REMITENTE")),
+        ...form.destinatarios.map((item) => normalizarEntidad(item, "DESTINATARIO")),
+      ],
     };
 
     if (!data.numeroDocumento || !data.razonSocial || !data.direccionFiscal) {
@@ -759,186 +709,163 @@ function ClienteModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-3 py-4 sm:px-4">
-      <div className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-gray-800 bg-gray-900 shadow-xl">
-        <div className="flex items-start justify-between gap-4 border-b border-gray-800 bg-gray-900 px-5 py-4 sm:px-6">
-          <div>
-            <h2 className="text-xl font-bold text-white">{titulo}</h2>
-            <p className="text-sm text-gray-400">
-              Cliente, remitentes, destinatarios y direcciones frecuentes.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={loading}
-            className="text-2xl text-gray-400 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            ×
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
-          <div className="flex-1 space-y-6 overflow-y-auto p-4 sm:p-6">
-            <section className={sectionClass}>
-              <div className="mb-4">
-                <h3 className="text-lg font-semibold text-white">
-                  Datos del cliente
-                </h3>
-                <p className="text-sm text-gray-400">
-                  Información principal de la empresa solicitante.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
-                <div className="md:col-span-2">
-                  <label className={labelClass}>Tipo doc.</label>
-                  <TipoDocumentoSelect
-                    value={form.tipoDocumento}
-                    onChange={handleClienteChange}
-                    disabled={isView}
-                    inputClass={inputClass}
-                  />
-                </div>
-
-                <div className="md:col-span-3">
-                  <label className={labelClass}>N° documento</label>
-                  <input
-                    type="text"
-                    name="numeroDocumento"
-                    value={form.numeroDocumento}
-                    onChange={handleClienteChange}
-                    disabled={isView}
-                    className={inputClass}
-                    placeholder="20600000000"
-                  />
-                </div>
-
-                <div className="md:col-span-7">
-                  <label className={labelClass}>Razón social</label>
-                  <input
-                    type="text"
-                    name="razonSocial"
-                    value={form.razonSocial}
-                    onChange={handleClienteChange}
-                    disabled={isView}
-                    className={`${inputClass} uppercase`}
-                    placeholder="TRANSPORTES J EIRL"
-                  />
-                </div>
-
-                <div className="md:col-span-12">
-                  <label className={labelClass}>Dirección fiscal</label>
-                  <input
-                    type="text"
-                    name="direccionFiscal"
-                    value={form.direccionFiscal}
-                    onChange={handleClienteChange}
-                    disabled={isView}
-                    className={`${inputClass} uppercase`}
-                    placeholder="Dirección fiscal"
-                  />
-                </div>
-              </div>
-            </section>
-
-            {!isView && (
-              <EntidadForm
-                tipo="remitente"
-                entidad={remitenteTemp}
-                direccion={direccionRemitenteTemp}
-                onEntidadChange={handleRemitenteChange}
-                onDireccionChange={handleDireccionRemitenteChange}
-                onAddDireccion={agregarDireccionRemitenteTemp}
-                onRemoveDireccion={eliminarDireccionRemitenteTemp}
-                onAddEntidad={agregarRemitente}
-                placeholderRazonSocial="AGENCIA DE ADUANAS SLI"
-                placeholderDireccion="CALLAO"
-                inputClass={inputClass}
-                inputDarkClass={inputDarkClass}
-                labelClass={labelClass}
-                sectionClass={sectionClass}
-                subSectionClass={subSectionClass}
-                smallCardClass={smallCardClass}
-                isView={isView}
-              />
-            )}
-
-            <ListaEntidades
-              titulo="Remitentes registrados"
-              emptyText="No hay remitentes registrados."
-              entidades={form.remitentes}
-              onRemove={eliminarRemitente}
-              isView={isView}
-              sectionClass={sectionClass}
-              cardClass={cardClass}
-              smallCardClass={smallCardClass}
-            />
-
-            {!isView && (
-              <EntidadForm
-                tipo="destinatario"
-                entidad={destinatarioTemp}
-                direccion={direccionDestinatarioTemp}
-                onEntidadChange={handleDestinatarioChange}
-                onDireccionChange={handleDireccionDestinatarioChange}
-                onAddDireccion={agregarDireccionDestinatarioTemp}
-                onRemoveDireccion={eliminarDireccionDestinatarioTemp}
-                onAddEntidad={agregarDestinatario}
-                placeholderRazonSocial="MANUCHAR"
-                placeholderDireccion="LURÍN"
-                inputClass={inputClass}
-                inputDarkClass={inputDarkClass}
-                labelClass={labelClass}
-                sectionClass={sectionClass}
-                subSectionClass={subSectionClass}
-                smallCardClass={smallCardClass}
-                isView={isView}
-              />
-            )}
-
-            <ListaEntidades
-              titulo="Destinatarios registrados"
-              emptyText="No hay destinatarios registrados."
-              entidades={form.destinatarios}
-              onRemove={eliminarDestinatario}
-              isView={isView}
-              sectionClass={sectionClass}
-              cardClass={cardClass}
-              smallCardClass={smallCardClass}
-            />
-          </div>
-
-          <div className="border-t border-gray-800 bg-gray-900 px-5 py-4 sm:px-6">
-            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={loading}
-                className="rounded-lg bg-gray-700 px-5 py-2 text-white hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {isView ? "Cerrar" : "Cancelar"}
-              </button>
-
-              {!isView && (
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="rounded-lg bg-blue-600 px-5 py-2 text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-900"
-                >
-                  {loading
-                    ? "Guardando..."
-                    : isCreate
-                    ? "Guardar cliente"
-                    : "Actualizar cliente"}
-                </button>
-              )}
+    <>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-3 py-4 backdrop-blur-sm sm:px-4">
+        <div className="panel flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden">
+          <div className="flex items-start justify-between gap-4 border-b px-5 py-4 sm:px-6">
+            <div>
+              <h2 className="text-main text-xl font-bold">{titulo}</h2>
+              <p className="text-muted text-sm">
+                Cliente, remitentes, destinatarios y direcciones frecuentes.
+              </p>
             </div>
+
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={loading}
+              className="text-muted text-2xl hover:text-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              ×
+            </button>
           </div>
-        </form>
+
+          <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+            <div className="flex-1 space-y-6 overflow-y-auto p-4 sm:p-6">
+              <section className={styles.section}>
+                <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <h3 className="text-main text-lg font-semibold">
+                      Datos del cliente
+                    </h3>
+                    <p className="text-muted text-sm">
+                      Información principal de la empresa solicitante.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    <span className="info-tile rounded-full px-3 py-1 text-muted">
+                      {form.remitentes.length} remitente(s)
+                    </span>
+                    <span className="info-tile rounded-full px-3 py-1 text-muted">
+                      {form.destinatarios.length} destinatario(s)
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
+                  <div className="md:col-span-2">
+                    <label className={styles.label}>Tipo doc.</label>
+                    <TipoDocumentoSelect
+                      value={form.tipoDocumento}
+                      onChange={handleClienteChange}
+                      disabled={isView}
+                      inputClass={styles.input}
+                    />
+                  </div>
+
+                  <div className="md:col-span-3">
+                    <label className={styles.label}>N° documento</label>
+                    <input
+                      type="text"
+                      name="numeroDocumento"
+                      value={form.numeroDocumento}
+                      onChange={handleClienteChange}
+                      disabled={isView}
+                      className={styles.input}
+                      placeholder="Ingrese el número de documento"
+                    />
+                  </div>
+
+                  <div className="md:col-span-7">
+                    <label className={styles.label}>Razón social</label>
+                    <input
+                      type="text"
+                      name="razonSocial"
+                      value={form.razonSocial}
+                      onChange={handleClienteChange}
+                      disabled={isView}
+                      className={`${styles.input} uppercase`}
+                      placeholder="Ingrese la razón social del cliente"
+                    />
+                  </div>
+
+                  <div className="md:col-span-12">
+                    <label className={styles.label}>Dirección fiscal</label>
+                    <input
+                      type="text"
+                      name="direccionFiscal"
+                      value={form.direccionFiscal}
+                      onChange={handleClienteChange}
+                      disabled={isView}
+                      className={`${styles.input} uppercase`}
+                      placeholder="Ingrese la dirección fiscal del cliente"
+                    />
+                  </div>
+                </div>
+              </section>
+
+              <EntidadesResumen
+                tipo="REMITENTE"
+                entidades={form.remitentes}
+                onAdd={() => abrirNuevo("REMITENTE")}
+                onEdit={(index) => abrirEditar("REMITENTE", index)}
+                onRemove={(index) => eliminarEntidad("REMITENTE", index)}
+                isView={isView}
+              />
+
+              <EntidadesResumen
+                tipo="DESTINATARIO"
+                entidades={form.destinatarios}
+                onAdd={() => abrirNuevo("DESTINATARIO")}
+                onEdit={(index) => abrirEditar("DESTINATARIO", index)}
+                onRemove={(index) => eliminarEntidad("DESTINATARIO", index)}
+                isView={isView}
+              />
+            </div>
+
+            <div className="border-t px-5 py-4 sm:px-6">
+              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  disabled={loading}
+                  className="btn-secondary px-5 py-2"
+                >
+                  {isView ? "Cerrar" : "Cancelar"}
+                </button>
+
+                {!isView && (
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="btn-primary px-5 py-2"
+                  >
+                    {loading
+                      ? "Guardando..."
+                      : isCreate
+                      ? "Guardar cliente"
+                      : "Actualizar cliente"}
+                  </button>
+                )}
+              </div>
+            </div>
+          </form>
+        </div>
       </div>
-    </div>
+
+      <EntidadRelacionadaModal
+        isOpen={submodal.open}
+        tipo={submodal.tipo}
+        entidadInicial={submodal.entidad}
+        editIndex={submodal.editIndex}
+        entidadesExistentes={
+          submodal.tipo === "REMITENTE" ? form.remitentes : form.destinatarios
+        }
+        onClose={cerrarSubmodal}
+        onSave={guardarEntidadRelacionada}
+      />
+    </>
   );
 }
 

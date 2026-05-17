@@ -13,11 +13,11 @@ export default {
         inter: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       backgroundColor: {
-        background: "#202020",
-        surface: "#2E2E2E",
-        navbar: "#3A3A3A",
-        card: "#2E2E2E",
-        input: "#1C1C1C",
+        background: "var(--app-bg)",
+        surface: "var(--app-surface)",
+        navbar: "var(--app-elevated)",
+        card: "var(--app-surface)",
+        input: "var(--app-surface-muted)",
         // nuevos botones
         "button-primary": "#3B82F6", // Azul moderno
         "button-secondary": "#A5A5A5",
@@ -27,8 +27,8 @@ export default {
         focus: "#00BFA5",
       },
       textColor: {
-        "text-primary": "#FFFFFF",
-        "text-secondary": "#B0B0B0",
+        "text-primary": "var(--app-text)",
+        "text-secondary": "var(--app-muted)",
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-out forwards',
