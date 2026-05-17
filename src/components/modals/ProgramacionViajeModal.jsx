@@ -3,15 +3,16 @@ import { useOrdenServicio } from "../../context/OrdenServicioContext";
 import { useUnidades } from "../../context/UnidadContext";
 import { useConductores } from "../../context/ConductorContext";
 import { useProgramacionViaje } from "../../context/ProgramacionViajeContext";
+import { getTodayInputDate } from "../../utils/date";
 
-const initialForm = {
+const createInitialForm = () => ({
   ordenServicioId: "",
   vehiculoPrincipalId: "",
   vehiculoSecundarioId: "",
   conductorId: "",
-  fechaInicioTraslado: "",
+  fechaInicioTraslado: getTodayInputDate(),
   observaciones: "",
-};
+});
 
 function ProgramacionViajeModal({
   isOpen,
@@ -57,7 +58,7 @@ function ProgramacionViajeModal({
     getConductores,
   ]);
 
-  const [form, setForm] = useState(initialForm);
+  const [form, setForm] = useState(createInitialForm);
   const [error, setError] = useState("");
 
   const isView = mode === "view";
@@ -77,6 +78,27 @@ function ProgramacionViajeModal({
     if (Number.isNaN(fechaObj.getTime())) return "";
 
     return fechaObj.toISOString().slice(0, 10);
+  };
+
+  const formatearFechaHora = (fecha) => {
+    if (!fecha) return "-";
+
+    const fechaObj = new Date(fecha);
+
+    if (Number.isNaN(fechaObj.getTime())) return "-";
+
+    return fechaObj.toLocaleString("es-PE", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const formatearStandby = (minutos) => {
+    if (minutos === null || minutos === undefined) return "-";
+    return `${minutos} min (${(minutos / 60).toFixed(2)} h)`;
   };
 
   useEffect(() => {
@@ -123,7 +145,7 @@ function ProgramacionViajeModal({
         observaciones: data.observaciones || "",
       });
     } else {
-      setForm(initialForm);
+      setForm(createInitialForm());
     }
   }, [modalOpen, isView, data]);
 
@@ -149,12 +171,13 @@ function ProgramacionViajeModal({
 
   const ordenesDisponibles = listaOrdenes.filter((orden) => {
     const estado = normalizar(orden.estado);
+    const cantidadViajes = Number(orden.cantidadViajes || 1);
+    const viajesProgramados = Number(orden.viajesProgramados || 0);
 
     return (
-      !orden.viajeCreado &&
       estado !== "ANULADA" &&
       estado !== "FINALIZADA" &&
-      estado !== "PROGRAMADA"
+      viajesProgramados < cantidadViajes
     );
   });
 
@@ -167,8 +190,43 @@ function ProgramacionViajeModal({
     );
   };
 
+  const formatearResumenCarga = (orden) => {
+    const tipo = orden?.tipoCarga
+      ? orden.tipoCarga.replace("_", " ")
+      : "Carga sin tipo";
+    const clasificacion = orden?.clasificacionCarga || "GENERAL";
+    const dimension =
+      orden?.tipoCarga === "CONTENEDOR" && orden?.dimensionCarga
+        ? ` ${orden.dimensionCarga} pies`
+        : "";
+
+    return `${tipo} ${clasificacion}${dimension}`;
+  };
+
+  const formatearCupoViajes = (orden) => {
+    const cantidadViajes = orden?.cantidadViajes || 1;
+    const viajesProgramados = orden?.viajesProgramados || 0;
+
+    return `${viajesProgramados}/${cantidadViajes} viajes`;
+  };
+
   const obtenerPlaca = (unidad) => {
     return unidad?.placa || unidad?.numeroPlaca || unidad?.placaUnidad || "";
+  };
+
+  const obtenerPermisosTexto = (item) => {
+    const permisos = [
+      item?.permisoIMO ? "IMO" : null,
+      item?.permisoIQBF ? "IQBF" : null,
+    ].filter(Boolean);
+
+    return permisos.length ? permisos.join("/") : "GENERAL";
+  };
+
+  const validarPermisoPorClasificacion = (item, clasificacion) => {
+    if (clasificacion === "IMO") return Boolean(item?.permisoIMO);
+    if (clasificacion === "IQBF") return Boolean(item?.permisoIQBF);
+    return true;
   };
 
   const handleChange = (e) => {
@@ -181,7 +239,7 @@ function ProgramacionViajeModal({
   };
 
   const cerrarModal = () => {
-    setForm(initialForm);
+    setForm(createInitialForm());
     setError("");
     onClose?.();
   };
@@ -217,6 +275,17 @@ function ProgramacionViajeModal({
       const unidadSeleccionada = tractos.find(
         (unidad) => String(getId(unidad)) === String(form.vehiculoPrincipalId)
       );
+      const carretaSeleccionada = carretas.find(
+        (unidad) => String(getId(unidad)) === String(form.vehiculoSecundarioId)
+      );
+      const conductorSeleccionado = listaConductores.find(
+        (conductor) => String(getId(conductor)) === String(form.conductorId)
+      );
+      const ordenSeleccionada = listaOrdenes.find(
+        (orden) => String(getId(orden)) === String(form.ordenServicioId)
+      );
+      const clasificacionCarga =
+        ordenSeleccionada?.clasificacionCarga || "GENERAL";
 
       if (!unidadSeleccionada) {
         setError("El vehículo principal debe ser un TRACTO activo");
@@ -228,6 +297,43 @@ function ProgramacionViajeModal({
         String(form.vehiculoPrincipalId) === String(form.vehiculoSecundarioId)
       ) {
         setError("El tracto y la carreta no pueden ser la misma unidad");
+        return;
+      }
+
+      if (
+        !validarPermisoPorClasificacion(
+          unidadSeleccionada,
+          clasificacionCarga
+        )
+      ) {
+        setError(
+          `No se puede asignar: el tracto no tiene permiso ${clasificacionCarga}`
+        );
+        return;
+      }
+
+      if (
+        carretaSeleccionada &&
+        !validarPermisoPorClasificacion(
+          carretaSeleccionada,
+          clasificacionCarga
+        )
+      ) {
+        setError(
+          `No se puede asignar: la carreta no tiene permiso ${clasificacionCarga}`
+        );
+        return;
+      }
+
+      if (
+        !validarPermisoPorClasificacion(
+          conductorSeleccionado,
+          clasificacionCarga
+        )
+      ) {
+        setError(
+          `No se puede asignar: el conductor no tiene permiso ${clasificacionCarga}`
+        );
         return;
       }
 
@@ -265,8 +371,8 @@ function ProgramacionViajeModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-      <div className="w-full max-w-3xl rounded-xl border border-gray-700 bg-gray-900 p-6 text-white shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-4 backdrop-blur-sm">
+      <div className="panel w-full max-w-3xl p-6">
         <div className="mb-5 flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold">
@@ -275,7 +381,7 @@ function ProgramacionViajeModal({
                 : "Nueva programación de viaje"}
             </h2>
 
-            <p className="text-sm text-gray-400">
+            <p className="text-muted text-sm">
               Asigna orden, tracto, carreta y conductor.
             </p>
           </div>
@@ -283,7 +389,7 @@ function ProgramacionViajeModal({
           <button
             type="button"
             onClick={cerrarModal}
-            className="text-2xl text-gray-400 hover:text-white"
+            className="text-muted text-2xl hover:text-blue-500"
           >
             ×
           </button>
@@ -295,12 +401,43 @@ function ProgramacionViajeModal({
           </div>
         )}
 
+        {isView && data && (
+          <div className="mb-4 grid gap-3 rounded-lg border border-[var(--app-border)] p-3 text-sm md:grid-cols-2">
+            <div>
+              <p className="text-faint text-xs">Llegada cliente</p>
+              <p className="text-main font-semibold">
+                {formatearFechaHora(data.fechaHoraLlegadaCliente)}
+              </p>
+            </div>
+            <div>
+              <p className="text-faint text-xs">Entrega</p>
+              <p className="text-main font-semibold">
+                {formatearFechaHora(data.fechaHoraEntrega)}
+              </p>
+            </div>
+            <div>
+              <p className="text-faint text-xs">Standby</p>
+              <p className="text-main font-semibold">
+                {formatearStandby(data.standbyMinutos)}
+              </p>
+            </div>
+            <div>
+              <p className="text-faint text-xs">Historial</p>
+              <p className="text-main font-semibold">
+                {Array.isArray(data.historialEstados)
+                  ? `${data.historialEstados.length} cambio(s)`
+                  : "0 cambio(s)"}
+              </p>
+            </div>
+          </div>
+        )}
+
         <form
           onSubmit={handleSubmit}
           className="grid grid-cols-1 gap-4 md:grid-cols-2"
         >
           <div className="md:col-span-2">
-            <label className="mb-1 block text-sm text-gray-300">
+            <label className="text-muted mb-1 block text-sm">
               Orden de servicio
             </label>
 
@@ -309,7 +446,7 @@ function ProgramacionViajeModal({
               value={form.ordenServicioId}
               onChange={handleChange}
               disabled={isView}
-              className="w-full rounded-lg border border-gray-700 bg-gray-800 p-3 outline-none disabled:opacity-70"
+              className="input p-3"
               required
             >
               <option value="">Seleccionar orden de servicio</option>
@@ -317,7 +454,9 @@ function ProgramacionViajeModal({
               {isView && data?.ordenServicio && (
                 <option value={form.ordenServicioId}>
                   {data.ordenServicio?.numeroOrden || "Orden seleccionada"} -{" "}
-                  {obtenerRazonSocialCliente(data.ordenServicio)}
+                  {obtenerRazonSocialCliente(data.ordenServicio)} -{" "}
+                  {formatearResumenCarga(data.ordenServicio)} -{" "}
+                  {formatearCupoViajes(data.ordenServicio)}
                 </option>
               )}
 
@@ -325,14 +464,15 @@ function ProgramacionViajeModal({
                 ordenesDisponibles.map((orden) => (
                   <option key={getId(orden)} value={getId(orden)}>
                     {orden.numeroOrden || "SIN N°"} -{" "}
-                    {obtenerRazonSocialCliente(orden)}
+                    {obtenerRazonSocialCliente(orden)} -{" "}
+                    {formatearResumenCarga(orden)} - {formatearCupoViajes(orden)}
                   </option>
                 ))}
             </select>
           </div>
 
           <div>
-            <label className="mb-1 block text-sm text-gray-300">
+            <label className="text-muted mb-1 block text-sm">
               Vehículo principal / Tracto
             </label>
 
@@ -341,7 +481,7 @@ function ProgramacionViajeModal({
               value={form.vehiculoPrincipalId}
               onChange={handleChange}
               disabled={isView}
-              className="w-full rounded-lg border border-gray-700 bg-gray-800 p-3 outline-none disabled:opacity-70"
+              className="input p-3"
               required
             >
               <option value="">Seleccionar TRACTO</option>
@@ -350,6 +490,7 @@ function ProgramacionViajeModal({
                 <option key={getId(unidad)} value={getId(unidad)}>
                   {obtenerPlaca(unidad) || "SIN PLACA"}
                   {unidad.marca ? ` - ${unidad.marca}` : ""}
+                  {` - ${obtenerPermisosTexto(unidad)}`}
                 </option>
               ))}
             </select>
@@ -362,7 +503,7 @@ function ProgramacionViajeModal({
           </div>
 
           <div>
-            <label className="mb-1 block text-sm text-gray-300">
+            <label className="text-muted mb-1 block text-sm">
               Vehículo secundario / Carreta
             </label>
 
@@ -371,7 +512,7 @@ function ProgramacionViajeModal({
               value={form.vehiculoSecundarioId}
               onChange={handleChange}
               disabled={isView}
-              className="w-full rounded-lg border border-gray-700 bg-gray-800 p-3 outline-none disabled:opacity-70"
+              className="input p-3"
             >
               <option value="">Seleccionar CARRETA</option>
 
@@ -379,6 +520,7 @@ function ProgramacionViajeModal({
                 <option key={getId(unidad)} value={getId(unidad)}>
                   {obtenerPlaca(unidad) || "SIN PLACA"}
                   {unidad.marca ? ` - ${unidad.marca}` : ""}
+                  {` - ${obtenerPermisosTexto(unidad)}`}
                 </option>
               ))}
             </select>
@@ -391,7 +533,7 @@ function ProgramacionViajeModal({
           </div>
 
           <div>
-            <label className="mb-1 block text-sm text-gray-300">
+            <label className="text-muted mb-1 block text-sm">
               Conductor
             </label>
 
@@ -400,14 +542,15 @@ function ProgramacionViajeModal({
               value={form.conductorId}
               onChange={handleChange}
               disabled={isView}
-              className="w-full rounded-lg border border-gray-700 bg-gray-800 p-3 outline-none disabled:opacity-70"
+              className="input p-3"
               required
             >
               <option value="">Seleccionar conductor</option>
 
               {listaConductores.map((conductor) => (
                 <option key={getId(conductor)} value={getId(conductor)}>
-                  {conductor.nombres} {conductor.apellidos}
+                  {conductor.nombres} {conductor.apellidos} -{" "}
+                  {obtenerPermisosTexto(conductor)}
                 </option>
               ))}
             </select>
@@ -420,7 +563,7 @@ function ProgramacionViajeModal({
           </div>
 
           <div>
-            <label className="mb-1 block text-sm text-gray-300">
+            <label className="text-muted mb-1 block text-sm">
               Fecha inicio traslado
             </label>
 
@@ -430,13 +573,13 @@ function ProgramacionViajeModal({
               value={form.fechaInicioTraslado}
               onChange={handleChange}
               disabled={isView}
-              className="w-full rounded-lg border border-gray-700 bg-gray-800 p-3 outline-none disabled:opacity-70"
+              className="input p-3"
               required
             />
           </div>
 
           <div className="md:col-span-2">
-            <label className="mb-1 block text-sm text-gray-300">
+            <label className="text-muted mb-1 block text-sm">
               Observaciones
             </label>
 
@@ -445,8 +588,8 @@ function ProgramacionViajeModal({
               value={form.observaciones}
               onChange={handleChange}
               disabled={isView}
-              placeholder="Observaciones"
-              className="w-full resize-none rounded-lg border border-gray-700 bg-gray-800 p-3 outline-none disabled:opacity-70"
+              placeholder="Indique una observación para la programación"
+              className="input resize-none p-3"
               rows="3"
             />
           </div>
@@ -455,7 +598,7 @@ function ProgramacionViajeModal({
             <button
               type="button"
               onClick={cerrarModal}
-              className="rounded-lg bg-gray-700 px-4 py-2 hover:bg-gray-600"
+              className="btn-secondary px-4 py-2"
             >
               {isView ? "Cerrar" : "Cancelar"}
             </button>
@@ -463,7 +606,7 @@ function ProgramacionViajeModal({
             {!isView && (
               <button
                 type="submit"
-                className="rounded-lg bg-blue-600 px-4 py-2 font-semibold hover:bg-blue-700"
+                className="btn-primary px-4 py-2"
               >
                 Guardar programación
               </button>

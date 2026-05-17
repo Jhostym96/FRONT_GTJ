@@ -12,6 +12,10 @@ import {
   obtenerUrlTicketGuiaTransportistaRequest,
   obtenerPdfOficialGuiaTransportistaRequest,
 } from "../api/guiaTransportista";
+import {
+  obtenerMensajeErrorApi,
+  obtenerMensajesErrorApi,
+} from "../utils/apiErrorMessages";
 
 const GuiaTransportistaContext = createContext();
 
@@ -45,13 +49,13 @@ export const GuiaTransportistaProvider = ({ children }) => {
       try {
         const texto = await data.text();
         const json = JSON.parse(texto);
-        return json.message || mensajePorDefecto;
+        return obtenerMensajeErrorApi(json, mensajePorDefecto);
       } catch {
         return mensajePorDefecto;
       }
     }
 
-    return data?.message || mensajePorDefecto;
+    return obtenerMensajeErrorApi(data, mensajePorDefecto);
   };
 
   const obtenerGuiasTransportista = async () => {
@@ -60,10 +64,12 @@ export const GuiaTransportistaProvider = ({ children }) => {
       const res = await obtenerGuiasTransportistaRequest();
       setGuiasTransportista(res.data);
     } catch (error) {
-      setErrorsGuia([
-        error.response?.data?.message ||
-          "Error al obtener las guías de transportista",
-      ]);
+      setErrorsGuia(
+        obtenerMensajesErrorApi(
+          error,
+          "Error al obtener las guías de transportista"
+        )
+      );
     } finally {
       setLoadingGuia(false);
     }
@@ -76,10 +82,12 @@ export const GuiaTransportistaProvider = ({ children }) => {
       setGuiaSeleccionada(res.data);
       return res.data;
     } catch (error) {
-      setErrorsGuia([
-        error.response?.data?.message ||
-          "Error al obtener la guía de transportista",
-      ]);
+      setErrorsGuia(
+        obtenerMensajesErrorApi(
+          error,
+          "Error al obtener la guía de transportista"
+        )
+      );
       throw error;
     } finally {
       setLoadingGuia(false);
@@ -98,11 +106,12 @@ export const GuiaTransportistaProvider = ({ children }) => {
 
       return res.data;
     } catch (error) {
-      const mensaje =
-        error.response?.data?.message ||
-        "Error al crear la guía de transportista";
-
-      setErrorsGuia([mensaje]);
+      setErrorsGuia(
+        obtenerMensajesErrorApi(
+          error,
+          "Error al crear la guía de transportista"
+        )
+      );
       throw error;
     } finally {
       setLoadingGuia(false);
@@ -128,11 +137,12 @@ export const GuiaTransportistaProvider = ({ children }) => {
 
       return res.data;
     } catch (error) {
-      const mensaje =
-        error.response?.data?.message ||
-        "Error al actualizar la guía de transportista";
-
-      setErrorsGuia([mensaje]);
+      setErrorsGuia(
+        obtenerMensajesErrorApi(
+          error,
+          "Error al actualizar la guía de transportista"
+        )
+      );
       throw error;
     } finally {
       setLoadingGuia(false);
@@ -150,10 +160,9 @@ export const GuiaTransportistaProvider = ({ children }) => {
 
       return res.data.json;
     } catch (error) {
-      const mensaje =
-        error.response?.data?.message || "Error al generar el JSON de la guía";
-
-      setErrorsGuia([mensaje]);
+      setErrorsGuia(
+        obtenerMensajesErrorApi(error, "Error al generar el JSON de la guía")
+      );
       throw error;
     } finally {
       setLoadingGuia(false);
@@ -177,11 +186,12 @@ export const GuiaTransportistaProvider = ({ children }) => {
 
       return res.data;
     } catch (error) {
-      const mensaje =
-        error.response?.data?.message ||
-        "Error al consultar la guía en Nubefact/SUNAT";
-
-      setErrorsGuia([mensaje]);
+      setErrorsGuia(
+        obtenerMensajesErrorApi(
+          error,
+          "Error al consultar la guía en Nubefact/SUNAT"
+        )
+      );
       throw error;
     } finally {
       setLoadingGuia(false);
@@ -205,11 +215,12 @@ export const GuiaTransportistaProvider = ({ children }) => {
 
       return res.data;
     } catch (error) {
-      const mensaje =
-        error.response?.data?.message ||
-        "Error al anular la guía de transportista";
-
-      setErrorsGuia([mensaje]);
+      setErrorsGuia(
+        obtenerMensajesErrorApi(
+          error,
+          "Error al anular la guía de transportista"
+        )
+      );
       throw error;
     } finally {
       setLoadingGuia(false);
@@ -225,11 +236,12 @@ export const GuiaTransportistaProvider = ({ children }) => {
 
       return res.data?.url || res.data?.enlace_pdf || "";
     } catch (error) {
-      const mensaje =
-        error.response?.data?.message ||
-        "Error al obtener el PDF oficial de Nubefact";
-
-      setErrorsGuia([mensaje]);
+      setErrorsGuia(
+        obtenerMensajesErrorApi(
+          error,
+          "Error al obtener el PDF oficial de Nubefact"
+        )
+      );
       throw error;
     } finally {
       setLoadingGuia(false);
@@ -247,12 +259,12 @@ export const GuiaTransportistaProvider = ({ children }) => {
 
       return res.data;
     } catch (error) {
-      const errores = error.response?.data?.errores;
-      const mensaje =
-        error.response?.data?.message ||
-        "La guía tiene datos pendientes por corregir";
-
-      setErrorsGuia(Array.isArray(errores) && errores.length ? errores : [mensaje]);
+      setErrorsGuia(
+        obtenerMensajesErrorApi(
+          error,
+          "La guía tiene datos pendientes por corregir"
+        )
+      );
       throw error;
     } finally {
       setLoadingGuia(false);
@@ -268,11 +280,9 @@ export const GuiaTransportistaProvider = ({ children }) => {
 
       return res.data;
     } catch (error) {
-      const mensaje =
-        error.response?.data?.message ||
-        "Error al obtener el historial de la guía";
-
-      setErrorsGuia([mensaje]);
+      setErrorsGuia(
+        obtenerMensajesErrorApi(error, "Error al obtener el historial de la guía")
+      );
       throw error;
     } finally {
       setLoadingGuia(false);

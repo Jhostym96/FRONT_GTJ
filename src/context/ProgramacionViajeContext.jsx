@@ -80,14 +80,14 @@ export function ProgramacionViajeProvider({ children }) {
     }
   };
 
-  const cambiarEstadoProgramacion = async (id, estado) => {
+  const cambiarEstadoProgramacion = async (id, data) => {
     try {
-      const res = await updateEstadoProgramacionViajeRequest(id, estado);
+      const res = await updateEstadoProgramacionViajeRequest(id, data);
 
       setProgramaciones((prev) =>
         prev.map((item) =>
-          item._id === id
-            ? { ...item, estado: res.data.programacion.estado }
+          (item.id || item._id) === id
+            ? { ...item, ...res.data.programacion }
             : item
         )
       );

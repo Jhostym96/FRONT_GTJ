@@ -32,59 +32,79 @@ function Sidebar({ collapsed, setCollapsed }) {
     <>
       {/* Botón hamburguesa (solo móvil) */}
       <button
-        className="md:hidden fixed top-4 left-4 z-50 text-white"
+        className="btn-secondary fixed left-4 top-3 z-50 h-9 w-9 px-0 md:hidden"
         onClick={() => setMobileOpen(!mobileOpen)}
+        aria-label={mobileOpen ? "Cerrar menú" : "Abrir menú"}
       >
         {mobileOpen ? <FaTimes size={22} /> : <FaBars size={22} />}
       </button>
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 bg-zinc-900/95 backdrop-blur-md 
-        border-r border-zinc-800 shadow-lg transition-all duration-300
+        className={`app-sidebar
         ${collapsed ? "w-20" : "w-64"}
         ${mobileOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0`}
       >
         {/* Logo + toggle desktop */}
-        <div className="flex items-center justify-between p-6 border-b border-zinc-800">
-          <div className="flex items-center gap-2">
+        <div
+          className={`flex border-b ${
+            collapsed
+              ? "h-24 flex-col items-center justify-center gap-2 px-0"
+              : "h-16 items-center justify-between px-5"
+          }`}
+        >
+          <div
+            className={`flex items-center ${
+              collapsed ? "justify-center" : "gap-2"
+            }`}
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-sm font-black text-white">
+              TJ
+            </div>
             {!collapsed && (
               <Link
                 to="/"
                 onClick={() => setMobileOpen(false)}
-                className="text-xl font-bold text-white tracking-tight hover:text-indigo-400 transition-colors"
+                className="text-main text-lg font-bold tracking-tight transition-colors hover:text-blue-500"
               >
-                TRANSPORTES J
+                
               </Link>
             )}
           </div>
 
           {/* Botón colapsar/expandir (solo desktop) */}
           <button
-            className="hidden md:block text-gray-300 hover:text-white"
+            className="btn-secondary hidden h-9 w-9 shrink-0 px-0 md:inline-flex"
             onClick={() => setCollapsed(!collapsed)}
+            aria-label={collapsed ? "Expandir menú" : "Colapsar menú"}
           >
             <FaBars size={20} />
           </button>
         </div>
 
         {/* Navegación */}
-        <nav className="flex-1 p-4 text-sm">
+        <nav className={`flex-1 text-sm ${collapsed ? "px-2 py-4" : "p-4"}`}>
           <ul className="space-y-2">
             {isAuthenticated ? (
               rolePermissions.map((menu) => (
                 <li key={menu.id}>
                   <button
                     onClick={() => handleMenuClick(menu.id)}
-                    className={`flex items-center justify-between w-full px-3 py-2 rounded-md transition-colors text-sm
+                    className={`nav-item ${
+                      collapsed ? "justify-center px-0" : "justify-between"
+                    }
                       ${
                         location.pathname.startsWith(menu.basePath)
-                          ? "bg-indigo-600 text-white"
-                          : "text-gray-300 hover:bg-zinc-800 hover:text-white"
+                          ? "nav-item-active"
+                          : ""
                       }`}
                   >
-                    <span className="flex items-center gap-3">
-                      <menu.icon className="h-5 w-5" />
+                    <span
+                      className={`flex items-center ${
+                        collapsed ? "justify-center" : "gap-3"
+                      }`}
+                    >
+                      <menu.icon className="h-5 w-5 shrink-0" />
                       {!collapsed && menu.label}
                     </span>
                     {!collapsed && (
@@ -103,11 +123,11 @@ function Sidebar({ collapsed, setCollapsed }) {
                         <li key={child.path}>
                           <Link
                             to={child.path}
-                            className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm
+                            className={`nav-item
                               ${
                                 location.pathname === child.path
-                                  ? "bg-indigo-600 text-white"
-                                  : "text-gray-300 hover:bg-zinc-800 hover:text-white"
+                                  ? "nav-item-active"
+                                  : ""
                               }`}
                             onClick={() => setMobileOpen(false)}
                           >
@@ -125,7 +145,7 @@ function Sidebar({ collapsed, setCollapsed }) {
                 <Link
                   to="/login"
                   onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-3 px-3 py-2 text-white bg-indigo-600 hover:bg-indigo-500 rounded-md transition-colors shadow-md"
+                  className="btn-primary w-full justify-start"
                 >
                   <FaSignInAlt /> {!collapsed && "Login"}
                 </Link>

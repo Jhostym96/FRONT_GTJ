@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useCallback, useContext, useState } from "react";
+import { useAuth } from "./AuthContext";
 import {
   crearUsuarioRequest,
   obtenerUsuariosRequest,
@@ -15,21 +16,29 @@ const UserContext = createContext();
 export const useUsuarios = () => useContext(UserContext);
 
 export const UserProvider = ({ children }) => {
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(false);
 
   // Obtener todos los usuarios
-  const cargarUsuarios = async () => {
+  const cargarUsuarios = useCallback(async () => {
+    if (authLoading || !isAuthenticated) {
+      setUsuarios([]);
+      return [];
+    }
+
     try {
       setLoading(true);
       const res = await obtenerUsuariosRequest();
       setUsuarios(res.data);
+      return res.data;
     } catch (error) {
       console.error("Error al obtener usuarios:", error);
+      return [];
     } finally {
       setLoading(false);
     }
-  };
+  }, [authLoading, isAuthenticated]);
 
   // Crear nuevo usuario
   const crearUsuario = async (usuario) => {
@@ -71,10 +80,6 @@ export const UserProvider = ({ children }) => {
     const res = await actualizarPerfilRequest(datos);
     return res.data;
   };
-
-  useEffect(() => {
-    cargarUsuarios();
-  }, []);
 
   return (
     <UserContext.Provider

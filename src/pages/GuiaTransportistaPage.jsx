@@ -77,7 +77,7 @@ const GuiaTransportistaPage = () => {
         return "bg-red-500/10 text-red-300 border-red-500/30";
 
       default:
-        return "bg-neutral-700/40 text-neutral-300 border-neutral-600";
+        return "text-muted";
     }
   };
 
@@ -283,7 +283,7 @@ const GuiaTransportistaPage = () => {
         <button
           type="button"
           onClick={() => abrirVer(guia)}
-          className="rounded-lg bg-neutral-700/80 px-3 py-2 text-xs font-semibold text-neutral-100 transition hover:bg-neutral-600"
+          className="btn-secondary px-3 py-2 text-xs"
         >
           Ver
         </button>
@@ -292,7 +292,7 @@ const GuiaTransportistaPage = () => {
           type="button"
           onClick={() => abrirEditar(guia)}
           disabled={["ANULADA", "ENVIADA", "ACEPTADA"].includes(guia.estado)}
-          className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
+          className="btn-primary px-3 py-2 text-xs"
         >
           Editar
         </button>
@@ -301,7 +301,7 @@ const GuiaTransportistaPage = () => {
           type="button"
           onClick={() => handleGenerarJson(guia)}
           disabled={generandoJson[id] || guia.estado === "ANULADA"}
-          className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
+          className="btn-success px-3 py-2 text-xs"
         >
           {generandoJson[id] ? "Generando..." : "JSON"}
         </button>
@@ -313,7 +313,7 @@ const GuiaTransportistaPage = () => {
               type="button"
               onClick={() => handleConsultarSunat(guia)}
               disabled={consultandoSunat[id] || guia.estado === "ANULADA"}
-              className="rounded-lg bg-green-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-green-500 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
+              className="btn-success px-3 py-2 text-xs"
             >
               {consultandoSunat[id] ? "Consultando..." : "Consultar SUNAT"}
             </button>
@@ -324,7 +324,7 @@ const GuiaTransportistaPage = () => {
           onClick={() => handleTicket(guia)}
           disabled={abriendoTicket[id] || guia.estado === "ANULADA"}
           title="Abrir PDF oficial de Nubefact"
-          className="rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
+          className="btn bg-amber-600 px-3 py-2 text-xs text-white hover:bg-amber-500"
         >
           {abriendoTicket[id] ? "Abriendo..." : "Ticket"}
         </button>
@@ -334,7 +334,7 @@ const GuiaTransportistaPage = () => {
             type="button"
             onClick={() => handleAnular(guia)}
             disabled={anulando[id]}
-            className="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
+            className="btn-danger px-3 py-2 text-xs"
           >
             {anulando[id] ? "Anulando..." : "Anular"}
           </button>
@@ -344,29 +344,29 @@ const GuiaTransportistaPage = () => {
   };
 
   return (
-    <div className="w-full px-2 py-4 text-text-primary sm:px-4 lg:px-4">
-      <div className="mx-auto flex w-full max-w-[98%] flex-col gap-5">
-        <header className="overflow-hidden rounded-2xl border border-neutral-800 bg-gradient-to-br from-neutral-900 via-neutral-900 to-neutral-950 shadow-xl">
+    <div className="w-full py-4">
+      <div className="page-wrap">
+        <header className="page-hero">
           <div className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <div className="mb-2 inline-flex rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-300">
+              <div className="eyebrow">
                 Emisión de guías
               </div>
 
-              <h1 className="text-2xl font-bold tracking-tight text-gray-100 sm:text-3xl">
+              <h1 className="page-title">
                 Guías de Transportista
               </h1>
 
-              <p className="mt-1 max-w-2xl text-sm text-neutral-400">
+              <p className="page-description">
                 Genera, visualiza y administra las guías de transportista
                 vinculadas a tus viajes programados.
               </p>
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <div className="rounded-xl border border-neutral-800 bg-neutral-950/50 px-4 py-3">
-                <p className="text-xs text-neutral-500">Total guías</p>
-                <p className="text-xl font-bold text-gray-100">
+              <div className="info-tile border px-4 py-3">
+                <p className="text-faint text-xs">Total guías</p>
+                <p className="text-main text-xl font-bold">
                   {totalGuias}
                 </p>
               </div>
@@ -374,7 +374,7 @@ const GuiaTransportistaPage = () => {
               <button
                 type="button"
                 onClick={abrirCrear}
-                className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-blue-950/30 transition hover:bg-blue-500 active:scale-[0.98]"
+                className="btn-primary px-5 py-3"
               >
                 Nueva guía
               </button>
@@ -383,27 +383,27 @@ const GuiaTransportistaPage = () => {
         </header>
 
         {loadingGuia ? (
-          <div className="rounded-2xl border border-neutral-800 bg-surface p-8 text-center shadow-lg">
-            <div className="mx-auto mb-3 h-9 w-9 animate-spin rounded-full border-2 border-neutral-700 border-t-blue-500" />
+          <div className="panel p-8 text-center">
+            <div className="mx-auto mb-3 h-9 w-9 animate-spin rounded-full border-2 border-[var(--app-border)] border-t-blue-500" />
 
-            <p className="text-sm text-neutral-400">
+            <p className="text-muted text-sm">
               Cargando guías de transportista...
             </p>
           </div>
         ) : guiasTransportista.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-neutral-700 bg-surface p-8 text-center shadow-lg">
-            <h2 className="text-lg font-semibold text-gray-200">
+          <div className="empty-panel">
+            <h2 className="text-main text-lg font-semibold">
               No hay guías registradas
             </h2>
 
-            <p className="mt-1 text-sm text-neutral-400">
+            <p className="text-muted mt-1 text-sm">
               Crea tu primera guía desde una programación de viaje.
             </p>
 
             <button
               type="button"
               onClick={abrirCrear}
-              className="mt-5 rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-blue-500"
+              className="btn-primary mt-5 px-5 py-3"
             >
               Crear guía
             </button>
@@ -418,15 +418,15 @@ const GuiaTransportistaPage = () => {
                 return (
                   <article
                     key={id}
-                    className="rounded-2xl border border-neutral-800 bg-surface p-4 shadow-lg"
+                    className="mobile-card"
                   >
                     <div className="mb-4 flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-xs font-medium text-neutral-500">
+                        <p className="text-faint text-xs font-medium">
                           Guía
                         </p>
 
-                        <h2 className="text-lg font-bold text-gray-100">
+                        <h2 className="text-main text-lg font-bold">
                           {guia.serie || "-"}-{guia.numero || "-"}
                         </h2>
                       </div>
@@ -435,20 +435,20 @@ const GuiaTransportistaPage = () => {
                     </div>
 
                     <div className="grid gap-3 text-sm">
-                      <div className="rounded-xl bg-neutral-900/60 p-3">
-                        <p className="text-xs text-neutral-500">Emisión</p>
+                      <div className="info-tile">
+                        <p className="text-faint text-xs">Emisión</p>
 
-                        <p className="font-semibold text-neutral-200">
+                        <p className="text-main font-semibold">
                           {guia.fecha_de_emision ||
                             formatearFecha(guia.fechaEmision) ||
                             "-"}
                         </p>
                       </div>
 
-                      <div className="rounded-xl bg-neutral-900/60 p-3">
-                        <p className="text-xs text-neutral-500">Cliente</p>
+                      <div className="info-tile">
+                        <p className="text-faint text-xs">Cliente</p>
 
-                        <p className="font-semibold text-gray-200">
+                        <p className="text-main font-semibold">
                           {datos.cliente?.razonSocial ||
                             datos.cliente?.denominacion ||
                             datos.cliente?.nombre ||
@@ -456,7 +456,7 @@ const GuiaTransportistaPage = () => {
                             "-"}
                         </p>
 
-                        <p className="text-xs text-neutral-500">
+                        <p className="text-faint text-xs">
                           {datos.cliente?.numeroDocumento ||
                             guia.cliente_numero_de_documento ||
                             ""}
@@ -464,22 +464,22 @@ const GuiaTransportistaPage = () => {
                       </div>
 
                       <div className="grid gap-3 sm:grid-cols-2">
-                        <div className="rounded-xl bg-neutral-900/60 p-3">
-                          <p className="text-xs text-neutral-500">Unidad</p>
+                        <div className="info-tile">
+                          <p className="text-faint text-xs">Unidad</p>
 
-                          <p className="font-semibold text-gray-200">
+                          <p className="text-main font-semibold">
                             {datos.unidad?.placa ||
                               guia.transportista_placa_numero ||
                               "-"}
                           </p>
                         </div>
 
-                        <div className="rounded-xl bg-neutral-900/60 p-3">
-                          <p className="text-xs text-neutral-500">
+                        <div className="info-tile">
+                          <p className="text-faint text-xs">
                             Conductor
                           </p>
 
-                          <p className="font-semibold text-gray-200">
+                          <p className="text-main font-semibold">
                             {datos.conductor
                               ? `${datos.conductor.nombres || ""} ${datos.conductor.apellidos || ""
                               }`
@@ -490,21 +490,21 @@ const GuiaTransportistaPage = () => {
                         </div>
                       </div>
 
-                      <div className="rounded-xl bg-neutral-900/60 p-3">
-                        <p className="text-xs text-neutral-500">Traslado</p>
+                      <div className="info-tile">
+                        <p className="text-faint text-xs">Traslado</p>
 
-                        <p className="font-semibold text-neutral-200">
+                        <p className="text-main font-semibold">
                           {guia.fecha_de_inicio_de_traslado ||
                             formatearFecha(datos.fechaInicioTraslado)}
                         </p>
                       </div>
 
-                      <div className="rounded-xl bg-neutral-900/60 p-3">
-                        <p className="text-xs text-neutral-500">
+                      <div className="info-tile">
+                        <p className="text-faint text-xs">
                           Peso / Bultos
                         </p>
 
-                        <p className="font-semibold text-neutral-200">
+                        <p className="text-main font-semibold">
                           {guia.peso_bruto_total || "-"}{" "}
                           {guia.peso_bruto_unidad_de_medida || "KGM"} /{" "}
                           {guia.numero_de_bultos || "-"}
@@ -512,7 +512,7 @@ const GuiaTransportistaPage = () => {
                       </div>
                     </div>
 
-                    <div className="mt-4 border-t border-neutral-800 pt-4">
+                    <div className="mt-4 border-t pt-4">
                       <AccionesGuia guia={guia} mobile />
                     </div>
                   </article>
@@ -520,11 +520,11 @@ const GuiaTransportistaPage = () => {
               })}
             </div>
 
-            <div className="hidden overflow-hidden rounded-2xl border border-neutral-800 bg-surface shadow-xl lg:block">
+            <div className="data-table-wrap">
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[1300px] text-sm">
-                  <thead className="bg-neutral-900">
-                    <tr className="border-b border-neutral-800 text-xs uppercase tracking-wide text-neutral-400">
+                <table className="data-table w-full min-w-[1300px] text-sm">
+                  <thead>
+                    <tr>
                       <th className="px-4 py-4 text-left">Guía</th>
                       <th className="px-4 py-4 text-left">Emisión</th>
                       <th className="px-4 py-4 text-left">Cliente</th>
@@ -537,30 +537,27 @@ const GuiaTransportistaPage = () => {
                     </tr>
                   </thead>
 
-                  <tbody className="divide-y divide-neutral-800">
+                  <tbody>
                     {guiasTransportista.map((guia) => {
                       const datos = obtenerDatosProgramacion(guia);
                       const id = getGuiaId(guia);
 
                       return (
-                        <tr
-                          key={id}
-                          className="bg-neutral-950/20 transition hover:bg-neutral-800/50"
-                        >
+                        <tr key={id}>
                           <td className="whitespace-nowrap px-4 py-4">
-                            <p className="font-bold text-gray-100">
+                            <p className="text-main font-bold">
                               {guia.serie || "-"}-{guia.numero || "-"}
                             </p>
                           </td>
 
-                          <td className="whitespace-nowrap px-4 py-4 text-neutral-300">
+                          <td className="text-muted whitespace-nowrap px-4 py-4">
                             {guia.fecha_de_emision ||
                               formatearFecha(guia.fechaEmision) ||
                               "-"}
                           </td>
 
                           <td className="min-w-[220px] px-4 py-4">
-                            <p className="max-w-[250px] truncate font-semibold text-gray-200">
+                            <p className="text-main max-w-[250px] truncate font-semibold">
                               {datos.cliente?.razonSocial ||
                                 datos.cliente?.denominacion ||
                                 datos.cliente?.nombre ||
@@ -568,7 +565,7 @@ const GuiaTransportistaPage = () => {
                                 "-"}
                             </p>
 
-                            <p className="text-xs text-neutral-500">
+                            <p className="text-faint text-xs">
                               {datos.cliente?.numeroDocumento ||
                                 guia.cliente_numero_de_documento ||
                                 ""}
@@ -576,19 +573,19 @@ const GuiaTransportistaPage = () => {
                           </td>
 
                           <td className="whitespace-nowrap px-4 py-4">
-                            <p className="font-semibold text-gray-200">
+                            <p className="text-main font-semibold">
                               {datos.unidad?.placa ||
                                 guia.transportista_placa_numero ||
                                 "-"}
                             </p>
 
-                            <p className="text-xs text-neutral-500">
+                            <p className="text-faint text-xs">
                               {datos.unidad?.tipoUnidad || ""}
                             </p>
                           </td>
 
                           <td className="min-w-[220px] px-4 py-4">
-                            <p className="max-w-[250px] truncate font-semibold text-gray-200">
+                            <p className="text-main max-w-[250px] truncate font-semibold">
                               {datos.conductor
                                 ? `${datos.conductor.nombres || ""} ${datos.conductor.apellidos || ""
                                 }`
@@ -597,19 +594,19 @@ const GuiaTransportistaPage = () => {
                                 "-"}
                             </p>
 
-                            <p className="text-xs text-neutral-500">
+                            <p className="text-faint text-xs">
                               {datos.conductor?.numeroDocumento ||
                                 guia.conductor_documento_numero ||
                                 ""}
                             </p>
                           </td>
 
-                          <td className="whitespace-nowrap px-4 py-4 text-neutral-300">
+                          <td className="text-muted whitespace-nowrap px-4 py-4">
                             {guia.fecha_de_inicio_de_traslado ||
                               formatearFecha(datos.fechaInicioTraslado)}
                           </td>
 
-                          <td className="whitespace-nowrap px-4 py-4 text-neutral-300">
+                          <td className="text-muted whitespace-nowrap px-4 py-4">
                             {guia.peso_bruto_total || "-"}{" "}
                             {guia.peso_bruto_unidad_de_medida || "KGM"} /{" "}
                             {guia.numero_de_bultos || "-"}

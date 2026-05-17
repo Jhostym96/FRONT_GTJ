@@ -37,85 +37,105 @@ const GestionUsuarios = () => {
 
   if (!isAuthenticated || !["administrador", "superadministrador"].includes(user.role)) {
     return (
-      <div className="text-center mt-20 text-red-500 font-semibold text-lg">
-        🚫 Acceso denegado
+      <div className="empty-panel mx-auto mt-20 max-w-xl">
+        <h2 className="text-lg font-semibold text-red-500">Acceso denegado</h2>
+        <p className="text-muted mt-1 text-sm">
+          No tienes permisos para administrar usuarios.
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-6 text-text-primary">
-      {/* Header */}
-      <header className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-200">Gestión de Usuarios</h1>
-        <p className="text-sm text-neutral-400">
-          Visualiza y administra los roles de los usuarios registrados.
-        </p>
-      </header>
+    <div className="w-full py-4">
+      <div className="page-wrap">
+        <header className="page-hero">
+          <div className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <div className="eyebrow">Administración</div>
+              <h1 className="page-title">Gestión de Usuarios</h1>
+              <p className="page-description">
+                Visualiza y administra los roles de los usuarios registrados.
+              </p>
+            </div>
 
-      {/* Tabla */}
-      {users.length === 0 ? (
-        <p className="text-sm text-neutral-400 italic">
-          No hay usuarios registrados.
-        </p>
-      ) : (
-        <div className="overflow-x-auto bg-surface rounded-lg shadow-lg">
-          <table className="min-w-full text-sm">
-            <thead className="bg-neutral-800 sticky top-0">
-              <tr className="text-neutral-300">
-                <th className="p-3 text-left">Nombre</th>
-                <th className="p-3 text-left">DNI</th>
-                <th className="p-3 text-left">Rol</th>
-                <th className="p-3 text-center">Acción</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((u, i) => {
-                const rolSeleccionado = rolesEditados[u._id] || u.role;
-                const cambioPendiente = rolSeleccionado !== u.role;
+            <div className="info-tile border px-4 py-3">
+              <p className="text-faint text-xs">Usuarios</p>
+              <p className="text-main text-xl font-bold">{users.length}</p>
+            </div>
+          </div>
+        </header>
 
-                return (
-                  <tr
-                    key={u._id}
-                    className={`${
-                      i % 2 === 0 ? "bg-neutral-900/40" : "bg-neutral-900/20"
-                    } hover:bg-neutral-800/60 transition`}
-                  >
-                    <td className="p-3 font-medium">{u.name}</td>
-                    <td className="p-3">{u.dni}</td>
-                    <td className="p-3">
-                      <select
-                        value={rolSeleccionado}
-                        onChange={(e) => handleRoleChange(u._id, e.target.value)}
-                        className="bg-input border border-neutral-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        {rolesDisponibles.map((rol) => (
-                          <option key={rol} value={rol}>
-                            {rol}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="p-3 text-center">
-                      <button
-                        onClick={() => guardarCambio(u._id)}
-                        disabled={!cambioPendiente || saving[u._id]}
-                        className={`px-4 py-2 rounded-lg font-semibold shadow transition transform ${
-                          cambioPendiente
-                            ? "bg-blue-600 hover:bg-blue-500 text-white hover:scale-105"
-                            : "bg-neutral-700 text-neutral-400 cursor-not-allowed"
-                        }`}
-                      >
-                        {saving[u._id] ? "Guardando..." : "Guardar"}
-                      </button>
-                    </td>
+        {users.length === 0 ? (
+          <div className="empty-panel">
+            <h2 className="text-main text-lg font-semibold">
+              No hay usuarios registrados
+            </h2>
+            <p className="text-muted mt-1 text-sm">
+              Cuando se creen usuarios aparecerán en esta tabla.
+            </p>
+          </div>
+        ) : (
+          <div className="data-table-wrap">
+            <div className="overflow-x-auto">
+              <table className="data-table min-w-full text-sm">
+                <thead>
+                  <tr>
+                    <th className="px-4 py-4 text-left">Nombre</th>
+                    <th className="px-4 py-4 text-left">DNI</th>
+                    <th className="px-4 py-4 text-left">Rol</th>
+                    <th className="px-4 py-4 text-center">Acción</th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+                </thead>
+                <tbody>
+                  {users.map((u) => {
+                    const rolSeleccionado = rolesEditados[u._id] || u.role;
+                    const cambioPendiente = rolSeleccionado !== u.role;
+
+                    return (
+                      <tr key={u._id}>
+                        <td className="text-main px-4 py-4 font-semibold">
+                          {u.name}
+                        </td>
+                        <td className="text-muted px-4 py-4">{u.dni}</td>
+                        <td className="px-4 py-4">
+                          <select
+                            value={rolSeleccionado}
+                            onChange={(e) =>
+                              handleRoleChange(u._id, e.target.value)
+                            }
+                            className="input w-auto min-w-[180px] px-3 py-2 text-sm"
+                          >
+                            {rolesDisponibles.map((rol) => (
+                              <option key={rol} value={rol}>
+                                {rol}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="px-4 py-4 text-center">
+                          <button
+                            type="button"
+                            onClick={() => guardarCambio(u._id)}
+                            disabled={!cambioPendiente || saving[u._id]}
+                            className={
+                              cambioPendiente
+                                ? "btn-primary px-4 py-2"
+                                : "btn-secondary px-4 py-2"
+                            }
+                          >
+                            {saving[u._id] ? "Guardando..." : "Guardar"}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

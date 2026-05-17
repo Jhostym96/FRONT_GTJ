@@ -8,6 +8,8 @@ const initialForm = {
   marca: "",
   modelo: "",
   estado: "ACTIVO",
+  permisoIMO: false,
+  permisoIQBF: false,
   observaciones: "",
 };
 
@@ -35,6 +37,8 @@ function UnidadModal({
         marca: unidad.marca || "",
         modelo: unidad.modelo || "",
         estado: unidad.estado || "ACTIVO",
+        permisoIMO: Boolean(unidad.permisoIMO),
+        permisoIQBF: Boolean(unidad.permisoIQBF),
         observaciones: unidad.observaciones || "",
       });
     } else {
@@ -45,11 +49,11 @@ function UnidadModal({
   if (!isOpen) return null;
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, type, checked, value } = e.target;
 
     setForm((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: type === "checkbox" ? checked : value,
     }));
   };
 
@@ -83,6 +87,8 @@ function UnidadModal({
       marca: form.marca.trim().toUpperCase(),
       modelo: form.modelo.trim().toUpperCase(),
       estado: estadoNormalizado,
+      permisoIMO: form.permisoIMO,
+      permisoIQBF: form.permisoIQBF,
       observaciones: form.observaciones.trim(),
     };
 
@@ -101,12 +107,12 @@ function UnidadModal({
   }[mode];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-      <div className="w-full max-w-2xl rounded-xl border border-gray-700 bg-gray-900 p-6 text-white shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-4 backdrop-blur-sm">
+      <div className="panel w-full max-w-2xl p-6">
         <div className="mb-5 flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold">{titulo}</h2>
-            <p className="text-sm text-gray-400">
+            <p className="text-muted text-sm">
               Registra tractos y carretas con su N° TUCE / CHV.
             </p>
           </div>
@@ -114,7 +120,7 @@ function UnidadModal({
           <button
             type="button"
             onClick={onClose}
-            className="text-2xl text-gray-400 hover:text-white"
+            className="text-muted text-2xl hover:text-blue-500"
           >
             ×
           </button>
@@ -125,20 +131,20 @@ function UnidadModal({
           className="grid grid-cols-1 gap-4 md:grid-cols-2"
         >
           <div>
-            <label className="mb-1 block text-sm text-gray-300">Placa</label>
+            <label className="text-muted mb-1 block text-sm">Placa</label>
             <input
               name="placa"
               value={form.placa}
               onChange={handleChange}
               disabled={isView || loading}
               required
-              className="w-full rounded-lg border border-gray-700 bg-gray-800 p-3 uppercase outline-none disabled:opacity-70"
-              placeholder="ABC-123"
+              className="input p-3 uppercase"
+              placeholder="Ingrese la placa de la unidad"
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-sm text-gray-300">
+            <label className="text-muted mb-1 block text-sm">
               Tipo unidad
             </label>
             <select
@@ -147,7 +153,7 @@ function UnidadModal({
               onChange={handleChange}
               disabled={isView || loading}
               required
-              className="w-full rounded-lg border border-gray-700 bg-gray-800 p-3 outline-none disabled:opacity-70"
+              className="input p-3"
             >
               <option value="">Seleccione tipo</option>
               <option value="TRACTO">TRACTO</option>
@@ -156,7 +162,7 @@ function UnidadModal({
           </div>
 
           <div>
-            <label className="mb-1 block text-sm text-gray-300">
+            <label className="text-muted mb-1 block text-sm">
               N° TUCE / CHV
             </label>
             <input
@@ -164,51 +170,77 @@ function UnidadModal({
               value={form.numeroTUCE_CHV}
               onChange={handleChange}
               disabled={isView || loading}
-              className="w-full rounded-lg border border-gray-700 bg-gray-800 p-3 uppercase outline-none disabled:opacity-70"
-              placeholder="Tarjeta circulación / CHV"
+              className="input p-3 uppercase"
+              placeholder="Ingrese el número TUCE o CHV"
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-sm text-gray-300">Marca</label>
+            <label className="text-muted mb-1 block text-sm">Marca</label>
             <input
               name="marca"
               value={form.marca}
               onChange={handleChange}
               disabled={isView || loading}
-              className="w-full rounded-lg border border-gray-700 bg-gray-800 p-3 uppercase outline-none disabled:opacity-70"
-              placeholder="VOLVO"
+              className="input p-3 uppercase"
+              placeholder="Ingrese la marca de la unidad"
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-sm text-gray-300">Modelo</label>
+            <label className="text-muted mb-1 block text-sm">Modelo</label>
             <input
               name="modelo"
               value={form.modelo}
               onChange={handleChange}
               disabled={isView || loading}
-              className="w-full rounded-lg border border-gray-700 bg-gray-800 p-3 uppercase outline-none disabled:opacity-70"
-              placeholder="FH"
+              className="input p-3 uppercase"
+              placeholder="Ingrese el modelo de la unidad"
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-sm text-gray-300">Estado</label>
+            <label className="text-muted mb-1 block text-sm">Estado</label>
             <select
               name="estado"
               value={form.estado}
               onChange={handleChange}
               disabled={isView || loading}
-              className="w-full rounded-lg border border-gray-700 bg-gray-800 p-3 outline-none disabled:opacity-70"
+              className="input p-3"
             >
               <option value="ACTIVO">ACTIVO</option>
               <option value="INACTIVO">INACTIVO</option>
             </select>
           </div>
 
+          <div className="grid gap-3 rounded-lg border border-[var(--app-border)] p-3 md:col-span-2 sm:grid-cols-2">
+            <label className="flex items-center gap-3 text-sm">
+              <input
+                type="checkbox"
+                name="permisoIMO"
+                checked={form.permisoIMO}
+                onChange={handleChange}
+                disabled={isView || loading}
+                className="h-4 w-4"
+              />
+              <span className="text-main font-semibold">Permiso IMO</span>
+            </label>
+
+            <label className="flex items-center gap-3 text-sm">
+              <input
+                type="checkbox"
+                name="permisoIQBF"
+                checked={form.permisoIQBF}
+                onChange={handleChange}
+                disabled={isView || loading}
+                className="h-4 w-4"
+              />
+              <span className="text-main font-semibold">Permiso IQBF</span>
+            </label>
+          </div>
+
           <div className="md:col-span-2">
-            <label className="mb-1 block text-sm text-gray-300">
+            <label className="text-muted mb-1 block text-sm">
               Observaciones
             </label>
             <textarea
@@ -217,8 +249,8 @@ function UnidadModal({
               onChange={handleChange}
               disabled={isView || loading}
               rows="3"
-              className="w-full resize-none rounded-lg border border-gray-700 bg-gray-800 p-3 outline-none disabled:opacity-70"
-              placeholder="Observaciones"
+              className="input resize-none p-3"
+              placeholder="Indique observaciones de la unidad"
             />
           </div>
 
@@ -227,7 +259,7 @@ function UnidadModal({
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="rounded-lg bg-gray-700 px-4 py-2 hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-60"
+              className="btn-secondary px-4 py-2"
             >
               {isView ? "Cerrar" : "Cancelar"}
             </button>
@@ -236,7 +268,7 @@ function UnidadModal({
               <button
                 type="submit"
                 disabled={loading}
-                className="rounded-lg bg-green-600 px-4 py-2 font-semibold hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="btn-success px-4 py-2"
               >
                 {loading
                   ? "Guardando..."

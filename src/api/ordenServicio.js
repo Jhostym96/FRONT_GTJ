@@ -19,3 +19,9 @@ export const actualizarOrdenServicioRequest = (id, datos) =>
 // Anular orden de servicio
 export const anularOrdenServicioRequest = (id) =>
   axios.patch(`/ordenes-servicio/${id}/anular`);
+
+export const obtenerDevolucionesPendientesRequest = () =>
+  axios.get(`/ordenes-servicio/devoluciones/pendientes`);
+
+export const actualizarEstadoDevolucionRequest = (id, data) =>
+  axios.patch(`/ordenes-servicio/${id}/devolucion`, data);

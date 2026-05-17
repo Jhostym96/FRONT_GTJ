@@ -1,10 +1,39 @@
 import { useEffect, useMemo, useState } from "react";
+import { CalendarClock } from "lucide-react";
 import toast from "react-hot-toast";
 import { useProgramacionViaje } from "../context/ProgramacionViajeContext";
 import { useUnidades } from "../context/UnidadContext";
 import { useConductores } from "../context/ConductorContext";
 
 import ProgramacionViajeModal from "../components/modals/ProgramacionViajeModal";
+
+const formatearTipoCarga = (tipoCarga) =>
+  tipoCarga ? tipoCarga.replace("_", " ") : "-";
+
+const formatearDimensionCarga = (dimensionCarga) =>
+  dimensionCarga ? `${dimensionCarga} pies` : "";
+
+const getDateTimeLocalNow = () => {
+  const now = new Date();
+  const offsetMs = now.getTimezoneOffset() * 60000;
+
+  return new Date(now.getTime() - offsetMs).toISOString().slice(0, 16);
+};
+
+const TRANSICIONES = {
+  ASIGNADO: [{ estado: "EN_RUTA", label: "En ruta" }],
+  EN_RUTA: [
+    { estado: "EN_ALMACEN", label: "En almacén" },
+    { estado: "EN_CLIENTE", label: "En cliente", requiereFecha: true },
+  ],
+  EN_ALMACEN: [
+    { estado: "EN_CLIENTE", label: "En cliente", requiereFecha: true },
+  ],
+  EN_CLIENTE: [
+    { estado: "ENTREGADO", label: "Entregado", requiereFecha: true },
+  ],
+  ENTREGADO: [{ estado: "FINALIZADO", label: "Finalizar" }],
+};
 
 const ProgramacionViajePage = () => {
   const {
@@ -21,6 +50,10 @@ const ProgramacionViajePage = () => {
   const [viajeSeleccionado, setViajeSeleccionado] = useState(null);
   const [modalMode, setModalMode] = useState("create");
   const [cambiandoEstado, setCambiandoEstado] = useState({});
+  const [estadoConFecha, setEstadoConFecha] = useState(null);
+  const [fechaHoraOperacion, setFechaHoraOperacion] = useState(
+    getDateTimeLocalNow()
+  );
 
   const getId = (item) => item?.id ?? item?._id ?? "";
 
@@ -62,6 +95,28 @@ const ProgramacionViajePage = () => {
     });
   };
 
+  const formatearFechaHora = (fecha) => {
+    if (!fecha) return "-";
+
+    const fechaObj = new Date(fecha);
+
+    if (Number.isNaN(fechaObj.getTime())) return "-";
+
+    return fechaObj.toLocaleString("es-PE", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const formatearStandby = (minutos) => {
+    if (minutos === null || minutos === undefined) return "-";
+
+    return `${minutos} min (${(minutos / 60).toFixed(2)} h)`;
+  };
+
   const getEstadoStyle = (estado) => {
     switch (estado) {
       case "PENDIENTE":
@@ -73,6 +128,15 @@ const ProgramacionViajePage = () => {
       case "EN_RUTA":
         return "bg-purple-500/10 text-purple-300 border-purple-500/30";
 
+      case "EN_ALMACEN":
+        return "bg-cyan-500/10 text-cyan-300 border-cyan-500/30";
+
+      case "EN_CLIENTE":
+        return "bg-orange-500/10 text-orange-300 border-orange-500/30";
+
+      case "ENTREGADO":
+        return "bg-emerald-500/10 text-emerald-300 border-emerald-500/30";
+
       case "FINALIZADO":
         return "bg-green-500/10 text-green-300 border-green-500/30";
 
@@ -80,7 +144,7 @@ const ProgramacionViajePage = () => {
         return "bg-red-500/10 text-red-300 border-red-500/30";
 
       default:
-        return "bg-neutral-700/40 text-neutral-300 border-neutral-600";
+        return "text-muted";
     }
   };
 
@@ -110,19 +174,19 @@ const ProgramacionViajePage = () => {
     }
   };
 
-  const handleCambiarEstado = async (viaje, nuevoEstado) => {
+  const ejecutarCambioEstado = async (viaje, nuevoEstado, fechaHora = "") => {
     const viajeId = getId(viaje);
 
     if (!viajeId) {
       toast.error("ID de programación no válido");
-      return;
+      return false;
     }
+
+    const requiereFecha = ["EN_CLIENTE", "ENTREGADO"].includes(nuevoEstado);
 
     const mensajeConfirmacion =
       nuevoEstado === "FINALIZADO"
-        ? "¿Seguro que deseas finalizar este servicio? La unidad quedará disponible para otro viaje."
-        : nuevoEstado === "EN_RUTA"
-        ? "¿Seguro que deseas marcar este servicio como EN RUTA?"
+        ? "¿Seguro que deseas finalizar este servicio?"
         : nuevoEstado === "ANULADO"
         ? "¿Seguro que deseas anular esta programación?"
         : `¿Seguro que deseas cambiar el estado a ${nuevoEstado}?`;
@@ -137,11 +201,15 @@ const ProgramacionViajePage = () => {
         [viajeId]: true,
       }));
 
-      await cambiarEstadoProgramacion(viajeId, nuevoEstado);
+      await cambiarEstadoProgramacion(viajeId, {
+        estado: nuevoEstado,
+        ...(requiereFecha ? { fechaHora } : {}),
+      });
 
       await recargarProgramaciones();
 
       toast.success(`Programación actualizada a ${nuevoEstado}`);
+      return true;
     } catch (error) {
       console.error("Error al cambiar estado:", error);
 
@@ -149,6 +217,7 @@ const ProgramacionViajePage = () => {
         error?.response?.data?.message ||
           "Error al cambiar el estado de la programación"
       );
+      return false;
     } finally {
       setCambiandoEstado((prev) => ({
         ...prev,
@@ -157,12 +226,40 @@ const ProgramacionViajePage = () => {
     }
   };
 
-  const puedeMarcarEnRuta = (estado) => {
-    return ["PENDIENTE", "ASIGNADO"].includes(estado);
+  const handleCambiarEstado = async (viaje, nuevoEstado) => {
+    if (["EN_CLIENTE", "ENTREGADO"].includes(nuevoEstado)) {
+      setEstadoConFecha({ viaje, nuevoEstado });
+      setFechaHoraOperacion(getDateTimeLocalNow());
+      return;
+    }
+
+    await ejecutarCambioEstado(viaje, nuevoEstado);
   };
 
-  const puedeFinalizar = (estado) => {
-    return ["PENDIENTE", "ASIGNADO", "EN_RUTA"].includes(estado);
+  const cerrarFechaOperacion = () => {
+    setEstadoConFecha(null);
+    setFechaHoraOperacion(getDateTimeLocalNow());
+  };
+
+  const confirmarFechaOperacion = async (e) => {
+    e.preventDefault();
+
+    if (!estadoConFecha?.viaje || !estadoConFecha?.nuevoEstado) return;
+
+    if (!fechaHoraOperacion) {
+      toast.error("Selecciona fecha y hora");
+      return;
+    }
+
+    const actualizado = await ejecutarCambioEstado(
+      estadoConFecha.viaje,
+      estadoConFecha.nuevoEstado,
+      fechaHoraOperacion
+    );
+
+    if (actualizado) {
+      cerrarFechaOperacion();
+    }
   };
 
   const puedeAnular = (estado) => {
@@ -179,151 +276,350 @@ const ProgramacionViajePage = () => {
     ? programaciones
     : [];
 
-  return (
-    <div className="p-6 text-white">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Programación de Viajes</h1>
+  const EstadoBadge = ({ estado }) => (
+    <span
+      className={`inline-flex items-center justify-center rounded-full border px-3 py-1 text-[11px] font-bold tracking-wide ${getEstadoStyle(
+        estado
+      )}`}
+    >
+      {estado || "SIN ESTADO"}
+    </span>
+  );
 
-          <p className="text-sm text-zinc-400">
-            Total de programaciones: {total}
-          </p>
-        </div>
+  const AccionesViaje = ({ viaje, mobile = false }) => {
+    const viajeId = getId(viaje);
 
+    return (
+      <div
+        className={`flex ${
+          mobile ? "w-full flex-col sm:flex-row" : "justify-start"
+        } flex-wrap gap-2`}
+      >
         <button
           type="button"
-          onClick={abrirCrear}
-          className="rounded-lg bg-green-600 px-4 py-2 font-semibold text-white hover:bg-green-700"
+          onClick={() => abrirVer(viaje)}
+          className="btn-secondary px-3 py-2 text-xs"
         >
-          + Nueva Programación
+          Ver
         </button>
+
+        {(TRANSICIONES[viaje.estado] || []).map((accion) => (
+          <button
+            key={accion.estado}
+            type="button"
+            disabled={cambiandoEstado[viajeId]}
+            onClick={() => handleCambiarEstado(viaje, accion.estado)}
+            className="btn-primary px-3 py-2 text-xs"
+          >
+            {accion.label}
+          </button>
+        ))}
+
+        {puedeAnular(viaje.estado) && (
+          <button
+            type="button"
+            disabled={cambiandoEstado[viajeId]}
+            onClick={() => handleCambiarEstado(viaje, "ANULADO")}
+            className="btn-danger px-3 py-2 text-xs"
+          >
+            Anular
+          </button>
+        )}
       </div>
+    );
+  };
 
-      <div className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900">
-        <table className="w-full text-sm">
-          <thead className="bg-zinc-800 text-zinc-300">
-            <tr>
-              <th className="p-3 text-left">Orden</th>
-              <th className="p-3 text-left">Tracto</th>
-              <th className="p-3 text-left">Carreta</th>
-              <th className="p-3 text-left">Conductor</th>
-              <th className="p-3 text-left">Fecha Inicio</th>
-              <th className="p-3 text-left">Estado</th>
-              <th className="p-3 text-left">Acciones</th>
-            </tr>
-          </thead>
+  return (
+    <div className="w-full py-4">
+      <div className="page-wrap">
+        <header className="page-hero">
+          <div className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <div className="eyebrow">Gestión de viajes</div>
 
-          <tbody>
-            {listaProgramaciones.length === 0 ? (
-              <tr>
-                <td colSpan="7" className="p-6 text-center text-zinc-400">
-                  No hay programaciones registradas
-                </td>
-              </tr>
-            ) : (
-              listaProgramaciones.map((viaje) => {
+              <h1 className="page-title">Programación de Viajes</h1>
+
+              <p className="page-description">
+                Asigna órdenes de servicio a unidades y conductores para iniciar
+                el flujo operativo.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="info-tile border px-4 py-3">
+                <p className="text-faint text-xs">Total programaciones</p>
+                <p className="text-main text-xl font-bold">{total}</p>
+              </div>
+
+              <button
+                type="button"
+                onClick={abrirCrear}
+                className="btn-primary px-5 py-3"
+              >
+                Nueva programación
+              </button>
+            </div>
+          </div>
+        </header>
+
+        {listaProgramaciones.length === 0 ? (
+          <div className="empty-panel">
+            <h2 className="text-main text-lg font-semibold">
+              No hay programaciones registradas
+            </h2>
+
+            <p className="text-muted mt-1 text-sm">
+              Crea una programación para asignar unidad y conductor a una orden.
+            </p>
+
+            <button
+              type="button"
+              onClick={abrirCrear}
+              className="btn-primary mt-5 px-5 py-3"
+            >
+              Crear programación
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="grid gap-4 lg:hidden">
+              {listaProgramaciones.map((viaje) => {
                 const viajeId = getId(viaje);
 
                 return (
-                  <tr
-                    key={viajeId}
-                    className="border-b border-zinc-800 hover:bg-zinc-800/60"
-                  >
-                    <td className="p-3">
-                      {viaje.ordenServicio?.numeroOrden || "-"}
-                    </td>
-
-                    <td className="p-3">
-                      {viaje.vehiculoPrincipal?.placa || "-"}
-                    </td>
-
-                    <td className="p-3">
-                      {viaje.vehiculoSecundario?.placa || "-"}
-                    </td>
-
-                    <td className="p-3">
-                      {obtenerNombreConductor(viaje.conductor)}
-                    </td>
-
-                    <td className="p-3">
-                      {formatearFecha(viaje.fechaInicioTraslado)}
-                    </td>
-
-                    <td className="p-3">
-                      <span
-                        className={`rounded border px-2 py-1 text-xs font-semibold ${getEstadoStyle(
-                          viaje.estado
-                        )}`}
-                      >
-                        {viaje.estado || "-"}
-                      </span>
-                    </td>
-
-                    <td className="p-3">
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          onClick={() => abrirVer(viaje)}
-                          className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-500"
-                        >
-                          Ver
-                        </button>
-
-                        {puedeMarcarEnRuta(viaje.estado) && (
-                          <button
-                            type="button"
-                            disabled={cambiandoEstado[viajeId]}
-                            onClick={() =>
-                              handleCambiarEstado(viaje, "EN_RUTA")
-                            }
-                            className="rounded-lg bg-purple-600 px-3 py-2 text-xs font-semibold text-white hover:bg-purple-500 disabled:cursor-not-allowed disabled:bg-zinc-700"
-                          >
-                            En ruta
-                          </button>
-                        )}
-
-                        {puedeFinalizar(viaje.estado) && (
-                          <button
-                            type="button"
-                            disabled={cambiandoEstado[viajeId]}
-                            onClick={() =>
-                              handleCambiarEstado(viaje, "FINALIZADO")
-                            }
-                            className="rounded-lg bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-500 disabled:cursor-not-allowed disabled:bg-zinc-700"
-                          >
-                            Finalizar
-                          </button>
-                        )}
-
-                        {puedeAnular(viaje.estado) && (
-                          <button
-                            type="button"
-                            disabled={cambiandoEstado[viajeId]}
-                            onClick={() =>
-                              handleCambiarEstado(viaje, "ANULADO")
-                            }
-                            className="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:bg-zinc-700"
-                          >
-                            Anular
-                          </button>
-                        )}
+                  <article key={viajeId} className="mobile-card">
+                    <div className="mb-4 flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-faint text-xs font-medium">Orden</p>
+                        <h2 className="text-main text-lg font-bold">
+                          {viaje.ordenServicio?.numeroOrden || "-"}
+                        </h2>
                       </div>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
 
-      <ProgramacionViajeModal
-        isOpen={openModal}
-        open={openModal}
-        onClose={cerrarModal}
-        mode={modalMode}
-        data={viajeSeleccionado}
-      />
+                      <EstadoBadge estado={viaje.estado} />
+                    </div>
+
+                    <div className="grid gap-3 text-sm sm:grid-cols-2">
+                      <div className="info-tile">
+                        <p className="text-faint text-xs">Carga</p>
+                        <p className="text-main font-semibold">
+                          {formatearTipoCarga(viaje.ordenServicio?.tipoCarga)}
+                        </p>
+                        <p className="text-faint text-xs">
+                          {viaje.ordenServicio?.clasificacionCarga ||
+                            "GENERAL"}
+                          {viaje.ordenServicio?.tipoCarga === "CONTENEDOR" &&
+                          viaje.ordenServicio?.dimensionCarga
+                            ? ` · ${formatearDimensionCarga(
+                                viaje.ordenServicio.dimensionCarga
+                              )}`
+                            : ""}
+                        </p>
+                      </div>
+
+                      <div className="info-tile">
+                        <p className="text-faint text-xs">Tracto</p>
+                        <p className="text-main font-semibold">
+                          {viaje.vehiculoPrincipal?.placa || "-"}
+                        </p>
+                      </div>
+
+                      <div className="info-tile">
+                        <p className="text-faint text-xs">Carreta</p>
+                        <p className="text-main font-semibold">
+                          {viaje.vehiculoSecundario?.placa || "-"}
+                        </p>
+                      </div>
+
+                      <div className="info-tile">
+                        <p className="text-faint text-xs">Conductor</p>
+                        <p className="text-main font-semibold">
+                          {obtenerNombreConductor(viaje.conductor)}
+                        </p>
+                      </div>
+
+                      <div className="info-tile">
+                        <p className="text-faint text-xs">Fecha inicio</p>
+                        <p className="text-main font-semibold">
+                          {formatearFecha(viaje.fechaInicioTraslado)}
+                        </p>
+                      </div>
+
+                      <div className="info-tile">
+                        <p className="text-faint text-xs">Standby</p>
+                        <p className="text-main font-semibold">
+                          {formatearStandby(viaje.standbyMinutos)}
+                        </p>
+                        <p className="text-faint text-xs">
+                          Cliente:{" "}
+                          {formatearFechaHora(viaje.fechaHoraLlegadaCliente)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 border-t pt-4">
+                      <AccionesViaje viaje={viaje} mobile />
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+
+            <div className="data-table-wrap">
+              <div className="overflow-x-auto">
+                <table className="data-table w-full min-w-[1100px] text-sm">
+                  <thead>
+                    <tr>
+                      <th className="px-4 py-4 text-left">Orden</th>
+                      <th className="px-4 py-4 text-left">Carga</th>
+                      <th className="px-4 py-4 text-left">Tracto</th>
+                      <th className="px-4 py-4 text-left">Carreta</th>
+                      <th className="px-4 py-4 text-left">Conductor</th>
+                      <th className="px-4 py-4 text-left">Fecha Inicio</th>
+                      <th className="px-4 py-4 text-left">Operación</th>
+                      <th className="px-4 py-4 text-center">Estado</th>
+                      <th className="px-4 py-4 text-left">Acciones</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {listaProgramaciones.map((viaje) => {
+                      const viajeId = getId(viaje);
+
+                      return (
+                        <tr key={viajeId}>
+                          <td className="px-4 py-4">
+                            <p className="text-main font-bold">
+                              {viaje.ordenServicio?.numeroOrden || "-"}
+                            </p>
+                          </td>
+
+                          <td className="whitespace-nowrap px-4 py-4">
+                            <p className="text-main font-semibold">
+                              {formatearTipoCarga(
+                                viaje.ordenServicio?.tipoCarga
+                              )}
+                            </p>
+                            <p className="text-faint text-xs">
+                              {viaje.ordenServicio?.clasificacionCarga ||
+                                "GENERAL"}
+                              {viaje.ordenServicio?.tipoCarga ===
+                                "CONTENEDOR" &&
+                              viaje.ordenServicio?.dimensionCarga
+                                ? ` · ${formatearDimensionCarga(
+                                    viaje.ordenServicio.dimensionCarga
+                                  )}`
+                                : ""}
+                            </p>
+                          </td>
+
+                          <td className="text-muted px-4 py-4">
+                            {viaje.vehiculoPrincipal?.placa || "-"}
+                          </td>
+
+                          <td className="text-muted px-4 py-4">
+                            {viaje.vehiculoSecundario?.placa || "-"}
+                          </td>
+
+                          <td className="text-muted min-w-[220px] px-4 py-4">
+                            {obtenerNombreConductor(viaje.conductor)}
+                          </td>
+
+                          <td className="text-muted whitespace-nowrap px-4 py-4">
+                            {formatearFecha(viaje.fechaInicioTraslado)}
+                          </td>
+
+                          <td className="text-muted min-w-[220px] px-4 py-4">
+                            <p className="text-faint text-xs">
+                              Cliente:{" "}
+                              {formatearFechaHora(
+                                viaje.fechaHoraLlegadaCliente
+                              )}
+                            </p>
+                            <p className="text-faint text-xs">
+                              Entrega:{" "}
+                              {formatearFechaHora(viaje.fechaHoraEntrega)}
+                            </p>
+                            <p className="text-main text-xs font-semibold">
+                              Standby: {formatearStandby(viaje.standbyMinutos)}
+                            </p>
+                          </td>
+
+                          <td className="whitespace-nowrap px-4 py-4 text-center">
+                            <EstadoBadge estado={viaje.estado} />
+                          </td>
+
+                          <td className="px-4 py-4">
+                            <AccionesViaje viaje={viaje} />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
+
+        <ProgramacionViajeModal
+          isOpen={openModal}
+          open={openModal}
+          onClose={cerrarModal}
+          mode={modalMode}
+          data={viajeSeleccionado}
+        />
+
+        {estadoConFecha && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-4 backdrop-blur-sm">
+            <form
+              onSubmit={confirmarFechaOperacion}
+              className="panel w-full max-w-md p-5"
+            >
+              <div className="mb-4 flex items-start gap-3">
+                <div className="rounded-lg border border-[var(--app-border)] p-2">
+                  <CalendarClock className="h-5 w-5 text-blue-400" />
+                </div>
+
+                <div>
+                  <h2 className="text-main text-lg font-bold">
+                    {estadoConFecha.nuevoEstado === "EN_CLIENTE"
+                      ? "Llegada al cliente"
+                      : "Entrega completada"}
+                  </h2>
+                  <p className="text-muted text-sm">
+                    Selecciona la fecha y hora registrada para este estado.
+                  </p>
+                </div>
+              </div>
+
+              <label className="text-muted mb-1 block text-sm font-semibold">
+                Fecha y hora
+              </label>
+              <input
+                type="datetime-local"
+                value={fechaHoraOperacion}
+                onChange={(e) => setFechaHoraOperacion(e.target.value)}
+                className="input p-3"
+                required
+              />
+
+              <div className="mt-5 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={cerrarFechaOperacion}
+                  className="btn-secondary px-4 py-2"
+                >
+                  Cancelar
+                </button>
+                <button type="submit" className="btn-primary px-4 py-2">
+                  Confirmar
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

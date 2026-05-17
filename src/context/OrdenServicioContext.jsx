@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react";
+import { useAuth } from "./AuthContext";
 
 import {
   crearOrdenServicioRequest,
@@ -6,6 +7,8 @@ import {
   obtenerOrdenServicioRequest,
   actualizarOrdenServicioRequest,
   anularOrdenServicioRequest,
+  obtenerDevolucionesPendientesRequest,
+  actualizarEstadoDevolucionRequest,
 } from "../api/ordenServicio";
 
 const OrdenServicioContext = createContext();
@@ -26,8 +29,10 @@ export const useOrdenesServicio = () => {
 export const useOrdenServicio = useOrdenesServicio;
 
 export const OrdenServicioProvider = ({ children }) => {
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const [ordenes, setOrdenes] = useState([]);
   const [ordenSeleccionada, setOrdenSeleccionada] = useState(null);
+  const [devolucionesPendientes, setDevolucionesPendientes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState([]);
 
@@ -119,13 +124,54 @@ export const OrdenServicioProvider = ({ children }) => {
     }
   };
 
+  const cargarDevolucionesPendientes = async () => {
+    try {
+      setLoading(true);
+      const res = await obtenerDevolucionesPendientesRequest();
+      setDevolucionesPendientes(res.data);
+      return res.data;
+    } catch (error) {
+      setErrors([
+        error.response?.data?.message || "Error al obtener devoluciones",
+      ]);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const actualizarEstadoDevolucion = async (id, data) => {
+    try {
+      const res = await actualizarEstadoDevolucionRequest(id, data);
+      await cargarOrdenesServicio();
+      await cargarDevolucionesPendientes();
+      return res.data;
+    } catch (error) {
+      setErrors([
+        error.response?.data?.message ||
+          "Error al actualizar el estado de devolución",
+      ]);
+      throw error;
+    }
+  };
+
   const limpiarOrdenSeleccionada = () => {
     setOrdenSeleccionada(null);
   };
 
   useEffect(() => {
-    cargarOrdenesServicio();
-  }, []);
+    if (authLoading) return;
+
+    if (isAuthenticated) {
+      cargarOrdenesServicio();
+      return;
+    }
+
+    setOrdenes([]);
+    setOrdenSeleccionada(null);
+    setDevolucionesPendientes([]);
+    limpiarErrores();
+  }, [authLoading, isAuthenticated]);
 
   return (
     <OrdenServicioContext.Provider
@@ -134,6 +180,7 @@ export const OrdenServicioProvider = ({ children }) => {
         ordenesServicio: ordenes,
 
         ordenSeleccionada,
+        devolucionesPendientes,
         loading,
         errors,
         setErrors,
@@ -151,6 +198,9 @@ export const OrdenServicioProvider = ({ children }) => {
         actualizarOrdenServicio: editarOrdenServicio,
 
         anularOrdenServicio,
+        cargarDevolucionesPendientes,
+        obtenerDevolucionesPendientes: cargarDevolucionesPendientes,
+        actualizarEstadoDevolucion,
 
         limpiarOrdenSeleccionada,
       }}

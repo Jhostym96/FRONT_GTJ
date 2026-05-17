@@ -6,6 +6,12 @@ import OrdenServicioModal from "../components/modals/OrdenServicioModal";
 
 const getItemId = (item) => item?.id ?? item?._id;
 
+const formatearTipoCarga = (tipoCarga) =>
+  tipoCarga ? tipoCarga.replace("_", " ") : "-";
+
+const formatearDimensionCarga = (dimensionCarga) =>
+  dimensionCarga ? `${dimensionCarga} pies` : "-";
+
 const OrdenesServicioPage = () => {
   const {
     ordenes = [],
@@ -40,6 +46,8 @@ const OrdenesServicioPage = () => {
     switch (estado) {
       case "PENDIENTE":
         return "bg-yellow-500/10 text-yellow-300 border-yellow-500/30";
+      case "PARCIALMENTE_PROGRAMADA":
+        return "bg-cyan-500/10 text-cyan-300 border-cyan-500/30";
       case "PROGRAMADA":
         return "bg-blue-500/10 text-blue-300 border-blue-500/30";
       case "EN_PROCESO":
@@ -49,7 +57,7 @@ const OrdenesServicioPage = () => {
       case "ANULADA":
         return "bg-red-500/10 text-red-300 border-red-500/30";
       default:
-        return "bg-neutral-700/40 text-neutral-300 border-neutral-600";
+        return "text-muted";
     }
   };
 
@@ -109,6 +117,26 @@ const OrdenesServicioPage = () => {
     </span>
   );
 
+  const DevolucionBadge = ({ orden }) => {
+    if (orden.tipoCarga !== "CONTENEDOR") {
+      return <span className="text-faint text-xs">No aplica</span>;
+    }
+
+    const pendiente = orden.estadoDevolucion !== "DEVUELTO";
+
+    return (
+      <span
+        className={`inline-flex items-center justify-center rounded-full border px-3 py-1 text-[11px] font-bold tracking-wide ${
+          pendiente
+            ? "border-amber-500/30 bg-amber-500/10 text-amber-400"
+            : "border-green-500/30 bg-green-500/10 text-green-400"
+        }`}
+      >
+        {pendiente ? "PENDIENTE" : "DEVUELTO"}
+      </span>
+    );
+  };
+
   const AccionesOrden = ({ orden, mobile = false }) => {
     const ordenId = getItemId(orden);
 
@@ -121,7 +149,7 @@ const OrdenesServicioPage = () => {
         <button
           type="button"
           onClick={() => abrirVer(orden)}
-          className="rounded-lg bg-neutral-700/80 px-3 py-2 text-xs font-semibold text-neutral-100 transition hover:bg-neutral-600"
+          className="btn-secondary px-3 py-2 text-xs"
         >
           Ver
         </button>
@@ -130,7 +158,7 @@ const OrdenesServicioPage = () => {
           type="button"
           onClick={() => abrirEditar(orden)}
           disabled={orden.estado === "ANULADA"}
-          className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
+          className="btn-primary px-3 py-2 text-xs"
         >
           Editar
         </button>
@@ -140,7 +168,7 @@ const OrdenesServicioPage = () => {
             type="button"
             onClick={() => handleAnular(ordenId)}
             disabled={anulando[ordenId]}
-            className="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-red-500 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
+            className="btn-danger px-3 py-2 text-xs"
           >
             {anulando[ordenId] ? "Anulando..." : "Anular"}
           </button>
@@ -150,29 +178,29 @@ const OrdenesServicioPage = () => {
   };
 
   return (
-    <div className="w-full px-2 py-4 text-text-primary sm:px-4 lg:px-4">
-      <div className="mx-auto flex w-full max-w-[98%] flex-col gap-5">
-        <header className="overflow-hidden rounded-2xl border border-neutral-800 bg-gradient-to-br from-neutral-900 via-neutral-900 to-neutral-950 shadow-xl">
+    <div className="w-full py-4">
+      <div className="page-wrap">
+        <header className="page-hero">
           <div className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <div className="mb-2 inline-flex rounded-full border border-blue-500/30 bg-blue-500/10 px-3 py-1 text-xs font-semibold text-blue-300">
+              <div className="eyebrow">
                 Gestión de transporte
               </div>
 
-              <h1 className="text-2xl font-bold tracking-tight text-gray-100 sm:text-3xl">
+              <h1 className="page-title">
                 Órdenes de Servicio
               </h1>
 
-              <p className="mt-1 max-w-2xl text-sm text-neutral-400">
+              <p className="page-description">
                 Visualiza, registra y administra las órdenes de servicio para
                 transporte.
               </p>
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <div className="rounded-xl border border-neutral-800 bg-neutral-950/50 px-4 py-3">
-                <p className="text-xs text-neutral-500">Total órdenes</p>
-                <p className="text-xl font-bold text-gray-100">
+              <div className="info-tile border px-4 py-3">
+                <p className="text-faint text-xs">Total órdenes</p>
+                <p className="text-main text-xl font-bold">
                   {totalOrdenes}
                 </p>
               </div>
@@ -180,7 +208,7 @@ const OrdenesServicioPage = () => {
               <button
                 type="button"
                 onClick={abrirCrear}
-                className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-blue-950/30 transition hover:bg-blue-500 active:scale-[0.98]"
+                className="btn-primary px-5 py-3"
               >
                 Nueva orden
               </button>
@@ -189,26 +217,26 @@ const OrdenesServicioPage = () => {
         </header>
 
         {loading ? (
-          <div className="rounded-2xl border border-neutral-800 bg-surface p-8 text-center shadow-lg">
-            <div className="mx-auto mb-3 h-9 w-9 animate-spin rounded-full border-2 border-neutral-700 border-t-blue-500" />
-            <p className="text-sm text-neutral-400">
+          <div className="panel p-8 text-center">
+            <div className="mx-auto mb-3 h-9 w-9 animate-spin rounded-full border-2 border-[var(--app-border)] border-t-blue-500" />
+            <p className="text-muted text-sm">
               Cargando órdenes de servicio...
             </p>
           </div>
         ) : ordenes.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-neutral-700 bg-surface p-8 text-center shadow-lg">
-            <h2 className="text-lg font-semibold text-gray-200">
+          <div className="empty-panel">
+            <h2 className="text-main text-lg font-semibold">
               No hay órdenes registradas
             </h2>
 
-            <p className="mt-1 text-sm text-neutral-400">
+            <p className="text-muted mt-1 text-sm">
               Crea tu primera orden de servicio para empezar.
             </p>
 
             <button
               type="button"
               onClick={abrirCrear}
-              className="mt-5 rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-blue-500"
+              className="btn-primary mt-5 px-5 py-3"
             >
               Crear orden
             </button>
@@ -222,14 +250,14 @@ const OrdenesServicioPage = () => {
                 return (
                   <article
                     key={ordenId}
-                    className="rounded-2xl border border-neutral-800 bg-surface p-4 shadow-lg"
+                    className="mobile-card"
                   >
                     <div className="mb-4 flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-xs font-medium text-neutral-500">
+                        <p className="text-faint text-xs font-medium">
                           N° Orden
                         </p>
-                        <h2 className="text-lg font-bold text-gray-100">
+                        <h2 className="text-main text-lg font-bold">
                           {orden.numeroOrden || "-"}
                         </h2>
                       </div>
@@ -238,59 +266,99 @@ const OrdenesServicioPage = () => {
                     </div>
 
                     <div className="grid gap-3 text-sm">
-                      <div className="rounded-xl bg-neutral-900/60 p-3">
-                        <p className="text-xs text-neutral-500">Fecha</p>
-                        <p className="font-semibold text-neutral-200">
+                      <div className="info-tile">
+                        <p className="text-faint text-xs">Fecha</p>
+                        <p className="text-main font-semibold">
                           {formatearFecha(orden.fechaProgramada)}
                         </p>
                       </div>
 
-                      <div className="rounded-xl bg-neutral-900/60 p-3">
-                        <p className="text-xs text-neutral-500">Cliente</p>
-                        <p className="font-semibold text-gray-200">
+                      <div className="info-tile">
+                        <p className="text-faint text-xs">Tipo de carga</p>
+                        <p className="text-main font-semibold">
+                          {formatearTipoCarga(orden.tipoCarga)}
+                        </p>
+                        <p className="text-faint text-xs">
+                          {orden.clasificacionCarga || "GENERAL"}
+                        </p>
+                      </div>
+
+                      <div className="info-tile">
+                        <p className="text-faint text-xs">Viajes</p>
+                        <p className="text-main font-semibold">
+                          {orden.viajesProgramados || 0}/
+                          {orden.cantidadViajes || 1}
+                        </p>
+                      </div>
+
+                      {orden.tipoCarga === "CONTENEDOR" && (
+                        <div className="info-tile">
+                          <p className="text-faint text-xs">Contenedor</p>
+                          <p className="text-main font-semibold">
+                            {formatearDimensionCarga(orden.dimensionCarga)}
+                          </p>
+                          {orden.numeroContenedor && (
+                            <p className="text-faint text-xs">
+                              N° {orden.numeroContenedor}
+                            </p>
+                          )}
+                          <p className="text-faint text-xs">
+                            Vence: {formatearFecha(orden.fechaVencimientoDevolucion)}
+                          </p>
+                        </div>
+                      )}
+
+                      <div className="info-tile">
+                        <p className="text-faint text-xs">Cliente</p>
+                        <p className="text-main font-semibold">
                           {orden.clienteSolicitante?.razonSocial || "-"}
                         </p>
-                        <p className="text-xs text-neutral-500">
+                        <p className="text-faint text-xs">
                           {orden.clienteSolicitante?.numeroDocumento || ""}
                         </p>
                       </div>
 
                       <div className="grid gap-3 sm:grid-cols-2">
-                        <div className="rounded-xl bg-neutral-900/60 p-3">
-                          <p className="text-xs text-neutral-500">Remitente</p>
-                          <p className="font-semibold text-gray-200">
+                        <div className="info-tile">
+                          <p className="text-faint text-xs">Remitente</p>
+                          <p className="text-main font-semibold">
                             {orden.remitente?.razonSocial || "-"}
                           </p>
-                          <p className="text-xs text-neutral-500">
+                          <p className="text-faint text-xs">
                             {orden.remitente?.numeroDocumento || ""}
                           </p>
                         </div>
 
-                        <div className="rounded-xl bg-neutral-900/60 p-3">
-                          <p className="text-xs text-neutral-500">
+                        <div className="info-tile">
+                          <p className="text-faint text-xs">
                             Destinatario
                           </p>
-                          <p className="font-semibold text-gray-200">
+                          <p className="text-main font-semibold">
                             {orden.destinatario?.razonSocial || "-"}
                           </p>
-                          <p className="text-xs text-neutral-500">
+                          <p className="text-faint text-xs">
                             {orden.destinatario?.numeroDocumento || ""}
                           </p>
                         </div>
                       </div>
 
-                      <div className="rounded-xl bg-neutral-900/60 p-3">
-                        <p className="text-xs text-neutral-500">Ruta</p>
-                        <p className="mt-1 text-neutral-300">
+                      <div className="info-tile">
+                        <p className="text-faint text-xs">Ruta</p>
+                        <p className="text-muted mt-1">
                           {orden.partida?.direccion || "-"}
                         </p>
-                        <p className="mt-1 text-xs text-neutral-500">
+                        <p className="text-faint mt-1 text-xs">
                           → {orden.llegada?.direccion || "-"}
                         </p>
                       </div>
+
+                      <div className="info-tile">
+                        <p className="text-faint mb-2 text-xs">Devolución</p>
+                        <DevolucionBadge orden={orden} />
+                      </div>
                     </div>
 
-                    <div className="mt-4 border-t border-neutral-800 pt-4">
+                    <div className="mt-4 border-t pt-4">
                       <AccionesOrden orden={orden} mobile />
                     </div>
                   </article>
@@ -298,79 +366,129 @@ const OrdenesServicioPage = () => {
               })}
             </div>
 
-            <div className="hidden overflow-hidden rounded-2xl border border-neutral-800 bg-surface shadow-xl lg:block">
+            <div className="data-table-wrap">
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[1200px] text-sm">
-                  <thead className="bg-neutral-900">
-                    <tr className="border-b border-neutral-800 text-xs uppercase tracking-wide text-neutral-400">
+                <table className="data-table w-full min-w-[1200px] text-sm">
+                  <thead>
+                    <tr>
                       <th className="px-4 py-4 text-left">N° Orden</th>
                       <th className="px-4 py-4 text-left">Fecha</th>
+                      <th className="px-4 py-4 text-left">Carga</th>
+                      <th className="px-4 py-4 text-left">Viajes</th>
+                      <th className="px-4 py-4 text-left">Contenedor</th>
                       <th className="px-4 py-4 text-left">Cliente</th>
                       <th className="px-4 py-4 text-left">Remitente</th>
                       <th className="px-4 py-4 text-left">Destinatario</th>
                       <th className="px-4 py-4 text-left">Ruta</th>
                       <th className="px-4 py-4 text-center">Estado</th>
+                      <th className="px-4 py-4 text-center">Devolución</th>
                       <th className="px-4 py-4 text-center">Acciones</th>
                     </tr>
                   </thead>
 
-                  <tbody className="divide-y divide-neutral-800">
+                  <tbody>
                     {ordenes.map((orden) => {
                       const ordenId = getItemId(orden);
 
                       return (
-                        <tr
-                          key={ordenId}
-                          className="bg-neutral-950/20 transition hover:bg-neutral-800/50"
-                        >
+                        <tr key={ordenId}>
                           <td className="px-4 py-4">
-                            <p className="font-bold text-gray-100">
+                            <p className="text-main font-bold">
                               {orden.numeroOrden || "-"}
                             </p>
                           </td>
 
-                          <td className="whitespace-nowrap px-4 py-4 text-neutral-300">
+                          <td className="text-muted whitespace-nowrap px-4 py-4">
+                            <p className="text-main font-semibold">
+                              {orden.viajesProgramados || 0}/
+                              {orden.cantidadViajes || 1}
+                            </p>
+                            <p className="text-faint text-xs">
+                              Pendientes: {orden.viajesPendientes ?? "-"}
+                            </p>
+                          </td>
+
+                          <td className="text-muted whitespace-nowrap px-4 py-4">
                             {formatearFecha(orden.fechaProgramada)}
                           </td>
 
+                          <td className="whitespace-nowrap px-4 py-4">
+                            <p className="text-main font-semibold">
+                              {formatearTipoCarga(orden.tipoCarga)}
+                            </p>
+                            <p className="text-faint text-xs">
+                              {orden.clasificacionCarga || "GENERAL"}
+                            </p>
+                            {orden.tipoCarga === "CONTENEDOR" && (
+                              <p className="text-faint text-xs">
+                                {formatearDimensionCarga(orden.dimensionCarga)}
+                              </p>
+                            )}
+                          </td>
+
+                          <td className="text-muted whitespace-nowrap px-4 py-4">
+                            {orden.tipoCarga === "CONTENEDOR" ? (
+                              <>
+                                <p className="text-main font-semibold">
+                                  {orden.numeroContenedor ||
+                                    formatearDimensionCarga(
+                                      orden.dimensionCarga
+                                    )}
+                                </p>
+                                <p className="text-faint text-xs">
+                                  Vence:{" "}
+                                  {formatearFecha(
+                                    orden.fechaVencimientoDevolucion
+                                  )}
+                                </p>
+                              </>
+                            ) : (
+                              "-"
+                            )}
+                          </td>
+
                           <td className="min-w-[190px] px-4 py-4">
-                            <p className="max-w-[230px] truncate font-semibold text-gray-200">
+                            <p className="text-main max-w-[230px] truncate font-semibold">
                               {orden.clienteSolicitante?.razonSocial || "-"}
                             </p>
-                            <p className="text-xs text-neutral-500">
+                            <p className="text-faint text-xs">
                               {orden.clienteSolicitante?.numeroDocumento || ""}
                             </p>
                           </td>
 
                           <td className="min-w-[190px] px-4 py-4">
-                            <p className="max-w-[230px] truncate font-semibold text-gray-200">
+                            <p className="text-main max-w-[230px] truncate font-semibold">
                               {orden.remitente?.razonSocial || "-"}
                             </p>
-                            <p className="text-xs text-neutral-500">
+                            <p className="text-faint text-xs">
                               {orden.remitente?.numeroDocumento || ""}
                             </p>
                           </td>
 
                           <td className="min-w-[190px] px-4 py-4">
-                            <p className="max-w-[230px] truncate font-semibold text-gray-200">
+                            <p className="text-main max-w-[230px] truncate font-semibold">
                               {orden.destinatario?.razonSocial || "-"}
                             </p>
-                            <p className="text-xs text-neutral-500">
+                            <p className="text-faint text-xs">
                               {orden.destinatario?.numeroDocumento || ""}
                             </p>
                           </td>
 
                           <td className="min-w-[280px] px-4 py-4">
-                            <p className="max-w-[360px] truncate text-neutral-300">
+                            <p className="text-muted max-w-[360px] truncate">
                               {orden.partida?.direccion || "-"}
                             </p>
-                            <p className="max-w-[360px] truncate text-xs text-neutral-500">
+                            <p className="text-faint max-w-[360px] truncate text-xs">
                               → {orden.llegada?.direccion || "-"}
                             </p>
                           </td>
 
                           <td className="whitespace-nowrap px-4 py-4 text-center">
                             <EstadoBadge estado={orden.estado} />
+                          </td>
+
+                          <td className="whitespace-nowrap px-4 py-4 text-center">
+                            <DevolucionBadge orden={orden} />
                           </td>
 
                           <td className="whitespace-nowrap px-4 py-4">

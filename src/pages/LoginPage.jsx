@@ -4,11 +4,14 @@ import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import logo from "/tj.png";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { useTheme } from "../context/ThemeContext";
+import { Moon, Sun } from "lucide-react";
 
 function LoginPage() {
   const { register, handleSubmit } = useForm();
   const { signin, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const { isDark, toggleTheme } = useTheme();
 
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -29,12 +32,25 @@ function LoginPage() {
   }, [isAuthenticated, navigate]);
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-zinc-900 px-4">
-      <div className="bg-zinc-800 w-full max-w-md p-8 rounded-lg shadow-md">
+    <div className="app-shell flex min-h-screen items-center justify-center px-4 py-8">
+      <button
+        type="button"
+        onClick={toggleTheme}
+        className="btn-secondary fixed right-5 top-5 h-10 w-10 px-0"
+        aria-label={isDark ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+        title={isDark ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+      >
+        {isDark ? <Sun size={18} /> : <Moon size={18} />}
+      </button>
+
+      <div className="panel w-full max-w-md p-8">
         {/* Logo + Título */}
         <div className="flex flex-col items-center mb-6">
           <img src={logo} alt="Logo" className="w-24 h-24 mb-2" />
-          <h1 className="text-3xl font-bold text-white">Iniciar sesión</h1>
+          <h1 className="page-title">Iniciar sesión</h1>
+          <p className="text-muted mt-2 text-center text-sm">
+            Accede al panel de gestión de Transportes J.
+          </p>
         </div>
 
 
@@ -44,7 +60,7 @@ function LoginPage() {
             <input
               type="text"
               {...register("dni")}
-              className="w-full bg-zinc-700 text-white px-4 py-2 rounded focus:outline-none focus:ring-2 focus:ring-sky-500"
+              className="input px-4 py-3"
               placeholder="DNI"
               autoComplete="username"
             />
@@ -55,7 +71,7 @@ function LoginPage() {
             <input
               type={showPassword ? "text" : "password"}
               {...register("password")}
-              className="w-full bg-zinc-700 text-white px-4 py-2 pr-10 rounded focus:outline-none focus:ring-2 focus:ring-sky-500"
+              className="input px-4 py-3 pr-10"
               placeholder="Contraseña"
               autoComplete="current-password"
             />
@@ -63,7 +79,7 @@ function LoginPage() {
               type="button"
               aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute top-2.5 right-3 text-white"
+              className="text-muted absolute right-3 top-3.5 hover:text-blue-500"
               tabIndex={-1}
             >
               {showPassword ? <FaEyeSlash /> : <FaEye />}
@@ -74,11 +90,7 @@ function LoginPage() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className={`w-full ${
-              isSubmitting
-                ? "bg-sky-400 cursor-not-allowed"
-                : "bg-sky-600 hover:bg-sky-700"
-            } transition-colors text-white py-2 rounded font-semibold`}
+            className="btn-primary w-full py-3"
           >
             {isSubmitting ? (
               <div className="flex items-center justify-center gap-2">
@@ -113,7 +125,7 @@ function LoginPage() {
         <div className="mt-4 text-center">
           <button
             type="button"
-            className="text-sky-400 hover:underline text-sm"
+            className="text-sm font-medium text-blue-500 hover:underline"
             onClick={() => alert("Funcionalidad en desarrollo")}
           >
             ¿Olvidaste tu contraseña?

@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import { FaTimes } from "react-icons/fa";
 import { useOrdenesServicio } from "../../context/OrdenServicioContext";
 import { useClientes } from "../../context/ClienteContext";
+import { getTodayInputDate } from "../../utils/date";
 
 const datosPersonaVacios = {
   tipoDocumento: "6",
@@ -11,10 +12,30 @@ const datosPersonaVacios = {
   direccion: "",
 };
 
-const initialForm = {
-  fechaProgramada: "",
-  observaciones: "",
+const TIPOS_CARGA = [
+  { value: "CONTENEDOR", label: "CONTENEDOR" },
+  { value: "CARGA_SUELTA", label: "CARGA SUELTA" },
+  { value: "TOLVA", label: "TOLVA" },
+];
+
+const CLASIFICACIONES_CARGA = [
+  { value: "GENERAL", label: "GENERAL" },
+  { value: "IMO", label: "IMO" },
+  { value: "IQBF", label: "IQBF" },
+];
+
+const DIMENSIONES_CARGA = [
+  { value: "20", label: "20 pies" },
+  { value: "40", label: "40 pies" },
+];
+
+const createInitialForm = () => ({
+  fechaProgramada: getTodayInputDate(),
   estado: "PENDIENTE",
+  cantidadViajes: "1",
+  tipoCarga: "CARGA_SUELTA",
+  clasificacionCarga: "GENERAL",
+  dimensionCarga: "",
 
   clienteSolicitante: { ...datosPersonaVacios },
   clienteEs: "OTRO",
@@ -34,10 +55,7 @@ const initialForm = {
     referencia: "",
   },
 
-  transporte: {
-    mtc: "",
-  },
-};
+});
 
 const getItemId = (item) => item?.id ?? item?._id;
 
@@ -65,7 +83,7 @@ const OrdenServicioModal = ({
     };
   }, [getClientes, limpiarDatosRelacionados]);
 
-  const [form, setForm] = useState(initialForm);
+  const [form, setForm] = useState(createInitialForm);
   const [loading, setLoading] = useState(false);
 
   const [clienteIdSeleccionado, setClienteIdSeleccionado] = useState("");
@@ -102,8 +120,11 @@ const OrdenServicioModal = ({
         fechaProgramada: orden.fechaProgramada
           ? orden.fechaProgramada.slice(0, 10)
           : "",
-        observaciones: orden.observaciones || "",
         estado: orden.estado || "PENDIENTE",
+        cantidadViajes: String(orden.cantidadViajes || 1),
+        tipoCarga: orden.tipoCarga || "CARGA_SUELTA",
+        clasificacionCarga: orden.clasificacionCarga || "GENERAL",
+        dimensionCarga: orden.dimensionCarga || "",
 
         clienteSolicitante: {
           tipoDocumento: clienteBase?.tipoDocumento || "6",
@@ -140,14 +161,11 @@ const OrdenServicioModal = ({
           referencia: orden.llegada?.referencia || "",
         },
 
-        transporte: {
-          mtc: orden.transporte?.mtc || "",
-        },
       });
     }
 
     if (isCreateMode) {
-      setForm(initialForm);
+      setForm(createInitialForm());
       setClienteIdSeleccionado("");
       setRemitenteIdSeleccionado("");
       setDestinatarioIdSeleccionado("");
@@ -161,16 +179,14 @@ const OrdenServicioModal = ({
 
   if (!isOpen) return null;
 
-  const inputClass =
-    "w-full rounded-xl border border-gray-700 bg-gray-950/70 px-3 py-2.5 text-sm text-gray-100 placeholder-gray-500 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:bg-gray-900/60 disabled:text-gray-400 disabled:opacity-80";
+  const inputClass = "input px-3 py-2.5 placeholder:text-gray-500";
 
-  const labelClass = "mb-1.5 block text-xs font-semibold text-gray-300";
+  const labelClass = "text-muted mb-1.5 block text-xs font-semibold";
 
-  const sectionClass =
-    "rounded-2xl border border-gray-800 bg-gray-950/35 p-4 shadow-sm sm:p-5";
+  const sectionClass = "panel p-4 sm:p-5";
 
   const sectionTitleClass =
-    "mb-4 flex items-center justify-between border-b border-gray-800 pb-3";
+    "mb-4 flex items-center justify-between border-b pb-3";
 
   const disabled = isViewMode || loading;
 
@@ -189,7 +205,7 @@ const OrdenServicioModal = ({
   };
 
   const resetForm = () => {
-    setForm(initialForm);
+    setForm(createInitialForm());
     setClienteIdSeleccionado("");
     setRemitenteIdSeleccionado("");
     setDestinatarioIdSeleccionado("");
@@ -484,6 +500,16 @@ const OrdenServicioModal = ({
       return;
     }
 
+    if (name === "tipoCarga") {
+      setForm((prev) => ({
+        ...prev,
+        tipoCarga: value,
+        dimensionCarga: value === "CONTENEDOR" ? prev.dimensionCarga : "",
+      }));
+
+      return;
+    }
+
     if (keys.length === 1) {
       setForm((prev) => ({
         ...prev,
@@ -506,6 +532,13 @@ const OrdenServicioModal = ({
   const validarFormulario = () => {
     if (!form.fechaProgramada) {
       toast.error("La fecha programada es obligatoria");
+      return false;
+    }
+
+    const cantidadViajes = Number(form.cantidadViajes);
+
+    if (!Number.isInteger(cantidadViajes) || cantidadViajes < 1) {
+      toast.error("La cantidad de viajes debe ser mayor a 0");
       return false;
     }
 
@@ -574,13 +607,27 @@ const OrdenServicioModal = ({
       return false;
     }
 
+    if (!form.clasificacionCarga) {
+      toast.error("Selecciona la clasificación de la carga");
+      return false;
+    }
+
+    if (form.tipoCarga === "CONTENEDOR" && !form.dimensionCarga) {
+      toast.error("Selecciona la dimensión del contenedor");
+      return false;
+    }
+
     return true;
   };
 
   const limpiarPayloadOrden = () => {
     const data = {
       ...form,
-      observaciones: form.observaciones.trim().toUpperCase(),
+      cantidadViajes: Number(form.cantidadViajes),
+      tipoCarga: form.tipoCarga,
+      clasificacionCarga: form.clasificacionCarga,
+      dimensionCarga:
+        form.tipoCarga === "CONTENEDOR" ? form.dimensionCarga : "",
 
       clienteSolicitante: {
         tipoDocumento: form.clienteSolicitante.tipoDocumento,
@@ -615,9 +662,6 @@ const OrdenServicioModal = ({
         referencia: form.llegada.referencia.trim().toUpperCase(),
       },
 
-      transporte: {
-        mtc: form.transporte.mtc.trim().toUpperCase(),
-      },
     };
 
     delete data.detalleCarga;
@@ -693,7 +737,7 @@ const OrdenServicioModal = ({
           value={form[prefix].numeroDocumento}
           onChange={handleChange}
           disabled={disabled}
-          placeholder="Ej: 20600695771"
+          placeholder="Ingrese el número de documento"
           className={inputClass}
         />
       </div>
@@ -706,7 +750,7 @@ const OrdenServicioModal = ({
           value={form[prefix].razonSocial}
           onChange={handleChange}
           disabled={disabled}
-          placeholder="Ej: SAN FERNANDO S.A."
+          placeholder="Ingrese la razón social o nombre"
           className={inputClass}
         />
       </div>
@@ -720,7 +764,7 @@ const OrdenServicioModal = ({
             value={form[prefix].direccion}
             onChange={handleChange}
             disabled={disabled}
-            placeholder="Dirección"
+            placeholder="Ingrese la dirección principal"
             className={inputClass}
           />
         </div>
@@ -737,19 +781,19 @@ const OrdenServicioModal = ({
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-3 py-4 sm:px-4">
-      <div className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-gray-800 bg-gray-900 shadow-xl">
-        <div className="flex items-start justify-between gap-4 border-b border-gray-800 bg-gray-900 px-5 py-4 sm:px-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-3 py-4 backdrop-blur-sm sm:px-4">
+      <div className="panel flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden">
+        <div className="flex items-start justify-between gap-4 border-b px-5 py-4 sm:px-6">
           <div>
-            <h2 className="text-xl font-bold text-white">{getTitulo()}</h2>
-            <p className="text-sm text-gray-400">{getSubtitulo()}</p>
+            <h2 className="text-main text-xl font-bold">{getTitulo()}</h2>
+            <p className="text-muted text-sm">{getSubtitulo()}</p>
           </div>
 
           <button
             type="button"
             onClick={handleClose}
             disabled={loading}
-            className="text-2xl text-gray-400 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+            className="text-muted text-2xl hover:text-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
             title="Cerrar"
           >
             <FaTimes />
@@ -761,10 +805,10 @@ const OrdenServicioModal = ({
             <section className={sectionClass}>
               <div className={sectionTitleClass}>
                 <div>
-                  <h3 className="text-base font-bold text-gray-100">
+                  <h3 className="text-main text-base font-bold">
                     Datos generales
                   </h3>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-faint text-xs">
                     Información principal del servicio.
                   </p>
                 </div>
@@ -794,6 +838,9 @@ const OrdenServicioModal = ({
                       className={inputClass}
                     >
                       <option value="PENDIENTE">PENDIENTE</option>
+                      <option value="PARCIALMENTE_PROGRAMADA">
+                        PARCIALMENTE PROGRAMADA
+                      </option>
                       <option value="PROGRAMADA">PROGRAMADA</option>
                       <option value="EN_PROCESO">EN PROCESO</option>
                       <option value="FINALIZADA">FINALIZADA</option>
@@ -802,30 +849,86 @@ const OrdenServicioModal = ({
                   </div>
                 )}
 
-                <div
-                  className={isCreateMode ? "md:col-span-9" : "md:col-span-6"}
-                >
-                  <label className={labelClass}>Observaciones</label>
+                <div className="md:col-span-3">
+                  <label className={labelClass}>Cantidad de viajes</label>
                   <input
-                    type="text"
-                    name="observaciones"
-                    value={form.observaciones}
+                    type="number"
+                    min="1"
+                    step="1"
+                    name="cantidadViajes"
+                    value={form.cantidadViajes}
                     onChange={handleChange}
                     disabled={disabled}
-                    placeholder="Ej: Coordinar ingreso con vigilancia"
                     className={inputClass}
                   />
                 </div>
+
+                <div className="md:col-span-3">
+                  <label className={labelClass}>Tipo de carga</label>
+                  <select
+                    name="tipoCarga"
+                    value={form.tipoCarga}
+                    onChange={handleChange}
+                    disabled={disabled}
+                    className={inputClass}
+                  >
+                    {TIPOS_CARGA.map((tipo) => (
+                      <option key={tipo.value} value={tipo.value}>
+                        {tipo.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="md:col-span-3">
+                  <label className={labelClass}>Clasificación</label>
+                  <select
+                    name="clasificacionCarga"
+                    value={form.clasificacionCarga}
+                    onChange={handleChange}
+                    disabled={disabled}
+                    className={inputClass}
+                  >
+                    {CLASIFICACIONES_CARGA.map((clasificacion) => (
+                      <option
+                        key={clasificacion.value}
+                        value={clasificacion.value}
+                      >
+                        {clasificacion.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {form.tipoCarga === "CONTENEDOR" && (
+                  <div className="md:col-span-3">
+                    <label className={labelClass}>Dimensión</label>
+                    <select
+                      name="dimensionCarga"
+                      value={form.dimensionCarga}
+                      onChange={handleChange}
+                      disabled={disabled}
+                      className={inputClass}
+                    >
+                      <option value="">Seleccione dimensión</option>
+                      {DIMENSIONES_CARGA.map((dimension) => (
+                        <option key={dimension.value} value={dimension.value}>
+                          {dimension.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
             </section>
 
             <section className={sectionClass}>
               <div className={sectionTitleClass}>
                 <div>
-                  <h3 className="text-base font-bold text-gray-100">
+                  <h3 className="text-main text-base font-bold">
                     Cliente solicitante
                   </h3>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-faint text-xs">
                     Empresa que solicita el servicio.
                   </p>
                 </div>
@@ -861,10 +964,10 @@ const OrdenServicioModal = ({
             <section className={sectionClass}>
               <div className={sectionTitleClass}>
                 <div>
-                  <h3 className="text-base font-bold text-gray-100">
+                  <h3 className="text-main text-base font-bold">
                     Remitente
                   </h3>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-faint text-xs">
                     Empresa desde donde inicia el traslado.
                   </p>
                 </div>
@@ -906,10 +1009,10 @@ const OrdenServicioModal = ({
             <section className={sectionClass}>
               <div className={sectionTitleClass}>
                 <div>
-                  <h3 className="text-base font-bold text-gray-100">
+                  <h3 className="text-main text-base font-bold">
                     Destinatario
                   </h3>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-faint text-xs">
                     Empresa donde finaliza el traslado.
                   </p>
                 </div>
@@ -952,10 +1055,10 @@ const OrdenServicioModal = ({
             <section className={sectionClass}>
               <div className={sectionTitleClass}>
                 <div>
-                  <h3 className="text-base font-bold text-gray-100">
+                  <h3 className="text-main text-base font-bold">
                     Ruta del servicio
                   </h3>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-faint text-xs">
                     Dirección de partida y llegada.
                   </p>
                 </div>
@@ -1005,7 +1108,7 @@ const OrdenServicioModal = ({
                           value={form.partida.ubigeo}
                           onChange={handleChange}
                           disabled={disabled}
-                          placeholder="150101"
+                          placeholder="Ingrese el ubigeo de partida"
                           maxLength={6}
                           className={inputClass}
                         />
@@ -1019,7 +1122,7 @@ const OrdenServicioModal = ({
                           value={form.partida.direccion}
                           onChange={handleChange}
                           disabled={disabled}
-                          placeholder="Dirección exacta de partida"
+                          placeholder="Ingrese la dirección de partida"
                           className={inputClass}
                         />
                       </div>
@@ -1033,7 +1136,7 @@ const OrdenServicioModal = ({
                         value={form.partida.referencia}
                         onChange={handleChange}
                         disabled={disabled}
-                        placeholder="Ej: Puerta 3"
+                        placeholder="Ingrese una referencia de partida"
                         className={inputClass}
                       />
                     </div>
@@ -1083,7 +1186,7 @@ const OrdenServicioModal = ({
                           value={form.llegada.ubigeo}
                           onChange={handleChange}
                           disabled={disabled}
-                          placeholder="150130"
+                          placeholder="Ingrese el ubigeo de llegada"
                           maxLength={6}
                           className={inputClass}
                         />
@@ -1097,7 +1200,7 @@ const OrdenServicioModal = ({
                           value={form.llegada.direccion}
                           onChange={handleChange}
                           disabled={disabled}
-                          placeholder="Dirección exacta de llegada"
+                          placeholder="Ingrese la dirección de llegada"
                           className={inputClass}
                         />
                       </div>
@@ -1111,7 +1214,7 @@ const OrdenServicioModal = ({
                         value={form.llegada.referencia}
                         onChange={handleChange}
                         disabled={disabled}
-                        placeholder="Ej: Almacén principal"
+                        placeholder="Ingrese una referencia de llegada"
                         className={inputClass}
                       />
                     </div>
@@ -1120,42 +1223,15 @@ const OrdenServicioModal = ({
               </div>
             </section>
 
-            <section className={sectionClass}>
-              <div className={sectionTitleClass}>
-                <div>
-                  <h3 className="text-base font-bold text-gray-100">
-                    Transporte / MTC
-                  </h3>
-                  <p className="text-xs text-gray-500">
-                    Datos complementarios del transporte.
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
-                <div className="md:col-span-4">
-                  <label className={labelClass}>MTC</label>
-                  <input
-                    type="text"
-                    name="transporte.mtc"
-                    value={form.transporte.mtc}
-                    onChange={handleChange}
-                    disabled={disabled}
-                    placeholder="Opcional"
-                    className={inputClass}
-                  />
-                </div>
-              </div>
-            </section>
           </div>
 
-          <div className="border-t border-gray-800 bg-gray-900 px-5 py-4 sm:px-6">
+          <div className="border-t px-5 py-4 sm:px-6">
             <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               <button
                 type="button"
                 onClick={handleClose}
                 disabled={loading}
-                className="rounded-lg bg-gray-700 px-5 py-2 text-white hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50"
+                className="btn-secondary px-5 py-2"
               >
                 {isViewMode ? "Cerrar" : "Cancelar"}
               </button>
@@ -1164,7 +1240,7 @@ const OrdenServicioModal = ({
                 <button
                   type="submit"
                   disabled={loading}
-                  className="rounded-lg bg-blue-600 px-5 py-2 text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-900"
+                  className="btn-primary px-5 py-2"
                 >
                   {loading
                     ? isEditMode
