@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useGuiaTransportista } from "../../context/GuiaTransportistaContext";
 import { useProgramacionViaje } from "../../context/ProgramacionViajeContext";
+import { getRecordId } from "../../utils/apiData";
 import { obtenerMensajesErrorApi } from "../../utils/apiErrorMessages";
 import { getTodayInputDate } from "../../utils/date";
 
@@ -205,7 +206,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
 
   const programacionSeleccionada = useMemo(() => {
     return programaciones?.find(
-      (p) => String(p.id) === String(form.programacionViaje)
+      (p) => String(getRecordId(p)) === String(form.programacionViaje)
     );
   }, [programaciones, form.programacionViaje]);
 
@@ -366,11 +367,11 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
       const data = limpiarPayloadGuia();
 
       if (isEdit) {
-        await actualizarGuiaTransportista(guia.id, data);
+        await actualizarGuiaTransportista(getRecordId(guia), data);
         toast.success("Guía actualizada correctamente");
       } else {
         await crearGuiaTransportista(data);
-        toast.success("Guía enviada a Nubefact correctamente");
+        toast.success("Guía creada y enviada a Nubefact correctamente");
       }
 
       await obtenerGuiasTransportista();
@@ -391,7 +392,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-3 py-4 backdrop-blur-sm">
+    <div className="modal-backdrop">
       <div className="panel max-h-[95vh] w-full max-w-6xl overflow-y-auto">
         <div className="sticky top-0 z-10 border-b px-5 py-4" style={{ background: "var(--app-surface)" }}>
           <div className="flex items-center justify-between gap-3">
@@ -436,7 +437,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
               </option>
 
               {programaciones?.map((p) => (
-                <option key={p.id} value={p.id}>
+                <option key={getRecordId(p)} value={getRecordId(p)}>
                   {p.ordenServicio?.numeroOrden || "Orden sin número"} -{" "}
                   {p.vehiculoPrincipal?.placa || "Sin placa"} -{" "}
                   {p.conductor
@@ -912,7 +913,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
                     ? "Guardando..."
                     : isEdit
                     ? "Actualizar guía"
-                    : "Emitir guía"}
+                    : "Crear y enviar guía"}
                 </button>
               </>
             )}

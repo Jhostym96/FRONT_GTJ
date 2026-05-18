@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useState } from "react";
 
 import {
   getProgramacionesViajeRequest,
@@ -8,6 +8,14 @@ import {
   getOrdenesDisponiblesParaViajeRequest,
   getProgramacionesDisponiblesParaGuiaRequest,
 } from "../api/programacionViaje";
+import {
+  DEFAULT_PAGINATION,
+  createPaginationParams,
+  normalizeCollection,
+  normalizePagination,
+  normalizeResource,
+  sameRecordId,
+} from "../utils/apiData";
 
 const ProgramacionViajeContext = createContext();
 
@@ -25,46 +33,59 @@ export function ProgramacionViajeProvider({ children }) {
   const [programaciones, setProgramaciones] = useState([]);
   const [ordenesDisponibles, setOrdenesDisponibles] = useState([]);
   const [errors, setErrors] = useState([]);
+  const [paginationProgramaciones, setPaginationProgramaciones] =
+    useState(DEFAULT_PAGINATION);
 
-  const getProgramacionesViaje = async () => {
+  const getProgramacionesViaje = useCallback(async (params = {}) => {
     try {
-      const res = await getProgramacionesViajeRequest();
-      setProgramaciones(res.data);
+      const requestParams = createPaginationParams({
+        page: params.page ?? 1,
+        limit: params.limit ?? 10,
+        search: params.search,
+      });
+      const res = await getProgramacionesViajeRequest(requestParams);
+      const data = normalizeCollection(res.data, ["programaciones"]);
+      setProgramaciones(data);
+      setPaginationProgramaciones(
+        normalizePagination(res.data, DEFAULT_PAGINATION)
+      );
     } catch (error) {
       setErrors([error.response?.data?.message || "Error al obtener programaciones"]);
     }
-  };
+  }, []);
 
-  const getProgramacionesDisponiblesParaGuia = async () => {
+  const getProgramacionesDisponiblesParaGuia = useCallback(async () => {
     try {
       const res = await getProgramacionesDisponiblesParaGuiaRequest();
-      setProgramaciones(res.data);
+      setProgramaciones(normalizeCollection(res.data, ["programaciones"]));
     } catch (error) {
       setErrors([
         error.response?.data?.message ||
           "Error al obtener programaciones disponibles para guía",
       ]);
     }
-  };
+  }, []);
 
-  const getProgramacionViaje = async (id) => {
+  const getProgramacionViaje = useCallback(async (id) => {
     try {
       const res = await getProgramacionViajeRequest(id);
-      return res.data;
+      return normalizeResource(res.data, ["programacion"]);
     } catch (error) {
       setErrors([error.response?.data?.message || "Error al obtener programación"]);
       throw error;
     }
-  };
+  }, []);
 
-  const createProgramacionViaje = async (data) => {
+  const createProgramacionViaje = useCallback(async (data) => {
     try {
       setErrors([]);
 
       const res = await createProgramacionViajeRequest(data);
 
-      if (res.data?.programacion) {
-        setProgramaciones((prev) => [res.data.programacion, ...prev]);
+      const programacionCreada = normalizeResource(res.data, ["programacion"]);
+
+      if (programacionCreada) {
+        setProgramaciones((prev) => [programacionCreada, ...prev]);
       }
 
       return res.data;
@@ -78,15 +99,15 @@ export function ProgramacionViajeProvider({ children }) {
 
       throw error;
     }
-  };
+  }, []);
 
-  const cambiarEstadoProgramacion = async (id, data) => {
+  const cambiarEstadoProgramacion = useCallback(async (id, data) => {
     try {
       const res = await updateEstadoProgramacionViajeRequest(id, data);
 
       setProgramaciones((prev) =>
         prev.map((item) =>
-          (item.id || item._id) === id
+          sameRecordId(item, id)
             ? { ...item, ...res.data.programacion }
             : item
         )
@@ -97,19 +118,19 @@ export function ProgramacionViajeProvider({ children }) {
       setErrors([error.response?.data?.message || "Error al cambiar estado"]);
       throw error;
     }
-  };
+  }, []);
 
-  const getOrdenesDisponibles = async () => {
+  const getOrdenesDisponibles = useCallback(async () => {
     try {
       const res = await getOrdenesDisponiblesParaViajeRequest();
-      setOrdenesDisponibles(res.data);
+      setOrdenesDisponibles(normalizeCollection(res.data, ["ordenes"]));
     } catch (error) {
       setErrors([
         error.response?.data?.message ||
           "Error al obtener órdenes disponibles",
       ]);
     }
-  };
+  }, []);
 
   return (
     <ProgramacionViajeContext.Provider
@@ -117,6 +138,7 @@ export function ProgramacionViajeProvider({ children }) {
         programaciones,
         ordenesDisponibles,
         errors,
+        paginationProgramaciones,
 
         getProgramacionesViaje,
         getProgramacionesDisponiblesParaGuia,

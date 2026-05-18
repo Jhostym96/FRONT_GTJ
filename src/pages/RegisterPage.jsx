@@ -20,7 +20,7 @@ function RegisterPage() {
   useEffect(() => {
     if (isAuthenticated) navigate("/")
 
-  }, [isAuthenticated]);
+  }, [isAuthenticated, navigate]);
 
 
   return (

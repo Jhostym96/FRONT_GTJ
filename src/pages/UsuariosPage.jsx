@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useUsuarios } from "../context/UserContext";
 import UsuarioForm from "../components/UsuarioForm";
+import TablePagination from "../components/TablePagination";
+import { getRecordId } from "../utils/apiData";
 
 // 👇 Definimos los roles igual que en el modelo Employee
 const rolesDisponibles = [
@@ -15,6 +17,7 @@ const UsuariosPage = () => {
   const {
     usuarios,
     loading,
+    paginationUsuarios,
     desactivarUsuario,
     activarUsuario,
     cambiarRol,
@@ -25,20 +28,34 @@ const UsuariosPage = () => {
   const [usuarioSeleccionado, setUsuarioSeleccionado] = useState(null);
 
   useEffect(() => {
-    cargarUsuarios();
+    cargarUsuarios({ page: 1, limit: 10 });
   }, [cargarUsuarios]);
 
-  const handleToggleActivo = (usuario) => {
+  const recargarUsuarios = (page = paginationUsuarios.page) =>
+    cargarUsuarios({ page, limit: paginationUsuarios.limit });
+
+  const handleToggleActivo = async (usuario) => {
+    const usuarioId = getRecordId(usuario);
+
+    if (!usuarioId) return;
+
     if (usuario.activo) {
-      desactivarUsuario(usuario._id);
+      await desactivarUsuario(usuarioId);
     } else {
-      activarUsuario(usuario._id);
+      await activarUsuario(usuarioId);
     }
+
+    await recargarUsuarios();
   };
 
-  const handleCambiarRol = (usuario, nuevoRol) => {
+  const handleCambiarRol = async (usuario, nuevoRol) => {
+    const usuarioId = getRecordId(usuario);
+
+    if (!usuarioId) return;
+
     if (nuevoRol && nuevoRol !== usuario.role) {
-      cambiarRol(usuario._id, nuevoRol);
+      await cambiarRol(usuarioId, nuevoRol);
+      await recargarUsuarios();
     }
   };
 
@@ -50,6 +67,10 @@ const UsuariosPage = () => {
   const cerrarFormulario = () => {
     setUsuarioSeleccionado(null);
     setMostrarFormulario(false);
+  };
+
+  const handlePageChange = (page) => {
+    recargarUsuarios(page);
   };
 
   return (
@@ -65,22 +86,13 @@ const UsuariosPage = () => {
               </p>
             </div>
 
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <div className="info-tile border px-4 py-3">
-                <p className="text-faint text-xs">Total usuarios</p>
-                <p className="text-main text-xl font-bold">
-                  {usuarios?.length || 0}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => abrirFormulario()}
-                className="btn-primary px-5 py-3"
-              >
-                Nuevo usuario
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => abrirFormulario()}
+              className="btn-primary px-5 py-3"
+            >
+              Nuevo usuario
+            </button>
           </div>
         </header>
 
@@ -106,9 +118,9 @@ const UsuariosPage = () => {
             </button>
           </div>
         ) : (
-          <div className="data-table-wrap">
-            <div className="overflow-x-auto">
-              <table className="data-table min-w-full text-left text-sm">
+          <div className="data-table-wrap !block">
+            <div className="table-scroll">
+              <table className="data-table min-w-[900px] text-left text-sm">
                 <thead>
                   <tr>
                     <th className="px-4 py-4">DNI</th>
@@ -120,71 +132,89 @@ const UsuariosPage = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {usuarios.map((usuario) => (
-                    <tr key={usuario._id}>
-                      <td className="text-muted px-4 py-4">{usuario.dni}</td>
-                      <td className="text-main px-4 py-4 font-semibold">
-                        {usuario.name}
-                      </td>
-                      <td className="text-muted px-4 py-4">{usuario.email}</td>
-                      <td className="px-4 py-4 capitalize">
-                        <select
-                          value={usuario.role}
-                          onChange={(e) =>
-                            handleCambiarRol(usuario, e.target.value)
-                          }
-                          className="input w-auto min-w-[170px] px-2 py-1 text-xs"
-                        >
-                          {rolesDisponibles.map((rol) => (
-                            <option key={rol} value={rol}>
-                              {rol}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="px-4 py-4">
-                        <span
-                          className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-bold tracking-wide ${
-                            usuario.activo
-                              ? "border-green-500/30 bg-green-500/10 text-green-400"
-                              : "border-red-500/30 bg-red-500/10 text-red-400"
-                          }`}
-                        >
-                          {usuario.activo ? "Activo" : "Inactivo"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4">
-                        <div className="flex justify-end gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleToggleActivo(usuario)}
-                            className={`${
-                              usuario.activo ? "btn-danger" : "btn-success"
-                            } px-3 py-2 text-xs`}
-                          >
-                            {usuario.activo ? "Desactivar" : "Activar"}
-                          </button>
+                  {usuarios.map((usuario, index) => {
+                    const usuarioId =
+                      getRecordId(usuario) ||
+                      `${usuario.dni || "usuario"}-${index}`;
 
-                          <button
-                            type="button"
-                            onClick={() => abrirFormulario(usuario)}
-                            className="btn-primary px-3 py-2 text-xs"
+                    return (
+                      <tr key={usuarioId}>
+                        <td className="text-muted px-4 py-4">{usuario.dni}</td>
+                        <td className="text-main px-4 py-4 font-semibold">
+                          {usuario.name}
+                        </td>
+                        <td className="text-muted px-4 py-4">
+                          {usuario.email}
+                        </td>
+                        <td className="px-4 py-4 capitalize">
+                          <select
+                            value={usuario.role}
+                            onChange={(e) =>
+                              handleCambiarRol(usuario, e.target.value)
+                            }
+                            className="input w-auto min-w-[170px] px-2 py-1 text-xs"
                           >
-                            Editar
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                            {rolesDisponibles.map((rol) => (
+                              <option key={rol} value={rol}>
+                                {rol}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="px-4 py-4">
+                          <span
+                            className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-bold tracking-wide ${
+                              usuario.activo
+                                ? "border-green-500/30 bg-green-500/10 text-green-400"
+                                : "border-red-500/30 bg-red-500/10 text-red-400"
+                            }`}
+                          >
+                            {usuario.activo ? "Activo" : "Inactivo"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="flex justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleActivo(usuario)}
+                              className={`${
+                                usuario.activo ? "btn-danger" : "btn-success"
+                              } px-3 py-2 text-xs`}
+                            >
+                              {usuario.activo ? "Desactivar" : "Activar"}
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => abrirFormulario(usuario)}
+                              className="btn-primary px-3 py-2 text-xs"
+                            >
+                              Editar
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           </div>
         )}
 
+        {!loading && usuarios.length > 0 && (
+          <TablePagination
+            page={paginationUsuarios.page}
+            totalPages={paginationUsuarios.totalPages}
+            total={paginationUsuarios.total}
+            limit={paginationUsuarios.limit}
+            onPageChange={handlePageChange}
+          />
+        )}
+
         {mostrarFormulario && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-4 backdrop-blur-sm">
-            <div className="panel relative max-h-[90vh] w-full max-w-md overflow-y-auto p-6 animate-fade-in">
+          <div className="modal-backdrop">
+            <div className="modal-panel relative max-w-md animate-fade-in">
               <button
                 type="button"
                 onClick={cerrarFormulario}
@@ -198,7 +228,7 @@ const UsuariosPage = () => {
                 usuario={usuarioSeleccionado}
                 onSuccess={() => {
                   cerrarFormulario();
-                  cargarUsuarios();
+                  recargarUsuarios();
                 }}
               />
             </div>

@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useOrdenesServicio } from "../context/OrdenServicioContext";
 import { useConductores } from "../context/ConductorContext";
+import TablePagination from "../components/TablePagination";
 import { getTodayInputDate } from "../utils/date";
 
 const getItemId = (item) => item?.id ?? item?._id;
@@ -10,6 +11,7 @@ function DevolucionesPage() {
   const {
     devolucionesPendientes = [],
     loading,
+    paginationDevoluciones,
     cargarDevolucionesPendientes,
     actualizarEstadoDevolucion,
   } = useOrdenesServicio();
@@ -27,7 +29,7 @@ function DevolucionesPage() {
   });
 
   useEffect(() => {
-    cargarDevolucionesPendientes();
+    cargarDevolucionesPendientes({ page: 1, limit: 10 });
     if (obtenerConductores) {
       obtenerConductores();
     } else {
@@ -36,10 +38,11 @@ function DevolucionesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const total = useMemo(
-    () => devolucionesPendientes?.length || 0,
-    [devolucionesPendientes]
-  );
+  const recargarDevoluciones = (page = paginationDevoluciones.page) =>
+    cargarDevolucionesPendientes({
+      page,
+      limit: paginationDevoluciones.limit,
+    });
 
   const formatearFecha = (fecha) => {
     if (!fecha) return "-";
@@ -148,6 +151,7 @@ function DevolucionesPage() {
       });
       toast.success("Datos de devolución guardados");
       cerrarModalDevolucion();
+      await recargarDevoluciones();
     } catch (error) {
       toast.error(
         error.response?.data?.message ||
@@ -187,6 +191,11 @@ function DevolucionesPage() {
       });
       toast.success("Devolución marcada como devuelta");
       cerrarModalDevolucion();
+      const nextPage =
+        devolucionesPendientes.length === 1 && paginationDevoluciones.page > 1
+          ? paginationDevoluciones.page - 1
+          : paginationDevoluciones.page;
+      await recargarDevoluciones(nextPage);
     } catch (error) {
       toast.error(
         error.response?.data?.message ||
@@ -195,6 +204,10 @@ function DevolucionesPage() {
     } finally {
       setActualizando((prev) => ({ ...prev, [id]: false }));
     }
+  };
+
+  const handlePageChange = (page) => {
+    recargarDevoluciones(page);
   };
 
   const ConductoresSelect = () => (
@@ -211,7 +224,7 @@ function DevolucionesPage() {
     >
       <option value="">Seleccione conductor</option>
       {conductores.map((conductor) => (
-        <option key={conductor.id} value={conductor.id}>
+        <option key={getItemId(conductor)} value={getItemId(conductor)}>
           {conductor.nombres} {conductor.apellidos}
         </option>
       ))}
@@ -231,10 +244,6 @@ function DevolucionesPage() {
               </p>
             </div>
 
-            <div className="info-tile border px-4 py-3">
-              <p className="text-faint text-xs">Pendientes</p>
-              <p className="text-main text-xl font-bold">{total}</p>
-            </div>
           </div>
         </header>
 
@@ -243,7 +252,7 @@ function DevolucionesPage() {
             <div className="mx-auto mb-3 h-9 w-9 animate-spin rounded-full border-2 border-[var(--app-border)] border-t-blue-500" />
             <p className="text-muted text-sm">Cargando devoluciones...</p>
           </div>
-        ) : total === 0 ? (
+        ) : devolucionesPendientes.length === 0 ? (
           <div className="empty-panel">
             <h2 className="text-main text-lg font-semibold">
               No hay devoluciones pendientes
@@ -373,7 +382,7 @@ function DevolucionesPage() {
             </div>
 
             <div className="data-table-wrap">
-              <div className="overflow-x-auto">
+              <div className="table-scroll">
                 <table className="data-table w-full min-w-[1000px] text-sm">
                   <thead>
                     <tr>
@@ -470,13 +479,21 @@ function DevolucionesPage() {
                 </table>
               </div>
             </div>
+
+            <TablePagination
+              page={paginationDevoluciones.page}
+              totalPages={paginationDevoluciones.totalPages}
+              total={paginationDevoluciones.total}
+              limit={paginationDevoluciones.limit}
+              onPageChange={handlePageChange}
+            />
           </>
         )}
       </div>
 
       {ordenSeleccionada && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-4 backdrop-blur-sm">
-          <div className="panel w-full max-w-lg p-6">
+        <div className="modal-backdrop">
+          <div className="modal-panel max-w-lg">
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-main text-xl font-bold">

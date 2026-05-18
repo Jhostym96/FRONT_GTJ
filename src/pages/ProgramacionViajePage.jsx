@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { CalendarClock } from "lucide-react";
 import toast from "react-hot-toast";
 import { useProgramacionViaje } from "../context/ProgramacionViajeContext";
@@ -6,6 +6,7 @@ import { useUnidades } from "../context/UnidadContext";
 import { useConductores } from "../context/ConductorContext";
 
 import ProgramacionViajeModal from "../components/modals/ProgramacionViajeModal";
+import TablePagination from "../components/TablePagination";
 
 const formatearTipoCarga = (tipoCarga) =>
   tipoCarga ? tipoCarga.replace("_", " ") : "-";
@@ -38,6 +39,7 @@ const TRANSICIONES = {
 const ProgramacionViajePage = () => {
   const {
     programaciones = [],
+    paginationProgramaciones,
     getProgramacionesViaje,
     obtenerProgramacionesViaje,
     cambiarEstadoProgramacion,
@@ -60,7 +62,7 @@ const ProgramacionViajePage = () => {
   useEffect(() => {
     const cargarDatos = async () => {
       if (getProgramacionesViaje) {
-        await getProgramacionesViaje();
+        await getProgramacionesViaje({ page: 1, limit: 10 });
       } else if (obtenerProgramacionesViaje) {
         await obtenerProgramacionesViaje();
       }
@@ -75,11 +77,13 @@ const ProgramacionViajePage = () => {
     };
 
     cargarDatos();
-  }, []);
-
-  const total = useMemo(() => {
-    return Array.isArray(programaciones) ? programaciones.length : 0;
-  }, [programaciones]);
+  }, [
+    getConductores,
+    getProgramacionesViaje,
+    obtenerConductores,
+    obtenerProgramacionesViaje,
+    obtenerUnidades,
+  ]);
 
   const formatearFecha = (fecha) => {
     if (!fecha) return "-";
@@ -166,12 +170,19 @@ const ProgramacionViajePage = () => {
     await recargarProgramaciones();
   };
 
-  const recargarProgramaciones = async () => {
+  const recargarProgramaciones = async (page = paginationProgramaciones.page) => {
     if (getProgramacionesViaje) {
-      await getProgramacionesViaje();
+      await getProgramacionesViaje({
+        page,
+        limit: paginationProgramaciones.limit,
+      });
     } else if (obtenerProgramacionesViaje) {
       await obtenerProgramacionesViaje();
     }
+  };
+
+  const handlePageChange = (page) => {
+    recargarProgramaciones(page);
   };
 
   const ejecutarCambioEstado = async (viaje, nuevoEstado, fechaHora = "") => {
@@ -345,20 +356,13 @@ const ProgramacionViajePage = () => {
               </p>
             </div>
 
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <div className="info-tile border px-4 py-3">
-                <p className="text-faint text-xs">Total programaciones</p>
-                <p className="text-main text-xl font-bold">{total}</p>
-              </div>
-
-              <button
-                type="button"
-                onClick={abrirCrear}
-                className="btn-primary px-5 py-3"
-              >
-                Nueva programación
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={abrirCrear}
+              className="btn-primary px-5 py-3"
+            >
+              Nueva programación
+            </button>
           </div>
         </header>
 
@@ -466,7 +470,7 @@ const ProgramacionViajePage = () => {
             </div>
 
             <div className="data-table-wrap">
-              <div className="overflow-x-auto">
+              <div className="table-scroll">
                 <table className="data-table w-full min-w-[1100px] text-sm">
                   <thead>
                     <tr>
@@ -559,6 +563,14 @@ const ProgramacionViajePage = () => {
                 </table>
               </div>
             </div>
+
+            <TablePagination
+              page={paginationProgramaciones.page}
+              totalPages={paginationProgramaciones.totalPages}
+              total={paginationProgramaciones.total}
+              limit={paginationProgramaciones.limit}
+              onPageChange={handlePageChange}
+            />
           </>
         )}
 
@@ -571,10 +583,10 @@ const ProgramacionViajePage = () => {
         />
 
         {estadoConFecha && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-4 backdrop-blur-sm">
+          <div className="modal-backdrop">
             <form
               onSubmit={confirmarFechaOperacion}
-              className="panel w-full max-w-md p-5"
+              className="modal-panel max-w-md"
             >
               <div className="mb-4 flex items-start gap-3">
                 <div className="rounded-lg border border-[var(--app-border)] p-2">

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useState } from "react";
 import {
   crearGuiaTransportistaRequest,
   validarGuiaTransportistaRequest,
@@ -16,6 +16,14 @@ import {
   obtenerMensajeErrorApi,
   obtenerMensajesErrorApi,
 } from "../utils/apiErrorMessages";
+import {
+  DEFAULT_PAGINATION,
+  createPaginationParams,
+  normalizeCollection,
+  normalizePagination,
+  normalizeResource,
+  sameRecordId,
+} from "../utils/apiData";
 
 const GuiaTransportistaContext = createContext();
 
@@ -37,10 +45,11 @@ export const GuiaTransportistaProvider = ({ children }) => {
   const [jsonGuia, setJsonGuia] = useState(null);
   const [loadingGuia, setLoadingGuia] = useState(false);
   const [errorsGuia, setErrorsGuia] = useState([]);
+  const [paginationGuias, setPaginationGuias] = useState(DEFAULT_PAGINATION);
 
-  const limpiarErroresGuia = () => {
+  const limpiarErroresGuia = useCallback(() => {
     setErrorsGuia([]);
-  };
+  }, []);
 
   const obtenerMensajeError = async (error, mensajePorDefecto) => {
     const data = error.response?.data;
@@ -58,11 +67,20 @@ export const GuiaTransportistaProvider = ({ children }) => {
     return obtenerMensajeErrorApi(data, mensajePorDefecto);
   };
 
-  const obtenerGuiasTransportista = async () => {
+  const obtenerGuiasTransportista = useCallback(async (params = {}) => {
     try {
       setLoadingGuia(true);
-      const res = await obtenerGuiasTransportistaRequest();
-      setGuiasTransportista(res.data);
+      const requestParams = createPaginationParams({
+        page: params.page ?? 1,
+        limit: params.limit ?? 10,
+        search: params.search,
+      });
+      const res = await obtenerGuiasTransportistaRequest(requestParams);
+      const data = normalizeCollection(res.data, ["guias", "guiasTransportista"]);
+      setGuiasTransportista(data);
+      setPaginationGuias(
+        normalizePagination(res.data, DEFAULT_PAGINATION)
+      );
     } catch (error) {
       setErrorsGuia(
         obtenerMensajesErrorApi(
@@ -73,14 +91,15 @@ export const GuiaTransportistaProvider = ({ children }) => {
     } finally {
       setLoadingGuia(false);
     }
-  };
+  }, []);
 
   const obtenerGuiaTransportista = async (id) => {
     try {
       setLoadingGuia(true);
       const res = await obtenerGuiaTransportistaRequest(id);
-      setGuiaSeleccionada(res.data);
-      return res.data;
+      const guia = normalizeResource(res.data, ["guia"]);
+      setGuiaSeleccionada(guia);
+      return guia;
     } catch (error) {
       setErrorsGuia(
         obtenerMensajesErrorApi(
@@ -100,8 +119,11 @@ export const GuiaTransportistaProvider = ({ children }) => {
       limpiarErroresGuia();
 
       const res = await crearGuiaTransportistaRequest(guia);
+      const guiaCreada = normalizeResource(res.data, ["guia"]);
 
-      setGuiasTransportista((prev) => [res.data.guia, ...prev]);
+      if (guiaCreada) {
+        setGuiasTransportista((prev) => [guiaCreada, ...prev]);
+      }
       setJsonGuia(res.data.json);
 
       return res.data;
@@ -124,15 +146,16 @@ export const GuiaTransportistaProvider = ({ children }) => {
       limpiarErroresGuia();
 
       const res = await actualizarGuiaTransportistaRequest(id, datos);
+      const guiaActualizada = normalizeResource(res.data, ["guia"]);
 
       setGuiasTransportista((prev) =>
-        prev.map((guia) => (guia._id === id ? res.data.guia : guia))
+        prev.map((guia) => (sameRecordId(guia, id) ? guiaActualizada || guia : guia))
       );
 
       setJsonGuia(res.data.json);
 
       if (guiaSeleccionada?._id === id) {
-        setGuiaSeleccionada(res.data.guia);
+        setGuiaSeleccionada(guiaActualizada);
       }
 
       return res.data;
@@ -175,13 +198,14 @@ export const GuiaTransportistaProvider = ({ children }) => {
       limpiarErroresGuia();
 
       const res = await consultarGuiaTransportistaRequest(id);
+      const guiaActualizada = normalizeResource(res.data, ["guia"]);
 
       setGuiasTransportista((prev) =>
-        prev.map((guia) => (guia._id === id ? res.data.guia : guia))
+        prev.map((guia) => (sameRecordId(guia, id) ? guiaActualizada || guia : guia))
       );
 
-      if (guiaSeleccionada?._id === id) {
-        setGuiaSeleccionada(res.data.guia);
+      if (sameRecordId(guiaSeleccionada, id)) {
+        setGuiaSeleccionada(guiaActualizada);
       }
 
       return res.data;
@@ -204,13 +228,14 @@ export const GuiaTransportistaProvider = ({ children }) => {
       limpiarErroresGuia();
 
       const res = await anularGuiaTransportistaRequest(id, datos);
+      const guiaActualizada = normalizeResource(res.data, ["guia"]);
 
       setGuiasTransportista((prev) =>
-        prev.map((guia) => (guia._id === id ? res.data.guia : guia))
+        prev.map((guia) => (sameRecordId(guia, id) ? guiaActualizada || guia : guia))
       );
 
-      if (guiaSeleccionada?._id === id) {
-        setGuiaSeleccionada(res.data.guia);
+      if (sameRecordId(guiaSeleccionada, id)) {
+        setGuiaSeleccionada(guiaActualizada);
       }
 
       return res.data;
@@ -329,6 +354,7 @@ export const GuiaTransportistaProvider = ({ children }) => {
         jsonGuia,
         loadingGuia,
         errorsGuia,
+        paginationGuias,
         obtenerGuiasTransportista,
         obtenerGuiaTransportista,
         validarGuiaTransportista,

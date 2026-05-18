@@ -83,8 +83,8 @@ function ConductorModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-4 backdrop-blur-sm">
-      <div className="panel w-full max-w-3xl p-6">
+    <div className="modal-backdrop">
+      <div className="modal-panel max-w-3xl">
         <div className="flex justify-between items-center mb-5">
           <div>
             <h2 className="text-xl font-bold">

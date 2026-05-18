@@ -18,6 +18,12 @@ function Sidebar({ collapsed, setCollapsed }) {
     setActiveDropdown((prev) => (prev === menuId ? null : menuId));
   };
 
+  const isPathActive = (path) =>
+    location.pathname === path || location.pathname.startsWith(`${path}/`);
+
+  const isMenuActive = (menu) =>
+    menu.children?.some((child) => isPathActive(child.path));
+
   // 👉 Nueva función: si está colapsado, auto-expande al hacer click
   const handleMenuClick = (menuId) => {
     if (collapsed) {
@@ -94,9 +100,7 @@ function Sidebar({ collapsed, setCollapsed }) {
                       collapsed ? "justify-center px-0" : "justify-between"
                     }
                       ${
-                        location.pathname.startsWith(menu.basePath)
-                          ? "nav-item-active"
-                          : ""
+                        isMenuActive(menu) ? "nav-item-active" : ""
                       }`}
                   >
                     <span
@@ -125,7 +129,7 @@ function Sidebar({ collapsed, setCollapsed }) {
                             to={child.path}
                             className={`nav-item
                               ${
-                                location.pathname === child.path
+                                isPathActive(child.path)
                                   ? "nav-item-active"
                                   : ""
                               }`}

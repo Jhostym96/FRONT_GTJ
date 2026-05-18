@@ -1,22 +1,22 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useGuiaTransportista } from "../context/GuiaTransportistaContext";
 
 import GuiaTransportistaModal from "../components/modals/GuiaTransportistaModal";
+import TablePagination from "../components/TablePagination";
 
 const GuiaTransportistaPage = () => {
   const {
     guiasTransportista = [],
     loadingGuia,
+    paginationGuias,
     obtenerGuiasTransportista,
-    generarJsonGuiaTransportista,
     consultarGuiaTransportista,
     anularGuiaTransportista,
     abrirPdfOficialGuiaTransportista,
   } = useGuiaTransportista();
 
   const [anulando, setAnulando] = useState({});
-  const [generandoJson, setGenerandoJson] = useState({});
   const [consultandoSunat, setConsultandoSunat] = useState({});
   const [abriendoTicket, setAbriendoTicket] = useState({});
 
@@ -25,13 +25,11 @@ const GuiaTransportistaPage = () => {
   const [guiaSeleccionada, setGuiaSeleccionada] = useState(null);
 
   useEffect(() => {
-    obtenerGuiasTransportista();
-  }, []);
+    obtenerGuiasTransportista({ page: 1, limit: 10 });
+  }, [obtenerGuiasTransportista]);
 
-  const totalGuias = useMemo(
-    () => guiasTransportista?.length || 0,
-    [guiasTransportista]
-  );
+  const recargarGuias = (page = paginationGuias.page) =>
+    obtenerGuiasTransportista({ page, limit: paginationGuias.limit });
 
   const getGuiaId = (guia) => {
     return guia?.id || guia?._id;
@@ -103,33 +101,7 @@ const GuiaTransportistaPage = () => {
     setOpenGuiaModal(false);
     setGuiaSeleccionada(null);
     setModalMode("create");
-  };
-
-  const handleGenerarJson = async (guia) => {
-    const id = getGuiaId(guia);
-
-    if (!id) {
-      toast.error("No se encontró el ID de la guía");
-      return;
-    }
-
-    try {
-      setGenerandoJson((prev) => ({ ...prev, [id]: true }));
-
-      await generarJsonGuiaTransportista(id);
-
-      toast.success("JSON generado correctamente");
-
-      await obtenerGuiasTransportista();
-    } catch (error) {
-      toast.error(
-        error.response?.data?.message ||
-        error.response?.data?.errors ||
-        "Error al generar el JSON de la guía"
-      );
-    } finally {
-      setGenerandoJson((prev) => ({ ...prev, [id]: false }));
-    }
+    recargarGuias();
   };
 
   const handleConsultarSunat = async (guia) => {
@@ -155,7 +127,7 @@ const GuiaTransportistaPage = () => {
         toast.success("Consulta realizada correctamente");
       }
 
-      await obtenerGuiasTransportista();
+      await recargarGuias();
     } catch (error) {
       toast.error(
         error.response?.data?.message ||
@@ -211,7 +183,11 @@ const GuiaTransportistaPage = () => {
 
       toast.success("Guía anulada correctamente");
 
-      await obtenerGuiasTransportista();
+      const nextPage =
+        guiasTransportista.length === 1 && paginationGuias.page > 1
+          ? paginationGuias.page - 1
+          : paginationGuias.page;
+      await recargarGuias(nextPage);
     } catch (error) {
       toast.error(
         error.response?.data?.message ||
@@ -221,6 +197,10 @@ const GuiaTransportistaPage = () => {
     } finally {
       setAnulando((prev) => ({ ...prev, [id]: false }));
     }
+  };
+
+  const handlePageChange = (page) => {
+    recargarGuias(page);
   };
 
   const EstadoBadge = ({ estado }) => (
@@ -297,15 +277,6 @@ const GuiaTransportistaPage = () => {
           Editar
         </button>
 
-        <button
-          type="button"
-          onClick={() => handleGenerarJson(guia)}
-          disabled={generandoJson[id] || guia.estado === "ANULADA"}
-          className="btn-success px-3 py-2 text-xs"
-        >
-          {generandoJson[id] ? "Generando..." : "JSON"}
-        </button>
-
         {["ENVIADA", "GENERADA", "PENDIENTE", "ERROR"].includes(
           guia.estado
         ) && (
@@ -363,22 +334,13 @@ const GuiaTransportistaPage = () => {
               </p>
             </div>
 
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <div className="info-tile border px-4 py-3">
-                <p className="text-faint text-xs">Total guías</p>
-                <p className="text-main text-xl font-bold">
-                  {totalGuias}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={abrirCrear}
-                className="btn-primary px-5 py-3"
-              >
-                Nueva guía
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={abrirCrear}
+              className="btn-primary px-5 py-3"
+            >
+              Nueva guía
+            </button>
           </div>
         </header>
 
@@ -521,7 +483,7 @@ const GuiaTransportistaPage = () => {
             </div>
 
             <div className="data-table-wrap">
-              <div className="overflow-x-auto">
+              <div className="table-scroll">
                 <table className="data-table w-full min-w-[1300px] text-sm">
                   <thead>
                     <tr>
@@ -626,6 +588,14 @@ const GuiaTransportistaPage = () => {
                 </table>
               </div>
             </div>
+
+            <TablePagination
+              page={paginationGuias.page}
+              totalPages={paginationGuias.totalPages}
+              total={paginationGuias.total}
+              limit={paginationGuias.limit}
+              onPageChange={handlePageChange}
+            />
           </>
         )}
 

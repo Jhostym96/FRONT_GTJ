@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { useConductores } from "../context/ConductorContext";
 import ConductorModal from "../components/modals/ConductorModal";
+import TablePagination from "../components/TablePagination";
+import { getRecordId } from "../utils/apiData";
 
 function ConductoresPage() {
   const {
@@ -9,7 +12,9 @@ function ConductoresPage() {
     obtenerConductores,
     crearConductor,
     actualizarConductor,
+    cambiarEstadoConductor,
     limpiarErrores,
+    paginationConductores,
   } = useConductores();
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -17,10 +22,10 @@ function ConductoresPage() {
   const [selectedConductor, setSelectedConductor] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const cargarConductores = async () => {
+  const cargarConductores = async (page = paginationConductores.page) => {
     try {
       setLoading(true);
-      await obtenerConductores();
+      await obtenerConductores({ page, limit: paginationConductores.limit });
     } catch (error) {
       console.error("Error al cargar conductores:", error);
     } finally {
@@ -58,13 +63,49 @@ function ConductoresPage() {
       if (mode === "create") {
         await crearConductor(form);
       } else {
-        await actualizarConductor(selectedConductor.id, form);
+        await actualizarConductor(getRecordId(selectedConductor), form);
       }
 
       cerrarModal();
-      await cargarConductores();
+      await cargarConductores(paginationConductores.page);
     } catch (error) {
       console.error("Error al guardar conductor:", error);
+    }
+  };
+
+  const handlePageChange = (page) => {
+    cargarConductores(page);
+  };
+
+  const handleCambiarEstado = async (conductor) => {
+    const conductorId = getRecordId(conductor);
+    const estadoActual = conductor.estado || "ACTIVO";
+    const nuevoEstado = estadoActual === "ACTIVO" ? "INACTIVO" : "ACTIVO";
+    const accion = nuevoEstado === "ACTIVO" ? "activar" : "desactivar";
+
+    if (!conductorId) {
+      toast.error("No se encontró el ID del conductor");
+      return;
+    }
+
+    const confirmar = window.confirm(
+      `¿Seguro que deseas ${accion} este conductor?`
+    );
+
+    if (!confirmar) return;
+
+    try {
+      await cambiarEstadoConductor(conductorId, nuevoEstado);
+      toast.success(
+        nuevoEstado === "ACTIVO"
+          ? "Conductor activado correctamente"
+          : "Conductor desactivado correctamente"
+      );
+      await cargarConductores(paginationConductores.page);
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message || "Error al cambiar estado de conductor"
+      );
     }
   };
 
@@ -97,6 +138,16 @@ function ConductoresPage() {
           className="btn-primary px-3 py-2 text-xs"
         >
           Editar
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleCambiarEstado(conductor)}
+          className={`${
+            conductor.estado === "ACTIVO" ? "btn-danger" : "btn-success"
+          } px-3 py-2 text-xs`}
+        >
+          {conductor.estado === "ACTIVO" ? "Desactivar" : "Activar"}
         </button>
       </div>
     );
@@ -172,7 +223,7 @@ function ConductoresPage() {
             <div className="grid gap-4 lg:hidden">
               {conductores.map((conductor) => (
                 <article
-                  key={conductor.id}
+                  key={getRecordId(conductor)}
                   className="mobile-card"
                 >
                   <div className="mb-4 flex items-start justify-between gap-3">
@@ -253,7 +304,7 @@ function ConductoresPage() {
 
             {/* Tabla en desktop */}
             <div className="data-table-wrap">
-              <div className="overflow-x-auto">
+              <div className="table-scroll">
                 <table className="data-table w-full min-w-[1000px] text-sm">
                   <thead>
                     <tr>
@@ -271,7 +322,7 @@ function ConductoresPage() {
                   <tbody>
                     {conductores.map((conductor) => (
                       <tr
-                        key={conductor.id}
+                        key={getRecordId(conductor)}
                       >
                         <td className="min-w-[230px] px-4 py-4">
                           <p className="text-main max-w-[260px] truncate font-bold">
@@ -331,6 +382,14 @@ function ConductoresPage() {
                 </table>
               </div>
             </div>
+
+            <TablePagination
+              page={paginationConductores.page}
+              totalPages={paginationConductores.totalPages}
+              total={paginationConductores.total}
+              limit={paginationConductores.limit}
+              onPageChange={handlePageChange}
+            />
           </>
         )}
 

@@ -9,6 +9,12 @@ import {
   activarUsuarioRequest,
   actualizarPerfilRequest, // 👈 nuevo import
 } from "../api/usuarios";
+import {
+  DEFAULT_PAGINATION,
+  createPaginationParams,
+  normalizeCollection,
+  normalizePagination,
+} from "../utils/apiData";
 
 const UserContext = createContext();
 
@@ -19,9 +25,11 @@ export const UserProvider = ({ children }) => {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [paginationUsuarios, setPaginationUsuarios] =
+    useState(DEFAULT_PAGINATION);
 
   // Obtener todos los usuarios
-  const cargarUsuarios = useCallback(async () => {
+  const cargarUsuarios = useCallback(async (params = {}) => {
     if (authLoading || !isAuthenticated) {
       setUsuarios([]);
       return [];
@@ -29,9 +37,18 @@ export const UserProvider = ({ children }) => {
 
     try {
       setLoading(true);
-      const res = await obtenerUsuariosRequest();
-      setUsuarios(res.data);
-      return res.data;
+      const requestParams = createPaginationParams({
+        page: params.page ?? 1,
+        limit: params.limit ?? 10,
+        search: params.search,
+      });
+      const res = await obtenerUsuariosRequest(requestParams);
+      const data = normalizeCollection(res.data, ["usuarios", "users"]);
+      setUsuarios(data);
+      setPaginationUsuarios(
+        normalizePagination(res.data, DEFAULT_PAGINATION)
+      );
+      return data;
     } catch (error) {
       console.error("Error al obtener usuarios:", error);
       return [];
@@ -86,6 +103,7 @@ export const UserProvider = ({ children }) => {
       value={{
         usuarios,
         loading,
+        paginationUsuarios,
         crearUsuario,
         editarUsuario,
         cambiarRol,

@@ -13,6 +13,12 @@ import {
   addDestinatarioRequest,
   addDireccionDestinatarioRequest,
 } from "../api/clientes";
+import {
+  DEFAULT_PAGINATION,
+  createPaginationParams,
+  normalizeCollection,
+  normalizePagination,
+} from "../utils/apiData";
 
 const ClienteContext = createContext();
 
@@ -35,6 +41,8 @@ export const ClienteProvider = ({ children }) => {
 
   const [errorsCliente, setErrorsCliente] = useState([]);
   const [loadingClientes, setLoadingClientes] = useState(false);
+  const [paginationClientes, setPaginationClientes] =
+    useState(DEFAULT_PAGINATION);
 
   // =========================
   // Manejo de errores
@@ -93,18 +101,24 @@ export const ClienteProvider = ({ children }) => {
   // =========================
   // CLIENTES
   // =========================
-  const getClientes = async () => {
+  const getClientes = async (params = {}) => {
     try {
       setLoadingClientes(true);
       limpiarErroresCliente();
 
-      const res = await getClientesRequest();
+      const requestParams = createPaginationParams({
+        page: params.page ?? 1,
+        limit: params.limit ?? 10,
+        search: params.search,
+      });
+      const res = await getClientesRequest(requestParams);
 
-      const data = Array.isArray(res.data)
-        ? res.data
-        : res.data?.clientes || [];
+      const data = normalizeCollection(res.data, ["clientes"]);
 
       setClientes(data);
+      setPaginationClientes(
+        normalizePagination(res.data, DEFAULT_PAGINATION)
+      );
 
       return data;
     } catch (error) {
@@ -483,6 +497,7 @@ export const ClienteProvider = ({ children }) => {
         destinatarios,
         errorsCliente,
         loadingClientes,
+        paginationClientes,
 
         getClientes,
         getCliente,

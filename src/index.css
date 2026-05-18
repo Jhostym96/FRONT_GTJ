@@ -5,8 +5,8 @@
 @layer base {
   :root {
     color-scheme: light;
-    --app-bg: #f4f7fb;
-    --app-bg-soft: #eaf0f7;
+    --app-bg: #f3f6fb;
+    --app-bg-soft: #e8eef7;
     --app-surface: #ffffff;
     --app-surface-muted: #f7f9fc;
     --app-elevated: #ffffff;
@@ -21,18 +21,18 @@
     --app-success: #059669;
     --app-danger: #dc2626;
     --app-warning: #d97706;
-    --app-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+    --app-shadow: 0 18px 45px rgba(15, 23, 42, 0.09);
   }
 
   .dark {
     color-scheme: dark;
-    --app-bg: #0d1117;
+    --app-bg: #0b1018;
     --app-bg-soft: #111827;
-    --app-surface: #161b22;
-    --app-surface-muted: #1f2633;
-    --app-elevated: #1b2230;
-    --app-border: #2a3444;
-    --app-border-strong: #3b4658;
+    --app-surface: #151b25;
+    --app-surface-muted: #1e2633;
+    --app-elevated: #182131;
+    --app-border: #293447;
+    --app-border-strong: #3d4a60;
     --app-text: #edf2f7;
     --app-muted: #a7b0bf;
     --app-faint: #778294;
@@ -58,5 +58,14 @@
 
   * {
     border-color: var(--app-border);
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--app-primary) 34%, transparent);
+    color: var(--app-text);
+  }
+
+  * {
+    scrollbar-color: color-mix(in srgb, var(--app-border-strong) 78%, var(--app-primary) 22%) var(--app-surface-muted);
   }
 }

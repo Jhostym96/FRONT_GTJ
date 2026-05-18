@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { useState } from "react";
 
 // 🔹 Contextos y Providers
@@ -60,6 +60,7 @@ function Layout() {
               }`}
           >
             <Routes>
+              <Route index element={<Navigate to="/profile" replace />} />
               <Route path="/profile" element={<ProfileTask />} />
               <Route path="/admin/usuarios" element={<GestionUsuarios />} />
               <Route path="/usuarios" element={<UsuariosPage />} />

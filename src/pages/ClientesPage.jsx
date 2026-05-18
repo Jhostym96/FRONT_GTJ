@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { useClientes } from "../context/ClienteContext";
 import ClienteModal from "../components/modals/ClienteModal";
+import TablePagination from "../components/TablePagination";
+import { getRecordId } from "../utils/apiData";
 
 function ClientesPage() {
   const {
@@ -11,6 +14,7 @@ function ClientesPage() {
     deleteCliente,
     loadingClientes,
     errorsCliente,
+    paginationClientes,
   } = useClientes();
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -18,11 +22,11 @@ function ClientesPage() {
   const [clienteSeleccionado, setClienteSeleccionado] = useState(null);
 
   useEffect(() => {
-    getClientes();
+    getClientes({ page: 1, limit: 10 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const getClienteId = (cliente) => cliente?.id;
+  const getClienteId = getRecordId;
 
   const getEntidadesPorTipo = (cliente, tipo) => {
     if (!cliente) return [];
@@ -90,31 +94,51 @@ function ClientesPage() {
       }
 
       cerrarModal();
-      await getClientes();
+      await getClientes({ page: paginationClientes.page, limit: paginationClientes.limit });
     } catch (error) {
       console.error("Error inesperado al guardar cliente:", error);
       alert("Error inesperado al guardar cliente");
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleCambiarEstado = async (cliente) => {
+    const id = getClienteId(cliente);
+    const nuevoEstado = !cliente.activo;
+    const accion = nuevoEstado ? "activar" : "desactivar";
+
     if (!id) {
-      alert("No se encontró el ID del cliente");
+      toast.error("No se encontró el ID del cliente");
       return;
     }
 
-    const confirmar = window.confirm("¿Estás seguro de eliminar este cliente?");
+    const confirmar = window.confirm(
+      `¿Estás seguro de ${accion} este cliente?`
+    );
 
     if (!confirmar) return;
 
-    const res = await deleteCliente(id);
+    const res = nuevoEstado
+      ? await updateCliente(id, { activo: true })
+      : await deleteCliente(id);
 
     if (!res?.ok) {
-      alert(res?.error || "No se pudo eliminar el cliente");
+      toast.error(res?.error || "No se pudo cambiar el estado del cliente");
       return;
     }
 
-    await getClientes();
+    toast.success(
+      nuevoEstado
+        ? "Cliente activado correctamente"
+        : "Cliente desactivado correctamente"
+    );
+    await getClientes({
+      page: paginationClientes.page,
+      limit: paginationClientes.limit,
+    });
+  };
+
+  const handlePageChange = (page) => {
+    getClientes({ page, limit: paginationClientes.limit });
   };
 
   const EstadoBadge = ({ activo }) => {
@@ -159,8 +183,6 @@ function ClientesPage() {
   };
 
   const AccionesCliente = ({ cliente, mobile = false }) => {
-    const clienteId = getClienteId(cliente);
-
     return (
       <div
         className={`flex ${
@@ -185,10 +207,12 @@ function ClientesPage() {
 
         <button
           type="button"
-          onClick={() => handleDelete(clienteId)}
-          className="btn-danger px-3 py-2 text-xs"
+          onClick={() => handleCambiarEstado(cliente)}
+          className={`${
+            cliente.activo ? "btn-danger" : "btn-success"
+          } px-3 py-2 text-xs`}
         >
-          Eliminar
+          {cliente.activo ? "Desactivar" : "Activar"}
         </button>
       </div>
     );
@@ -320,7 +344,7 @@ function ClientesPage() {
 
             {/* Tabla en desktop */}
             <div className="data-table-wrap">
-              <div className="overflow-x-auto">
+              <div className="table-scroll">
                 <table className="data-table w-full min-w-[1000px] text-sm">
                   <thead>
                     <tr>
@@ -379,6 +403,14 @@ function ClientesPage() {
                 </table>
               </div>
             </div>
+
+            <TablePagination
+              page={paginationClientes.page}
+              totalPages={paginationClientes.totalPages}
+              total={paginationClientes.total}
+              limit={paginationClientes.limit}
+              onPageChange={handlePageChange}
+            />
           </>
         )}
 

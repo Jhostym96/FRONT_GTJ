@@ -1,4 +1,4 @@
-import { useEffect, useState, useContext, useMemo } from "react";
+import { useCallback, useEffect, useState, useContext, useMemo } from "react";
 import { createContext } from "react";
 import {
   loginRequest,
@@ -38,13 +38,13 @@ export const AuthProvider = ({ children }) => {
   }, [errors]);
 
   // 📌 Normalizador de errores
-  const normalizeError = (error, fallback) => {
+  const normalizeError = useCallback((error, fallback) => {
     const err = error.response?.data;
     return Array.isArray(err) ? err[0] : err?.message || fallback;
-  };
+  }, []);
 
   // REGISTRO
-  const signup = async (formData) => {
+  const signup = useCallback(async (formData) => {
     try {
       const res = await registerRequest(formData);
       const { accessToken, user: userData } = res.data;
@@ -63,10 +63,10 @@ export const AuthProvider = ({ children }) => {
       setErrors([msg]);
       toast.error(msg);
     }
-  };
+  }, [normalizeError]);
 
   // LOGIN
-  const signin = async (formData) => {
+  const signin = useCallback(async (formData) => {
     try {
       const res = await loginRequest(formData);
       const { accessToken, user: userData } = res.data;
@@ -85,10 +85,10 @@ export const AuthProvider = ({ children }) => {
       setErrors([msg]);
       toast.error(msg);
     }
-  };
+  }, [normalizeError]);
 
   // LOGOUT
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       await logoutRequest();
     } catch (error) {
@@ -100,7 +100,7 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(false);
       toast("Sesión cerrada", { icon: "👋" });
     }
-  };
+  }, []);
 
   // 🔐 Verificar sesión al montar
   useEffect(() => {
@@ -166,7 +166,7 @@ export const AuthProvider = ({ children }) => {
       errors,
       loading,
     }),
-    [user, isAuthenticated, errors, loading]
+    [user, signup, signin, logout, isAuthenticated, errors, loading]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

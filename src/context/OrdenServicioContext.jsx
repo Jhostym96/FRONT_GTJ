@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useCallback, useContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 
 import {
@@ -10,6 +10,12 @@ import {
   obtenerDevolucionesPendientesRequest,
   actualizarEstadoDevolucionRequest,
 } from "../api/ordenServicio";
+import {
+  DEFAULT_PAGINATION,
+  createPaginationParams,
+  normalizeCollection,
+  normalizePagination,
+} from "../utils/apiData";
 
 const OrdenServicioContext = createContext();
 
@@ -35,18 +41,31 @@ export const OrdenServicioProvider = ({ children }) => {
   const [devolucionesPendientes, setDevolucionesPendientes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState([]);
+  const [paginationOrdenes, setPaginationOrdenes] =
+    useState(DEFAULT_PAGINATION);
+  const [paginationDevoluciones, setPaginationDevoluciones] =
+    useState(DEFAULT_PAGINATION);
 
-  const limpiarErrores = () => setErrors([]);
+  const limpiarErrores = useCallback(() => setErrors([]), []);
 
-  const cargarOrdenesServicio = async () => {
+  const cargarOrdenesServicio = useCallback(async (params = {}) => {
     try {
       limpiarErrores();
       setLoading(true);
 
-      const res = await obtenerOrdenesServicioRequest();
-      setOrdenes(res.data);
+      const requestParams = createPaginationParams({
+        page: params.page ?? 1,
+        limit: params.limit ?? 10,
+        search: params.search,
+      });
+      const res = await obtenerOrdenesServicioRequest(requestParams);
+      const data = normalizeCollection(res.data, ["ordenes"]);
+      setOrdenes(data);
+      setPaginationOrdenes(
+        normalizePagination(res.data, DEFAULT_PAGINATION)
+      );
 
-      return res.data;
+      return data;
     } catch (error) {
       setErrors([
         error.response?.data?.message || "Error al obtener órdenes de servicio",
@@ -55,9 +74,9 @@ export const OrdenServicioProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [limpiarErrores]);
 
-  const cargarOrdenServicio = async (id) => {
+  const cargarOrdenServicio = useCallback(async (id) => {
     try {
       limpiarErrores();
       setLoading(true);
@@ -74,9 +93,9 @@ export const OrdenServicioProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [limpiarErrores]);
 
-  const crearOrdenServicio = async (orden) => {
+  const crearOrdenServicio = useCallback(async (orden) => {
     try {
       limpiarErrores();
 
@@ -90,9 +109,9 @@ export const OrdenServicioProvider = ({ children }) => {
       ]);
       throw error;
     }
-  };
+  }, [cargarOrdenesServicio, limpiarErrores]);
 
-  const editarOrdenServicio = async (id, datos) => {
+  const editarOrdenServicio = useCallback(async (id, datos) => {
     try {
       limpiarErrores();
 
@@ -106,9 +125,9 @@ export const OrdenServicioProvider = ({ children }) => {
       ]);
       throw error;
     }
-  };
+  }, [cargarOrdenesServicio, limpiarErrores]);
 
-  const anularOrdenServicio = async (id) => {
+  const anularOrdenServicio = useCallback(async (id) => {
     try {
       limpiarErrores();
 
@@ -122,14 +141,23 @@ export const OrdenServicioProvider = ({ children }) => {
       ]);
       throw error;
     }
-  };
+  }, [cargarOrdenesServicio, limpiarErrores]);
 
-  const cargarDevolucionesPendientes = async () => {
+  const cargarDevolucionesPendientes = useCallback(async (params = {}) => {
     try {
       setLoading(true);
-      const res = await obtenerDevolucionesPendientesRequest();
-      setDevolucionesPendientes(res.data);
-      return res.data;
+      const requestParams = createPaginationParams({
+        page: params.page ?? 1,
+        limit: params.limit ?? 10,
+        search: params.search,
+      });
+      const res = await obtenerDevolucionesPendientesRequest(requestParams);
+      const data = normalizeCollection(res.data, ["ordenes"]);
+      setDevolucionesPendientes(data);
+      setPaginationDevoluciones(
+        normalizePagination(res.data, DEFAULT_PAGINATION)
+      );
+      return data;
     } catch (error) {
       setErrors([
         error.response?.data?.message || "Error al obtener devoluciones",
@@ -138,9 +166,9 @@ export const OrdenServicioProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const actualizarEstadoDevolucion = async (id, data) => {
+  const actualizarEstadoDevolucion = useCallback(async (id, data) => {
     try {
       const res = await actualizarEstadoDevolucionRequest(id, data);
       await cargarOrdenesServicio();
@@ -153,11 +181,11 @@ export const OrdenServicioProvider = ({ children }) => {
       ]);
       throw error;
     }
-  };
+  }, [cargarDevolucionesPendientes, cargarOrdenesServicio]);
 
-  const limpiarOrdenSeleccionada = () => {
+  const limpiarOrdenSeleccionada = useCallback(() => {
     setOrdenSeleccionada(null);
-  };
+  }, []);
 
   useEffect(() => {
     if (authLoading) return;
@@ -171,7 +199,7 @@ export const OrdenServicioProvider = ({ children }) => {
     setOrdenSeleccionada(null);
     setDevolucionesPendientes([]);
     limpiarErrores();
-  }, [authLoading, isAuthenticated]);
+  }, [authLoading, cargarOrdenesServicio, isAuthenticated, limpiarErrores]);
 
   return (
     <OrdenServicioContext.Provider
@@ -183,6 +211,8 @@ export const OrdenServicioProvider = ({ children }) => {
         devolucionesPendientes,
         loading,
         errors,
+        paginationOrdenes,
+        paginationDevoluciones,
         setErrors,
         limpiarErrores,
 

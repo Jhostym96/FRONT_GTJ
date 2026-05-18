@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { useUnidades } from "../context/UnidadContext";
 import UnidadModal from "../components/modals/UnidadModal";
+import TablePagination from "../components/TablePagination";
+import { getRecordId } from "../utils/apiData";
 
 function UnidadesPage() {
   const {
@@ -8,7 +11,8 @@ function UnidadesPage() {
     obtenerUnidades,
     crearUnidad,
     actualizarUnidad,
-    eliminarUnidad,
+    cambiarEstadoUnidad,
+    paginationUnidades,
   } = useUnidades();
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -16,10 +20,10 @@ function UnidadesPage() {
   const [unidadSeleccionada, setUnidadSeleccionada] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const cargarUnidades = async () => {
+  const cargarUnidades = async (page = paginationUnidades.page) => {
     try {
       setLoading(true);
-      await obtenerUnidades?.();
+      await obtenerUnidades?.({ page, limit: paginationUnidades.limit });
     } catch (error) {
       console.error("Error al cargar unidades:", error);
     } finally {
@@ -57,29 +61,48 @@ function UnidadesPage() {
 
   const handleSubmit = async (data) => {
     try {
-      if (mode === "edit" && unidadSeleccionada?.id) {
-        await actualizarUnidad(unidadSeleccionada.id, data);
+      const unidadId = getRecordId(unidadSeleccionada);
+
+      if (mode === "edit" && unidadId) {
+        await actualizarUnidad(unidadId, data);
       } else {
         await crearUnidad(data);
       }
 
       cerrarModal();
-      await cargarUnidades();
+      await cargarUnidades(paginationUnidades.page);
     } catch (error) {
       console.error("Error al guardar unidad:", error);
     }
   };
 
-  const handleEliminar = async (id) => {
-    const confirmar = confirm("¿Seguro que deseas eliminar esta unidad?");
+  const handleCambiarEstado = async (unidad) => {
+    const id = getRecordId(unidad);
+    const estadoActual = unidad.estado || "ACTIVO";
+    const nuevoEstado = estadoActual === "ACTIVO" ? "INACTIVO" : "ACTIVO";
+    const accion = nuevoEstado === "ACTIVO" ? "activar" : "desactivar";
+
+    const confirmar = confirm(`¿Seguro que deseas ${accion} esta unidad?`);
     if (!confirmar) return;
 
     try {
-      await eliminarUnidad(id);
-      await cargarUnidades();
+      await cambiarEstadoUnidad(id, nuevoEstado);
+      toast.success(
+        nuevoEstado === "ACTIVO"
+          ? "Unidad activada correctamente"
+          : "Unidad desactivada correctamente"
+      );
+      await cargarUnidades(paginationUnidades.page);
     } catch (error) {
-      console.error("Error al eliminar unidad:", error);
+      console.error("Error al cambiar estado de unidad:", error);
+      toast.error(
+        error.response?.data?.message || "Error al cambiar estado de unidad"
+      );
     }
+  };
+
+  const handlePageChange = (page) => {
+    cargarUnidades(page);
   };
 
   const EstadoBadge = ({ estado }) => {
@@ -139,10 +162,12 @@ function UnidadesPage() {
 
         <button
           type="button"
-          onClick={() => handleEliminar(unidad.id)}
-          className="btn-danger px-3 py-2 text-xs"
+          onClick={() => handleCambiarEstado(unidad)}
+          className={`${
+            unidad.estado === "ACTIVO" ? "btn-danger" : "btn-success"
+          } px-3 py-2 text-xs`}
         >
-          Eliminar
+          {unidad.estado === "ACTIVO" ? "Desactivar" : "Activar"}
         </button>
       </div>
     );
@@ -208,7 +233,7 @@ function UnidadesPage() {
             <div className="grid gap-4 lg:hidden">
               {unidades.map((unidad) => (
                 <article
-                  key={unidad.id}
+                  key={getRecordId(unidad)}
                   className="mobile-card"
                 >
                   <div className="mb-4 flex items-start justify-between gap-3">
@@ -294,7 +319,7 @@ function UnidadesPage() {
 
             {/* Tabla en desktop */}
             <div className="data-table-wrap">
-              <div className="overflow-x-auto">
+              <div className="table-scroll">
                 <table className="data-table w-full min-w-[1000px] text-sm">
                   <thead>
                     <tr>
@@ -312,7 +337,7 @@ function UnidadesPage() {
 
                   <tbody>
                     {unidades.map((unidad) => (
-                      <tr key={unidad.id}>
+                      <tr key={getRecordId(unidad)}>
                         <td className="whitespace-nowrap px-4 py-4">
                           <p className="text-main font-bold">
                             {unidad.placa || "-"}
@@ -363,6 +388,14 @@ function UnidadesPage() {
                 </table>
               </div>
             </div>
+
+            <TablePagination
+              page={paginationUnidades.page}
+              totalPages={paginationUnidades.totalPages}
+              total={paginationUnidades.total}
+              limit={paginationUnidades.limit}
+              onPageChange={handlePageChange}
+            />
           </>
         )}
 

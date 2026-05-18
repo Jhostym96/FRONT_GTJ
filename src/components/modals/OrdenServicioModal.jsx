@@ -781,7 +781,7 @@ const OrdenServicioModal = ({
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-3 py-4 backdrop-blur-sm sm:px-4">
+    <div className="modal-backdrop">
       <div className="panel flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden">
         <div className="flex items-start justify-between gap-4 border-b px-5 py-4 sm:px-6">
           <div>

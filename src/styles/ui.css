@@ -5,18 +5,19 @@
   .app-shell {
     @apply min-h-screen transition-colors duration-300;
     background:
-      radial-gradient(circle at top right, color-mix(in srgb, var(--app-primary) 12%, transparent), transparent 34rem),
+      radial-gradient(circle at top right, color-mix(in srgb, var(--app-primary) 11%, transparent), transparent 34rem),
+      linear-gradient(180deg, color-mix(in srgb, var(--app-bg-soft) 36%, transparent), transparent 22rem),
       var(--app-bg);
     color: var(--app-text);
   }
 
   .app-main {
-    @apply flex-1 overflow-y-auto px-4 pb-8 pt-20 transition-all duration-300 sm:px-6 lg:px-8;
+    @apply flex-1 overflow-x-hidden overflow-y-auto px-2 pb-8 pt-20 transition-all duration-300 sm:px-3 lg:px-4 xl:px-5;
   }
 
   .app-sidebar {
     @apply fixed inset-y-0 left-0 z-40 border-r shadow-xl backdrop-blur-xl transition-all duration-300;
-    background: color-mix(in srgb, var(--app-elevated) 94%, transparent);
+    background: color-mix(in srgb, var(--app-elevated) 92%, transparent);
     border-color: var(--app-border);
   }
 
@@ -33,12 +34,13 @@
   }
 
   .nav-item {
-    @apply flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition;
+    @apply flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition duration-200 focus-visible:outline-none focus-visible:ring-2;
     color: var(--app-muted);
+    --tw-ring-color: color-mix(in srgb, var(--app-primary) 34%, transparent);
   }
 
   .nav-item:hover {
-    background: var(--app-surface-muted);
+    background: color-mix(in srgb, var(--app-surface-muted) 82%, var(--app-primary) 8%);
     color: var(--app-text);
   }
 
@@ -49,31 +51,35 @@
   }
 
   .page-wrap {
-    @apply mx-auto flex w-full max-w-[1500px] flex-col gap-5;
+    @apply mx-auto flex w-full max-w-[1800px] flex-col gap-4 sm:gap-5;
   }
 
   .page-hero {
-    @apply overflow-hidden rounded-2xl border p-5 shadow-sm sm:p-6;
+    @apply overflow-hidden rounded-xl border p-4 shadow-sm sm:p-5;
     background:
-      linear-gradient(135deg, color-mix(in srgb, var(--app-primary) 10%, var(--app-surface)), var(--app-surface) 48%, var(--app-surface-muted));
+      linear-gradient(135deg, color-mix(in srgb, var(--app-primary) 7%, var(--app-surface)), var(--app-surface) 58%, color-mix(in srgb, var(--app-surface-muted) 94%, var(--app-primary) 2%));
     border-color: var(--app-border);
     box-shadow: var(--app-shadow);
   }
 
+  .page-hero > .flex {
+    @apply gap-3 p-0 sm:p-0 lg:gap-4;
+  }
+
   .eyebrow {
-    @apply mb-2 inline-flex rounded-full border px-3 py-1 text-xs font-semibold;
+    @apply mb-1 inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-bold;
     background: var(--app-primary-soft);
     border-color: color-mix(in srgb, var(--app-primary) 28%, transparent);
     color: var(--app-primary);
   }
 
   .page-title {
-    @apply text-2xl font-bold tracking-tight sm:text-3xl;
+    @apply text-xl font-extrabold tracking-tight sm:text-2xl;
     color: var(--app-text);
   }
 
   .page-description {
-    @apply mt-1 max-w-2xl text-sm;
+    @apply mt-1 max-w-2xl text-sm leading-5;
     color: var(--app-muted);
   }
 
@@ -85,21 +91,26 @@
   }
 
   .empty-panel {
-    @apply rounded-2xl border border-dashed p-8 text-center shadow-sm;
+    @apply rounded-2xl border border-dashed p-6 text-center shadow-sm sm:p-8;
     background: var(--app-surface);
     border-color: var(--app-border-strong);
   }
 
   .mobile-card {
-    @apply rounded-2xl border p-4 shadow-sm;
+    @apply rounded-2xl border p-4 shadow-sm transition duration-200;
     background: var(--app-surface);
     border-color: var(--app-border);
     box-shadow: var(--app-shadow);
   }
 
+  .mobile-card:hover {
+    border-color: color-mix(in srgb, var(--app-primary) 26%, var(--app-border));
+  }
+
   .info-tile {
-    @apply rounded-xl p-3;
+    @apply rounded-xl border p-3;
     background: var(--app-surface-muted);
+    border-color: color-mix(in srgb, var(--app-border) 74%, transparent);
   }
 
   .data-table-wrap {
@@ -109,14 +120,49 @@
     box-shadow: var(--app-shadow);
   }
 
-  .data-table thead {
+  .table-scroll {
+    @apply overflow-x-auto;
+  }
+
+  .table-scroll::-webkit-scrollbar {
+    height: 10px;
+  }
+
+  .table-scroll::-webkit-scrollbar-track {
     background: var(--app-surface-muted);
   }
 
+  .table-scroll::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--app-border-strong) 78%, var(--app-primary) 22%);
+    border-radius: 999px;
+  }
+
+  .pagination-bar {
+    @apply mt-3 flex flex-col gap-3 rounded-xl border px-4 py-3 sm:flex-row sm:items-center sm:justify-between;
+    background: color-mix(in srgb, var(--app-surface) 88%, var(--app-surface-muted) 12%);
+    border-color: var(--app-border);
+  }
+
+  .pagination-page {
+    @apply inline-flex min-h-10 items-center rounded-lg border px-3 text-xs font-bold;
+    background: var(--app-surface-muted);
+    border-color: var(--app-border);
+    color: var(--app-text);
+  }
+
+  .data-table thead {
+    background: color-mix(in srgb, var(--app-surface-muted) 88%, var(--app-primary) 5%);
+  }
+
   .data-table thead tr {
-    @apply border-b text-xs uppercase tracking-wide;
+    @apply border-b text-xs uppercase;
+    letter-spacing: 0;
     color: var(--app-muted);
     border-color: var(--app-border);
+  }
+
+  .data-table th {
+    @apply whitespace-nowrap font-extrabold;
   }
 
   .data-table tbody {
@@ -125,11 +171,15 @@
   }
 
   .data-table tbody tr {
-    @apply transition;
+    @apply transition duration-150;
   }
 
   .data-table tbody tr:hover {
-    background: var(--app-surface-muted);
+    background: color-mix(in srgb, var(--app-surface-muted) 86%, var(--app-primary) 6%);
+  }
+
+  .data-table td {
+    @apply align-middle;
   }
 
   .text-main {
@@ -145,44 +195,96 @@
   }
 
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition duration-200 disabled:cursor-not-allowed disabled:opacity-60;
+    @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-bold transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 active:translate-y-px disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-55;
+    --tw-ring-offset-color: var(--app-bg);
   }
 
   .btn-primary {
     @apply btn text-white;
-    background: var(--app-primary);
+    background: linear-gradient(180deg, var(--app-primary-hover), var(--app-primary));
     box-shadow: 0 10px 24px color-mix(in srgb, var(--app-primary) 22%, transparent);
+    --tw-ring-color: color-mix(in srgb, var(--app-primary) 42%, transparent);
   }
 
   .btn-primary:hover {
-    background: var(--app-primary-hover);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--app-primary-hover) 82%, white 18%), var(--app-primary-hover));
+    box-shadow: 0 14px 28px color-mix(in srgb, var(--app-primary) 28%, transparent);
   }
 
   .btn-secondary {
     @apply btn border;
-    background: var(--app-surface-muted);
+    background: color-mix(in srgb, var(--app-surface-muted) 90%, var(--app-elevated) 10%);
     border-color: var(--app-border);
     color: var(--app-text);
+    --tw-ring-color: color-mix(in srgb, var(--app-primary) 32%, transparent);
+  }
+
+  .btn-secondary:hover {
+    border-color: color-mix(in srgb, var(--app-primary) 26%, var(--app-border));
+    background: color-mix(in srgb, var(--app-surface-muted) 84%, var(--app-primary) 7%);
   }
 
   .btn-danger {
-    @apply btn bg-red-600 text-white hover:bg-red-500;
+    @apply btn text-white;
+    background: linear-gradient(180deg, #ef4444, #dc2626);
+    box-shadow: 0 10px 22px rgba(220, 38, 38, 0.2);
+    --tw-ring-color: rgba(239, 68, 68, 0.38);
+  }
+
+  .btn-danger:hover {
+    background: linear-gradient(180deg, #f87171, #ef4444);
   }
 
   .btn-success {
-    @apply btn bg-emerald-600 text-white hover:bg-emerald-500;
+    @apply btn text-white;
+    background: linear-gradient(180deg, #10b981, #059669);
+    box-shadow: 0 10px 22px rgba(5, 150, 105, 0.2);
+    --tw-ring-color: rgba(16, 185, 129, 0.36);
+  }
+
+  .btn-success:hover {
+    background: linear-gradient(180deg, #34d399, #10b981);
   }
 
   .input {
-    @apply w-full rounded-lg border px-3 py-2 text-sm outline-none transition focus:ring-2 disabled:cursor-not-allowed disabled:opacity-70;
+    @apply w-full rounded-lg border px-3 py-2.5 text-sm outline-none transition duration-200 placeholder:text-[var(--app-faint)] focus:border-[var(--app-primary)] focus:ring-2 disabled:cursor-not-allowed disabled:opacity-70;
     background: var(--app-surface-muted);
     border-color: var(--app-border);
     color: var(--app-text);
     --tw-ring-color: color-mix(in srgb, var(--app-primary) 32%, transparent);
   }
 
+  .input:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--app-primary) 24%, var(--app-border));
+  }
+
   .card {
-    @apply panel p-6 animate-fade-in;
+    @apply panel animate-fade-in p-5 sm:p-6;
+  }
+
+  .card-header {
+    @apply text-xl font-extrabold sm:text-2xl;
+    color: var(--app-text);
+  }
+
+  .status-badge {
+    @apply inline-flex items-center justify-center rounded-full border px-3 py-1 text-[11px] font-extrabold;
+    letter-spacing: 0;
+  }
+
+  .alert-error {
+    @apply rounded-xl border p-4 text-sm shadow-sm;
+    background: color-mix(in srgb, #ef4444 12%, transparent);
+    border-color: color-mix(in srgb, #ef4444 38%, transparent);
+    color: #fca5a5;
+  }
+
+  .modal-backdrop {
+    @apply fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/60 px-3 py-6 backdrop-blur-sm sm:px-4;
+  }
+
+  .modal-panel {
+    @apply panel max-h-[92vh] w-full overflow-y-auto p-5 sm:p-6;
   }
 
   .table-head {

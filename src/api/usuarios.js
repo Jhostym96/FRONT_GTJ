@@ -5,8 +5,8 @@ export const crearUsuarioRequest = (usuario) =>
   axios.post(`/usuarios`, usuario);
 
 // Obtener todos los usuarios
-export const obtenerUsuariosRequest = () =>
-  axios.get(`/usuarios`);
+export const obtenerUsuariosRequest = (params = {}) =>
+  axios.get(`/usuarios`, { params });
 
 // Actualizar usuario por ID (solo admins)
 export const actualizarUsuarioRequest = (id, datos) =>

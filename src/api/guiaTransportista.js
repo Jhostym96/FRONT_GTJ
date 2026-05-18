@@ -11,8 +11,8 @@ export const validarGuiaTransportistaRequest = (guia) =>
   axios.post("/guia-transportista/validar", guia);
 
 // Obtener todas las guías de transportista
-export const obtenerGuiasTransportistaRequest = () =>
-  axios.get("/guia-transportista");
+export const obtenerGuiasTransportistaRequest = (params = {}) =>
+  axios.get("/guia-transportista", { params });
 
 // Obtener guía de transportista por ID
 export const obtenerGuiaTransportistaRequest = (id) =>

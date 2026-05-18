@@ -6,8 +6,8 @@ import axios from "./axios";
 // CRUD CLIENTES
 // =========================
 
-export const getClientesRequest = () =>
-  axios.get("/clientes");
+export const getClientesRequest = (params = {}) =>
+  axios.get("/clientes", { params });
 
 export const getClienteRequest = (id) =>
   axios.get(`/clientes/${id}`);

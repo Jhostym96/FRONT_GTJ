@@ -1,7 +1,7 @@
 import axios from "./axios";
 
-export const getProgramacionesViajeRequest = () =>
-  axios.get("/programacion-viaje");
+export const getProgramacionesViajeRequest = (params = {}) =>
+  axios.get("/programacion-viaje", { params });
 
 export const getProgramacionViajeRequest = (id) =>
   axios.get(`/programacion-viaje/${id}`);
