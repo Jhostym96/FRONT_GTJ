@@ -598,7 +598,7 @@ function ProgramacionViajeModal({
             <button
               type="button"
               onClick={cerrarModal}
-              className="btn-secondary px-4 py-2"
+              className="btn-secondary px-3 py-1.5"
             >
               {isView ? "Cerrar" : "Cancelar"}
             </button>
@@ -606,7 +606,7 @@ function ProgramacionViajeModal({
             {!isView && (
               <button
                 type="submit"
-                className="btn-primary px-4 py-2"
+                className="btn-primary px-3 py-1.5"
               >
                 Guardar programación
               </button>

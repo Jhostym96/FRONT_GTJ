@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
-import toast from "react-hot-toast";
+import { notify } from "../utils/notify";
+import { Eye, Pencil, Power, PowerOff } from "lucide-react";
 import { useUnidades } from "../context/UnidadContext";
+import { useConfirm } from "../context/ConfirmContext";
 import UnidadModal from "../components/modals/UnidadModal";
 import TablePagination from "../components/TablePagination";
 import { getRecordId } from "../utils/apiData";
@@ -14,6 +16,7 @@ function UnidadesPage() {
     cambiarEstadoUnidad,
     paginationUnidades,
   } = useUnidades();
+  const confirm = useConfirm();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [mode, setMode] = useState("create");
@@ -82,12 +85,17 @@ function UnidadesPage() {
     const nuevoEstado = estadoActual === "ACTIVO" ? "INACTIVO" : "ACTIVO";
     const accion = nuevoEstado === "ACTIVO" ? "activar" : "desactivar";
 
-    const confirmar = confirm(`¿Seguro que deseas ${accion} esta unidad?`);
+    const confirmar = await confirm({
+      title: nuevoEstado === "ACTIVO" ? "Activar unidad" : "Desactivar unidad",
+      message: `¿Seguro que deseas ${accion} esta unidad?`,
+      confirmText: nuevoEstado === "ACTIVO" ? "Activar" : "Desactivar",
+      variant: nuevoEstado === "ACTIVO" ? "primary" : "danger",
+    });
     if (!confirmar) return;
 
     try {
       await cambiarEstadoUnidad(id, nuevoEstado);
-      toast.success(
+      notify.success(
         nuevoEstado === "ACTIVO"
           ? "Unidad activada correctamente"
           : "Unidad desactivada correctamente"
@@ -95,7 +103,7 @@ function UnidadesPage() {
       await cargarUnidades(paginationUnidades.page);
     } catch (error) {
       console.error("Error al cambiar estado de unidad:", error);
-      toast.error(
+      notify.error(
         error.response?.data?.message || "Error al cambiar estado de unidad"
       );
     }
@@ -141,23 +149,27 @@ function UnidadesPage() {
     return (
       <div
         className={`flex gap-2 ${
-          mobile ? "w-full flex-col sm:flex-row" : "justify-end"
+          mobile ? "flex-wrap" : "justify-end"
         }`}
       >
         <button
           type="button"
           onClick={() => abrirVer(unidad)}
-          className="btn-secondary px-3 py-2 text-xs"
+          className="btn-secondary btn-icon"
+          title="Ver unidad"
+          aria-label="Ver unidad"
         >
-          Ver
+          <Eye />
         </button>
 
         <button
           type="button"
           onClick={() => abrirEditar(unidad)}
-          className="btn-primary px-3 py-2 text-xs"
+          className="btn-primary btn-icon"
+          title="Editar unidad"
+          aria-label="Editar unidad"
         >
-          Editar
+          <Pencil />
         </button>
 
         <button
@@ -165,9 +177,11 @@ function UnidadesPage() {
           onClick={() => handleCambiarEstado(unidad)}
           className={`${
             unidad.estado === "ACTIVO" ? "btn-danger" : "btn-success"
-          } px-3 py-2 text-xs`}
+          } btn-icon`}
+          title={unidad.estado === "ACTIVO" ? "Desactivar unidad" : "Activar unidad"}
+          aria-label={unidad.estado === "ACTIVO" ? "Desactivar unidad" : "Activar unidad"}
         >
-          {unidad.estado === "ACTIVO" ? "Desactivar" : "Activar"}
+          {unidad.estado === "ACTIVO" ? <PowerOff /> : <Power />}
         </button>
       </div>
     );
@@ -196,7 +210,7 @@ function UnidadesPage() {
             <button
               type="button"
               onClick={abrirCrear}
-              className="btn-primary px-5 py-3"
+              className="btn-primary px-3 py-2"
             >
               Nueva unidad
             </button>
@@ -222,7 +236,7 @@ function UnidadesPage() {
             <button
               type="button"
               onClick={abrirCrear}
-              className="btn-primary mt-5 px-5 py-3"
+              className="btn-primary mt-4 px-3 py-2"
             >
               Crear unidad
             </button>

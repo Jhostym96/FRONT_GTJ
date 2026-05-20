@@ -13,7 +13,7 @@ import {
   getAccessToken,
   setAccessToken,
 } from "../api/tokenStore";
-import toast from "react-hot-toast";
+import { notify } from "../utils/notify";
 
 const AuthContext = createContext();
 
@@ -57,11 +57,11 @@ export const AuthProvider = ({ children }) => {
         axios.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
       }
 
-      toast.success("Usuario registrado con éxito");
+      notify.success("Usuario registrado con éxito");
     } catch (error) {
       const msg = normalizeError(error, "Error al registrarse");
       setErrors([msg]);
-      toast.error(msg);
+      notify.error(msg);
     }
   }, [normalizeError]);
 
@@ -79,11 +79,11 @@ export const AuthProvider = ({ children }) => {
         axios.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
       }
 
-      toast.success("¡Bienvenido!");
+      notify.success("¡Bienvenido!");
     } catch (error) {
       const msg = normalizeError(error, "Error al iniciar sesión");
       setErrors([msg]);
-      toast.error(msg);
+      notify.error(msg);
     }
   }, [normalizeError]);
 
@@ -148,7 +148,7 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(false);
       clearAccessToken();
       delete axios.defaults.headers.common["Authorization"];
-      toast.error("Tu sesión ha expirado. Vuelve a iniciar sesión.");
+      notify.error("Tu sesión ha expirado. Vuelve a iniciar sesión.");
     };
 
     window.addEventListener("sessionExpired", handleSessionExpired);

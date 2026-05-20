@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
-import toast from "react-hot-toast";
+import { notify } from "../utils/notify";
+import { Ban, Eye, FileText, LoaderCircle, Pencil, SearchCheck } from "lucide-react";
 import { useGuiaTransportista } from "../context/GuiaTransportistaContext";
+import { useConfirm } from "../context/ConfirmContext";
 
 import GuiaTransportistaModal from "../components/modals/GuiaTransportistaModal";
 import TablePagination from "../components/TablePagination";
@@ -15,6 +17,7 @@ const GuiaTransportistaPage = () => {
     anularGuiaTransportista,
     abrirPdfOficialGuiaTransportista,
   } = useGuiaTransportista();
+  const confirm = useConfirm();
 
   const [anulando, setAnulando] = useState({});
   const [consultandoSunat, setConsultandoSunat] = useState({});
@@ -108,7 +111,7 @@ const GuiaTransportistaPage = () => {
     const id = getGuiaId(guia);
 
     if (!id) {
-      toast.error("No se encontró el ID de la guía");
+      notify.error("No se encontró el ID de la guía");
       return;
     }
 
@@ -118,18 +121,18 @@ const GuiaTransportistaPage = () => {
       const res = await consultarGuiaTransportista(id);
 
       if (res?.guia?.estado === "ACEPTADA") {
-        toast.success("Guía aceptada por SUNAT");
+        notify.success("Guía aceptada por SUNAT");
       } else if (res?.guia?.estado === "RECHAZADA") {
-        toast.error("Guía rechazada por SUNAT");
+        notify.error("Guía rechazada por SUNAT");
       } else if (res?.guia?.estado === "ERROR") {
-        toast.error("Nubefact devolvió errores en la guía");
+        notify.error("Nubefact devolvió errores en la guía");
       } else {
-        toast.success("Consulta realizada correctamente");
+        notify.success("Consulta realizada correctamente");
       }
 
       await recargarGuias();
     } catch (error) {
-      toast.error(
+      notify.error(
         error.response?.data?.message ||
         error.response?.data?.errors ||
         "Error al consultar SUNAT/Nubefact"
@@ -143,7 +146,7 @@ const GuiaTransportistaPage = () => {
     const id = getGuiaId(guia);
 
     if (!id) {
-      toast.error("No se encontró el ID de la guía");
+      notify.error("No se encontró el ID de la guía");
       return;
     }
 
@@ -152,7 +155,7 @@ const GuiaTransportistaPage = () => {
 
       await abrirPdfOficialGuiaTransportista(id);
     } catch (error) {
-      toast.error(
+      notify.error(
         error.response?.data?.message ||
         error.message ||
         "Error al abrir el PDF oficial de Nubefact"
@@ -166,13 +169,16 @@ const GuiaTransportistaPage = () => {
     const id = getGuiaId(guia);
 
     if (!id) {
-      toast.error("No se encontró el ID de la guía");
+      notify.error("No se encontró el ID de la guía");
       return;
     }
 
-    const confirmar = window.confirm(
-      "¿Seguro que deseas anular esta guía de transportista?"
-    );
+    const confirmar = await confirm({
+      title: "Anular guía",
+      message: "¿Seguro que deseas anular esta guía de transportista?",
+      confirmText: "Anular",
+      variant: "danger",
+    });
 
     if (!confirmar) return;
 
@@ -181,7 +187,7 @@ const GuiaTransportistaPage = () => {
 
       await anularGuiaTransportista(id);
 
-      toast.success("Guía anulada correctamente");
+      notify.success("Guía anulada correctamente");
 
       const nextPage =
         guiasTransportista.length === 1 && paginationGuias.page > 1
@@ -189,7 +195,7 @@ const GuiaTransportistaPage = () => {
           : paginationGuias.page;
       await recargarGuias(nextPage);
     } catch (error) {
-      toast.error(
+      notify.error(
         error.response?.data?.message ||
         error.response?.data?.errors ||
         "Error al anular la guía"
@@ -257,24 +263,28 @@ const GuiaTransportistaPage = () => {
 
     return (
       <div
-        className={`flex ${mobile ? "w-full flex-col sm:flex-row" : "justify-center"
+        className={`flex ${mobile ? "flex-wrap" : "justify-center"
           } flex-wrap gap-2`}
       >
         <button
           type="button"
           onClick={() => abrirVer(guia)}
-          className="btn-secondary px-3 py-2 text-xs"
+          className="btn-secondary btn-icon"
+          title="Ver guía"
+          aria-label="Ver guía"
         >
-          Ver
+          <Eye />
         </button>
 
         <button
           type="button"
           onClick={() => abrirEditar(guia)}
           disabled={["ANULADA", "ENVIADA", "ACEPTADA"].includes(guia.estado)}
-          className="btn-primary px-3 py-2 text-xs"
+          className="btn-primary btn-icon"
+          title="Editar guía"
+          aria-label="Editar guía"
         >
-          Editar
+          <Pencil />
         </button>
 
         {["ENVIADA", "GENERADA", "PENDIENTE", "ERROR"].includes(
@@ -284,9 +294,15 @@ const GuiaTransportistaPage = () => {
               type="button"
               onClick={() => handleConsultarSunat(guia)}
               disabled={consultandoSunat[id] || guia.estado === "ANULADA"}
-              className="btn-success px-3 py-2 text-xs"
+              className="btn-success btn-icon"
+              title="Consultar SUNAT"
+              aria-label="Consultar SUNAT"
             >
-              {consultandoSunat[id] ? "Consultando..." : "Consultar SUNAT"}
+              {consultandoSunat[id] ? (
+                <LoaderCircle className="animate-spin" />
+              ) : (
+                <SearchCheck />
+              )}
             </button>
           )}
 
@@ -295,9 +311,14 @@ const GuiaTransportistaPage = () => {
           onClick={() => handleTicket(guia)}
           disabled={abriendoTicket[id] || guia.estado === "ANULADA"}
           title="Abrir PDF oficial de Nubefact"
-          className="btn bg-amber-600 px-3 py-2 text-xs text-white hover:bg-amber-500"
+          aria-label="Abrir PDF oficial de Nubefact"
+          className="btn btn-icon bg-amber-600 text-white hover:bg-amber-500"
         >
-          {abriendoTicket[id] ? "Abriendo..." : "Ticket"}
+          {abriendoTicket[id] ? (
+            <LoaderCircle className="animate-spin" />
+          ) : (
+            <FileText />
+          )}
         </button>
 
         {guia.estado !== "ANULADA" && guia.estado !== "ACEPTADA" && (
@@ -305,9 +326,11 @@ const GuiaTransportistaPage = () => {
             type="button"
             onClick={() => handleAnular(guia)}
             disabled={anulando[id]}
-            className="btn-danger px-3 py-2 text-xs"
+            className="btn-danger btn-icon"
+            title="Anular guía"
+            aria-label="Anular guía"
           >
-            {anulando[id] ? "Anulando..." : "Anular"}
+            {anulando[id] ? <LoaderCircle className="animate-spin" /> : <Ban />}
           </button>
         )}
       </div>
@@ -337,7 +360,7 @@ const GuiaTransportistaPage = () => {
             <button
               type="button"
               onClick={abrirCrear}
-              className="btn-primary px-5 py-3"
+              className="btn-primary px-3 py-2"
             >
               Nueva guía
             </button>
@@ -365,7 +388,7 @@ const GuiaTransportistaPage = () => {
             <button
               type="button"
               onClick={abrirCrear}
-              className="btn-primary mt-5 px-5 py-3"
+              className="btn-primary mt-4 px-3 py-2"
             >
               Crear guía
             </button>

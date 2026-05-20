@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
-import toast from "react-hot-toast";
+import { notify } from "../utils/notify";
+import { Eye, Pencil, Power, PowerOff } from "lucide-react";
 import { useClientes } from "../context/ClienteContext";
+import { useConfirm } from "../context/ConfirmContext";
 import ClienteModal from "../components/modals/ClienteModal";
 import TablePagination from "../components/TablePagination";
 import { getRecordId } from "../utils/apiData";
@@ -16,6 +18,7 @@ function ClientesPage() {
     errorsCliente,
     paginationClientes,
   } = useClientes();
+  const confirm = useConfirm();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState("create");
@@ -81,7 +84,7 @@ function ClientesPage() {
         const clienteId = getClienteId(clienteSeleccionado);
 
         if (!clienteId) {
-          alert("No se encontró el ID del cliente seleccionado");
+          notify.error("No se encontró el ID del cliente seleccionado");
           return;
         }
 
@@ -89,7 +92,7 @@ function ClientesPage() {
       }
 
       if (!res?.ok) {
-        alert(res?.error || "No se pudo guardar el cliente");
+        notify.error(res?.error || "No se pudo guardar el cliente");
         return;
       }
 
@@ -97,7 +100,7 @@ function ClientesPage() {
       await getClientes({ page: paginationClientes.page, limit: paginationClientes.limit });
     } catch (error) {
       console.error("Error inesperado al guardar cliente:", error);
-      alert("Error inesperado al guardar cliente");
+      notify.error("Error inesperado al guardar cliente");
     }
   };
 
@@ -107,13 +110,16 @@ function ClientesPage() {
     const accion = nuevoEstado ? "activar" : "desactivar";
 
     if (!id) {
-      toast.error("No se encontró el ID del cliente");
+      notify.error("No se encontró el ID del cliente");
       return;
     }
 
-    const confirmar = window.confirm(
-      `¿Estás seguro de ${accion} este cliente?`
-    );
+    const confirmar = await confirm({
+      title: nuevoEstado ? "Activar cliente" : "Desactivar cliente",
+      message: `¿Estás seguro de ${accion} este cliente?`,
+      confirmText: nuevoEstado ? "Activar" : "Desactivar",
+      variant: nuevoEstado ? "primary" : "danger",
+    });
 
     if (!confirmar) return;
 
@@ -122,11 +128,11 @@ function ClientesPage() {
       : await deleteCliente(id);
 
     if (!res?.ok) {
-      toast.error(res?.error || "No se pudo cambiar el estado del cliente");
+      notify.error(res?.error || "No se pudo cambiar el estado del cliente");
       return;
     }
 
-    toast.success(
+    notify.success(
       nuevoEstado
         ? "Cliente activado correctamente"
         : "Cliente desactivado correctamente"
@@ -186,23 +192,27 @@ function ClientesPage() {
     return (
       <div
         className={`flex ${
-          mobile ? "w-full flex-col sm:flex-row" : "justify-end"
+          mobile ? "flex-wrap" : "justify-end"
         } gap-2`}
       >
         <button
           type="button"
           onClick={() => abrirVer(cliente)}
-          className="btn-secondary px-3 py-2 text-xs"
+          className="btn-secondary btn-icon"
+          title="Ver cliente"
+          aria-label="Ver cliente"
         >
-          Ver
+          <Eye />
         </button>
 
         <button
           type="button"
           onClick={() => abrirEditar(cliente)}
-          className="btn-primary px-3 py-2 text-xs"
+          className="btn-primary btn-icon"
+          title="Editar cliente"
+          aria-label="Editar cliente"
         >
-          Editar
+          <Pencil />
         </button>
 
         <button
@@ -210,9 +220,11 @@ function ClientesPage() {
           onClick={() => handleCambiarEstado(cliente)}
           className={`${
             cliente.activo ? "btn-danger" : "btn-success"
-          } px-3 py-2 text-xs`}
+          } btn-icon`}
+          title={cliente.activo ? "Desactivar cliente" : "Activar cliente"}
+          aria-label={cliente.activo ? "Desactivar cliente" : "Activar cliente"}
         >
-          {cliente.activo ? "Desactivar" : "Activar"}
+          {cliente.activo ? <PowerOff /> : <Power />}
         </button>
       </div>
     );
@@ -241,7 +253,7 @@ function ClientesPage() {
             <button
               type="button"
               onClick={abrirCrear}
-              className="btn-primary px-5 py-3"
+              className="btn-primary px-3 py-2"
             >
               Nuevo cliente
             </button>
@@ -275,7 +287,7 @@ function ClientesPage() {
             <button
               type="button"
               onClick={abrirCrear}
-              className="btn-primary mt-5 px-5 py-3"
+              className="btn-primary mt-4 px-3 py-2"
             >
               Crear cliente
             </button>

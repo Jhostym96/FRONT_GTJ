@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
-import toast from "react-hot-toast";
+import { notify } from "../utils/notify";
+import { Ban, Eye, LoaderCircle, Pencil } from "lucide-react";
 import { useOrdenesServicio } from "../context/OrdenServicioContext";
+import { useConfirm } from "../context/ConfirmContext";
 
 import OrdenServicioModal from "../components/modals/OrdenServicioModal";
 import TablePagination from "../components/TablePagination";
@@ -13,6 +15,8 @@ const formatearTipoCarga = (tipoCarga) =>
 const formatearDimensionCarga = (dimensionCarga) =>
   dimensionCarga ? `${dimensionCarga} pies` : "-";
 
+const estadosNoAnulables = ["ANULADA", "FINALIZADA", "FINALIZADO"];
+
 const OrdenesServicioPage = () => {
   const {
     ordenes = [],
@@ -21,6 +25,7 @@ const OrdenesServicioPage = () => {
     cargarOrdenesServicio,
     anularOrdenServicio,
   } = useOrdenesServicio();
+  const confirm = useConfirm();
 
   const [anulando, setAnulando] = useState({});
 
@@ -89,10 +94,50 @@ const OrdenesServicioPage = () => {
     });
   };
 
-  const handleAnular = async (id) => {
-    const confirmar = window.confirm(
-      "¿Seguro que deseas anular esta orden de servicio?"
+  const getViajesAsignados = (orden) => {
+    const viajesProgramados = Number(orden?.viajesProgramados) || 0;
+
+    const relaciones = [
+      orden?.programaciones,
+      orden?.programacionesViaje,
+      orden?.viajes,
+      orden?.viajesAsignados,
+    ];
+
+    const viajesEnRelaciones = relaciones.some(
+      (relacion) => Array.isArray(relacion) && relacion.length > 0
     );
+
+    return viajesProgramados > 0 || viajesEnRelaciones || Boolean(orden?.programacionViaje);
+  };
+
+  const getMotivoBloqueoAnulacion = (orden) => {
+    if (estadosNoAnulables.includes(orden?.estado)) {
+      return "La orden ya está finalizada o anulada.";
+    }
+
+    if (getViajesAsignados(orden)) {
+      return "La orden ya tiene viajes asignados.";
+    }
+
+    return "";
+  };
+
+  const handleAnular = async (orden) => {
+    const id = getItemId(orden);
+    const motivoBloqueo = getMotivoBloqueoAnulacion(orden);
+
+    if (motivoBloqueo) {
+      notify.info(`No se puede anular esta orden. ${motivoBloqueo}`);
+      return;
+    }
+
+    const confirmar = await confirm({
+      title: "Anular orden",
+      message: "¿Seguro que deseas anular esta orden de servicio?",
+      confirmText: "Anular",
+      variant: "danger",
+    });
 
     if (!confirmar) return;
 
@@ -101,7 +146,7 @@ const OrdenesServicioPage = () => {
 
       await anularOrdenServicio(id);
 
-      toast.success("Orden anulada correctamente");
+      notify.success("Orden anulada correctamente");
       const nextPage =
         ordenes.length === 1 && paginationOrdenes.page > 1
           ? paginationOrdenes.page - 1
@@ -112,7 +157,7 @@ const OrdenesServicioPage = () => {
       });
     } catch (error) {
       console.error("Error al anular orden:", error);
-      toast.error(error.response?.data?.message || "Error al anular la orden");
+      notify.error(error.response?.data?.message || "Error al anular la orden");
     } finally {
       setAnulando((prev) => ({ ...prev, [id]: false }));
     }
@@ -153,37 +198,44 @@ const OrdenesServicioPage = () => {
 
   const AccionesOrden = ({ orden, mobile = false }) => {
     const ordenId = getItemId(orden);
+    const motivoBloqueoAnulacion = getMotivoBloqueoAnulacion(orden);
 
     return (
       <div
-        className={`flex ${mobile ? "w-full flex-col sm:flex-row" : "justify-center"
+        className={`flex ${mobile ? "flex-wrap" : "justify-center"
           } gap-2`}
       >
         <button
           type="button"
           onClick={() => abrirVer(orden)}
-          className="btn-secondary px-3 py-2 text-xs"
+          className="btn-secondary btn-icon"
+          title="Ver orden"
+          aria-label="Ver orden"
         >
-          Ver
+          <Eye />
         </button>
 
         <button
           type="button"
           onClick={() => abrirEditar(orden)}
           disabled={orden.estado === "ANULADA"}
-          className="btn-primary px-3 py-2 text-xs"
+          className="btn-primary btn-icon"
+          title="Editar orden"
+          aria-label="Editar orden"
         >
-          Editar
+          <Pencil />
         </button>
 
-        {orden.estado !== "ANULADA" && (
+        {!motivoBloqueoAnulacion && (
           <button
             type="button"
-            onClick={() => handleAnular(ordenId)}
+            onClick={() => handleAnular(orden)}
             disabled={anulando[ordenId]}
-            className="btn-danger px-3 py-2 text-xs"
+            className="btn-danger btn-icon"
+            title="Anular orden"
+            aria-label="Anular orden"
           >
-            {anulando[ordenId] ? "Anulando..." : "Anular"}
+            {anulando[ordenId] ? <LoaderCircle className="animate-spin" /> : <Ban />}
           </button>
         )}
       </div>
@@ -209,7 +261,7 @@ const OrdenesServicioPage = () => {
             <button
               type="button"
               onClick={abrirCrear}
-              className="btn-primary px-5 py-3"
+              className="btn-primary px-3 py-2"
             >
               Nueva orden
             </button>
@@ -236,7 +288,7 @@ const OrdenesServicioPage = () => {
             <button
               type="button"
               onClick={abrirCrear}
-              className="btn-primary mt-5 px-5 py-3"
+              className="btn-primary mt-4 px-3 py-2"
             >
               Crear orden
             </button>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useUsuarios } from "../context/UserContext";
-import toast from "react-hot-toast";
+import { notify } from "../utils/notify";
 import TablePagination from "../components/TablePagination";
 import { getRecordId } from "../utils/apiData";
 
@@ -42,10 +42,10 @@ const GestionUsuarios = () => {
       setSaving((prev) => ({ ...prev, [userId]: true }));
       await cambiarRol(userId, nuevoRol);
       await recargarUsuarios();
-      toast.success("Rol actualizado con éxito");
+      notify.success("Rol actualizado con éxito");
     } catch (error) {
       console.error("Error al actualizar rol:", error);
-      toast.error(error.response?.data?.message || "Error al actualizar rol");
+      notify.error(error.response?.data?.message || "Error al actualizar rol");
     } finally {
       setSaving((prev) => ({ ...prev, [userId]: false }));
     }
@@ -135,8 +135,8 @@ const GestionUsuarios = () => {
                             disabled={!cambioPendiente || saving[userId]}
                             className={
                               cambioPendiente
-                                ? "btn-primary px-4 py-2"
-                                : "btn-secondary px-4 py-2"
+                                ? "btn-primary px-3 py-1.5"
+                                : "btn-secondary px-3 py-1.5"
                             }
                           >
                             {saving[userId] ? "Guardando..." : "Guardar"}

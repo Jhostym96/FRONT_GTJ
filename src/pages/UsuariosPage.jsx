@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Pencil, Power, PowerOff } from "lucide-react";
 import { useUsuarios } from "../context/UserContext";
 import UsuarioForm from "../components/UsuarioForm";
 import TablePagination from "../components/TablePagination";
@@ -89,7 +90,7 @@ const UsuariosPage = () => {
             <button
               type="button"
               onClick={() => abrirFormulario()}
-              className="btn-primary px-5 py-3"
+              className="btn-primary px-3 py-2"
             >
               Nuevo usuario
             </button>
@@ -112,7 +113,7 @@ const UsuariosPage = () => {
             <button
               type="button"
               onClick={() => abrirFormulario()}
-              className="btn-primary mt-5 px-5 py-3"
+              className="btn-primary mt-4 px-3 py-2"
             >
               Crear usuario
             </button>
@@ -179,17 +180,21 @@ const UsuariosPage = () => {
                               onClick={() => handleToggleActivo(usuario)}
                               className={`${
                                 usuario.activo ? "btn-danger" : "btn-success"
-                              } px-3 py-2 text-xs`}
+                              } btn-icon`}
+                              title={usuario.activo ? "Desactivar usuario" : "Activar usuario"}
+                              aria-label={usuario.activo ? "Desactivar usuario" : "Activar usuario"}
                             >
-                              {usuario.activo ? "Desactivar" : "Activar"}
+                              {usuario.activo ? <PowerOff /> : <Power />}
                             </button>
 
                             <button
                               type="button"
                               onClick={() => abrirFormulario(usuario)}
-                              className="btn-primary px-3 py-2 text-xs"
+                              className="btn-primary btn-icon"
+                              title="Editar usuario"
+                              aria-label="Editar usuario"
                             >
-                              Editar
+                              <Pencil />
                             </button>
                           </div>
                         </td>

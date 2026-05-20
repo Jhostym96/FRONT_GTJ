@@ -1,9 +1,20 @@
 import { useEffect, useState } from "react";
-import { CalendarClock } from "lucide-react";
-import toast from "react-hot-toast";
+import {
+  Ban,
+  CalendarClock,
+  CheckCircle2,
+  Eye,
+  Flag,
+  LoaderCircle,
+  MapPin,
+  Route,
+  Warehouse,
+} from "lucide-react";
+import { notify } from "../utils/notify";
 import { useProgramacionViaje } from "../context/ProgramacionViajeContext";
 import { useUnidades } from "../context/UnidadContext";
 import { useConductores } from "../context/ConductorContext";
+import { useConfirm } from "../context/ConfirmContext";
 
 import ProgramacionViajeModal from "../components/modals/ProgramacionViajeModal";
 import TablePagination from "../components/TablePagination";
@@ -36,6 +47,23 @@ const TRANSICIONES = {
   ENTREGADO: [{ estado: "FINALIZADO", label: "Finalizar" }],
 };
 
+const getAccionIcon = (estado) => {
+  switch (estado) {
+    case "EN_RUTA":
+      return <Route />;
+    case "EN_ALMACEN":
+      return <Warehouse />;
+    case "EN_CLIENTE":
+      return <MapPin />;
+    case "ENTREGADO":
+      return <CheckCircle2 />;
+    case "FINALIZADO":
+      return <Flag />;
+    default:
+      return <CheckCircle2 />;
+  }
+};
+
 const ProgramacionViajePage = () => {
   const {
     programaciones = [],
@@ -47,6 +75,7 @@ const ProgramacionViajePage = () => {
 
   const { obtenerUnidades } = useUnidades();
   const { obtenerConductores, getConductores } = useConductores();
+  const confirm = useConfirm();
 
   const [openModal, setOpenModal] = useState(false);
   const [viajeSeleccionado, setViajeSeleccionado] = useState(null);
@@ -189,7 +218,7 @@ const ProgramacionViajePage = () => {
     const viajeId = getId(viaje);
 
     if (!viajeId) {
-      toast.error("ID de programación no válido");
+      notify.error("ID de programación no válido");
       return false;
     }
 
@@ -202,7 +231,22 @@ const ProgramacionViajePage = () => {
         ? "¿Seguro que deseas anular esta programación?"
         : `¿Seguro que deseas cambiar el estado a ${nuevoEstado}?`;
 
-    const confirmar = window.confirm(mensajeConfirmacion);
+    const confirmar = await confirm({
+      title:
+        nuevoEstado === "FINALIZADO"
+          ? "Finalizar servicio"
+          : nuevoEstado === "ANULADO"
+          ? "Anular programación"
+          : "Cambiar estado",
+      message: mensajeConfirmacion,
+      confirmText:
+        nuevoEstado === "FINALIZADO"
+          ? "Finalizar"
+          : nuevoEstado === "ANULADO"
+          ? "Anular"
+          : "Cambiar estado",
+      variant: nuevoEstado === "ANULADO" ? "danger" : "primary",
+    });
 
     if (!confirmar) return;
 
@@ -219,12 +263,12 @@ const ProgramacionViajePage = () => {
 
       await recargarProgramaciones();
 
-      toast.success(`Programación actualizada a ${nuevoEstado}`);
+      notify.success(`Programación actualizada a ${nuevoEstado}`);
       return true;
     } catch (error) {
       console.error("Error al cambiar estado:", error);
 
-      toast.error(
+      notify.error(
         error?.response?.data?.message ||
           "Error al cambiar el estado de la programación"
       );
@@ -258,7 +302,7 @@ const ProgramacionViajePage = () => {
     if (!estadoConFecha?.viaje || !estadoConFecha?.nuevoEstado) return;
 
     if (!fechaHoraOperacion) {
-      toast.error("Selecciona fecha y hora");
+      notify.error("Selecciona fecha y hora");
       return;
     }
 
@@ -303,15 +347,17 @@ const ProgramacionViajePage = () => {
     return (
       <div
         className={`flex ${
-          mobile ? "w-full flex-col sm:flex-row" : "justify-start"
+          mobile ? "flex-wrap" : "justify-start"
         } flex-wrap gap-2`}
       >
         <button
           type="button"
           onClick={() => abrirVer(viaje)}
-          className="btn-secondary px-3 py-2 text-xs"
+          className="btn-secondary btn-icon"
+          title="Ver programación"
+          aria-label="Ver programación"
         >
-          Ver
+          <Eye />
         </button>
 
         {(TRANSICIONES[viaje.estado] || []).map((accion) => (
@@ -320,9 +366,15 @@ const ProgramacionViajePage = () => {
             type="button"
             disabled={cambiandoEstado[viajeId]}
             onClick={() => handleCambiarEstado(viaje, accion.estado)}
-            className="btn-primary px-3 py-2 text-xs"
+            className="btn-primary btn-icon"
+            title={accion.label}
+            aria-label={accion.label}
           >
-            {accion.label}
+            {cambiandoEstado[viajeId] ? (
+              <LoaderCircle className="animate-spin" />
+            ) : (
+              getAccionIcon(accion.estado)
+            )}
           </button>
         ))}
 
@@ -331,9 +383,15 @@ const ProgramacionViajePage = () => {
             type="button"
             disabled={cambiandoEstado[viajeId]}
             onClick={() => handleCambiarEstado(viaje, "ANULADO")}
-            className="btn-danger px-3 py-2 text-xs"
+            className="btn-danger btn-icon"
+            title="Anular programación"
+            aria-label="Anular programación"
           >
-            Anular
+            {cambiandoEstado[viajeId] ? (
+              <LoaderCircle className="animate-spin" />
+            ) : (
+              <Ban />
+            )}
           </button>
         )}
       </div>
@@ -359,7 +417,7 @@ const ProgramacionViajePage = () => {
             <button
               type="button"
               onClick={abrirCrear}
-              className="btn-primary px-5 py-3"
+              className="btn-primary px-3 py-2"
             >
               Nueva programación
             </button>
@@ -379,7 +437,7 @@ const ProgramacionViajePage = () => {
             <button
               type="button"
               onClick={abrirCrear}
-              className="btn-primary mt-5 px-5 py-3"
+              className="btn-primary mt-4 px-3 py-2"
             >
               Crear programación
             </button>
@@ -620,11 +678,11 @@ const ProgramacionViajePage = () => {
                 <button
                   type="button"
                   onClick={cerrarFechaOperacion}
-                  className="btn-secondary px-4 py-2"
+                  className="btn-secondary px-3 py-1.5"
                 >
                   Cancelar
                 </button>
-                <button type="submit" className="btn-primary px-4 py-2">
+                <button type="submit" className="btn-primary px-3 py-1.5">
                   Confirmar
                 </button>
               </div>

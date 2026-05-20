@@ -256,7 +256,7 @@ function ConductorModal({
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="btn-secondary px-4 py-2"
+              className="btn-secondary px-3 py-1.5"
             >
               Cancelar
             </button>
@@ -264,7 +264,7 @@ function ConductorModal({
             <button
               type="submit"
               disabled={loading}
-              className="btn-success px-4 py-2"
+              className="btn-success px-3 py-1.5"
             >
               {loading
                 ? "Guardando..."

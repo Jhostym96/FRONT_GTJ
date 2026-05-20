@@ -1,7 +1,7 @@
 import { useAuth } from "../context/AuthContext";
 import { useUsuarios } from "../context/UserContext"; // 👈 usamos el contexto
 import { useState } from "react";
-import toast from "react-hot-toast";
+import { notify } from "../utils/notify";
 
 function ProfilePage() {
   const { user } = useAuth();
@@ -22,7 +22,7 @@ function ProfilePage() {
     e.preventDefault();
 
     if (!form.email) {
-      toast.error("El correo no puede estar vacío");
+      notify.error("El correo no puede estar vacío");
       return;
     }
 
@@ -35,11 +35,11 @@ function ProfilePage() {
         password: form.password || undefined,
       });
 
-      toast.success("Perfil actualizado correctamente");
+      notify.success("Perfil actualizado correctamente");
       setForm({ ...form, password: "" }); // limpiar campo contraseña
     } catch (err) {
       console.error(err);
-      toast.error(
+      notify.error(
         err.response?.data?.error || "No se pudo actualizar el perfil"
       );
     } finally {

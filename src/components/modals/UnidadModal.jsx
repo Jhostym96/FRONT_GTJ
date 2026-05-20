@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import toast from "react-hot-toast";
+import { notify } from "../../utils/notify";
 
 const initialForm = {
   placa: "",
@@ -66,17 +66,17 @@ function UnidadModal({
     const estadoNormalizado = form.estado.trim().toUpperCase();
 
     if (!form.placa.trim()) {
-      toast.error("La placa es obligatoria");
+      notify.error("La placa es obligatoria");
       return;
     }
 
     if (!["TRACTO", "CARRETA"].includes(tipoUnidadNormalizado)) {
-      toast.error("Selecciona un tipo de unidad válido");
+      notify.error("Selecciona un tipo de unidad válido");
       return;
     }
 
     if (!["ACTIVO", "INACTIVO"].includes(estadoNormalizado)) {
-      toast.error("Selecciona un estado válido");
+      notify.error("Selecciona un estado válido");
       return;
     }
 
@@ -259,7 +259,7 @@ function UnidadModal({
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="btn-secondary px-4 py-2"
+              className="btn-secondary px-3 py-1.5"
             >
               {isView ? "Cerrar" : "Cancelar"}
             </button>
@@ -268,7 +268,7 @@ function UnidadModal({
               <button
                 type="submit"
                 disabled={loading}
-                className="btn-success px-4 py-2"
+                className="btn-success px-3 py-1.5"
               >
                 {loading
                   ? "Guardando..."

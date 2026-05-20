@@ -11,6 +11,7 @@ import { ConductorProvider } from "./context/ConductorContext";
 import { ProgramacionViajeProvider } from "./context/ProgramacionViajeContext";
 import { GuiaTransportistaProvider } from "./context/GuiaTransportistaContext";
 import { ThemeProvider } from "./context/ThemeContext";
+import { ConfirmProvider } from "./context/ConfirmContext";
 
 // 🔹 Componentes
 import Sidebar from "./components/Sidebar";
@@ -95,23 +96,25 @@ function App() {
               <UnidadProvider>
                 <ConductorProvider>
                   <ProgramacionViajeProvider>
-                    <Router>
-                      <RouteChangeLoader />
-                      <GuiaTransportistaProvider>
-                        <Routes>
-                          {/* Rutas públicas */}
-                          <Route
-                            path="/unauthorized"
-                            element={<UnauthorizedPage />}
-                          />
-                          <Route path="/login" element={<LoginPage />} />
-                          {/* Rutas protegidas */}
-                          <Route element={<ProtectedRoute />}>
-                            <Route path="/*" element={<Layout />} />
-                          </Route>
-                        </Routes>
-                      </GuiaTransportistaProvider>
-                    </Router>
+                    <ConfirmProvider>
+                      <Router>
+                        <RouteChangeLoader />
+                        <GuiaTransportistaProvider>
+                          <Routes>
+                            {/* Rutas públicas */}
+                            <Route
+                              path="/unauthorized"
+                              element={<UnauthorizedPage />}
+                            />
+                            <Route path="/login" element={<LoginPage />} />
+                            {/* Rutas protegidas */}
+                            <Route element={<ProtectedRoute />}>
+                              <Route path="/*" element={<Layout />} />
+                            </Route>
+                          </Routes>
+                        </GuiaTransportistaProvider>
+                      </Router>
+                    </ConfirmProvider>
                   </ProgramacionViajeProvider>
                 </ConductorProvider>
               </UnidadProvider>

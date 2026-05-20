@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import toast from "react-hot-toast";
+import { notify } from "../../utils/notify";
 import { FaTimes } from "react-icons/fa";
 import { useOrdenesServicio } from "../../context/OrdenServicioContext";
 import { useClientes } from "../../context/ClienteContext";
@@ -531,89 +531,89 @@ const OrdenServicioModal = ({
 
   const validarFormulario = () => {
     if (!form.fechaProgramada) {
-      toast.error("La fecha programada es obligatoria");
+      notify.error("La fecha programada es obligatoria");
       return false;
     }
 
     const cantidadViajes = Number(form.cantidadViajes);
 
     if (!Number.isInteger(cantidadViajes) || cantidadViajes < 1) {
-      toast.error("La cantidad de viajes debe ser mayor a 0");
+      notify.error("La cantidad de viajes debe ser mayor a 0");
       return false;
     }
 
     if (!form.clienteSolicitante.numeroDocumento.trim()) {
-      toast.error("Ingresa el número de documento del cliente");
+      notify.error("Ingresa el número de documento del cliente");
       return false;
     }
 
     if (!form.clienteSolicitante.razonSocial.trim()) {
-      toast.error("Ingresa la razón social del cliente");
+      notify.error("Ingresa la razón social del cliente");
       return false;
     }
 
     if (!form.clienteSolicitante.direccion.trim()) {
-      toast.error("Ingresa la dirección del cliente");
+      notify.error("Ingresa la dirección del cliente");
       return false;
     }
 
     if (!form.remitente.numeroDocumento.trim()) {
-      toast.error("Selecciona o ingresa el remitente");
+      notify.error("Selecciona o ingresa el remitente");
       return false;
     }
 
     if (!form.remitente.razonSocial.trim()) {
-      toast.error("Ingresa la razón social del remitente");
+      notify.error("Ingresa la razón social del remitente");
       return false;
     }
 
     if (!form.destinatario.numeroDocumento.trim()) {
-      toast.error("Selecciona o ingresa el destinatario");
+      notify.error("Selecciona o ingresa el destinatario");
       return false;
     }
 
     if (!form.destinatario.razonSocial.trim()) {
-      toast.error("Ingresa la razón social del destinatario");
+      notify.error("Ingresa la razón social del destinatario");
       return false;
     }
 
     if (!form.partida.ubigeo.trim()) {
-      toast.error("Ingresa el ubigeo de partida");
+      notify.error("Ingresa el ubigeo de partida");
       return false;
     }
 
     if (form.partida.ubigeo.trim().length !== 6) {
-      toast.error("El ubigeo de partida debe tener 6 dígitos");
+      notify.error("El ubigeo de partida debe tener 6 dígitos");
       return false;
     }
 
     if (!form.partida.direccion.trim()) {
-      toast.error("Ingresa la dirección de partida");
+      notify.error("Ingresa la dirección de partida");
       return false;
     }
 
     if (!form.llegada.ubigeo.trim()) {
-      toast.error("Ingresa el ubigeo de llegada");
+      notify.error("Ingresa el ubigeo de llegada");
       return false;
     }
 
     if (form.llegada.ubigeo.trim().length !== 6) {
-      toast.error("El ubigeo de llegada debe tener 6 dígitos");
+      notify.error("El ubigeo de llegada debe tener 6 dígitos");
       return false;
     }
 
     if (!form.llegada.direccion.trim()) {
-      toast.error("Ingresa la dirección de llegada");
+      notify.error("Ingresa la dirección de llegada");
       return false;
     }
 
     if (!form.clasificacionCarga) {
-      toast.error("Selecciona la clasificación de la carga");
+      notify.error("Selecciona la clasificación de la carga");
       return false;
     }
 
     if (form.tipoCarga === "CONTENEDOR" && !form.dimensionCarga) {
-      toast.error("Selecciona la dimensión del contenedor");
+      notify.error("Selecciona la dimensión del contenedor");
       return false;
     }
 
@@ -683,25 +683,25 @@ const OrdenServicioModal = ({
 
       if (isCreateMode) {
         await crearOrdenServicio(data);
-        toast.success("Orden de servicio creada correctamente");
+        notify.success("Orden de servicio creada correctamente");
       }
 
       if (isEditMode) {
         const ordenId = getItemId(orden);
 
         if (!ordenId) {
-          toast.error("No se encontró el ID de la orden");
+          notify.error("No se encontró el ID de la orden");
           return;
         }
 
         await editarOrdenServicio(ordenId, data);
-        toast.success("Orden de servicio actualizada correctamente");
+        notify.success("Orden de servicio actualizada correctamente");
       }
 
     resetForm();
       onClose();
     } catch (error) {
-      toast.error(
+      notify.error(
         error.response?.data?.message || "Error al guardar la orden de servicio"
       );
     } finally {
@@ -1231,7 +1231,7 @@ const OrdenServicioModal = ({
                 type="button"
                 onClick={handleClose}
                 disabled={loading}
-                className="btn-secondary px-5 py-2"
+                className="btn-secondary px-3 py-1.5"
               >
                 {isViewMode ? "Cerrar" : "Cancelar"}
               </button>
@@ -1240,7 +1240,7 @@ const OrdenServicioModal = ({
                 <button
                   type="submit"
                   disabled={loading}
-                  className="btn-primary px-5 py-2"
+                  className="btn-primary px-3 py-1.5"
                 >
                   {loading
                     ? isEditMode

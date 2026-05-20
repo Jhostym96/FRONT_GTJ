@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
-import toast from "react-hot-toast";
+import { notify } from "../utils/notify";
+import { Pencil, Power, PowerOff } from "lucide-react";
 import { useConductores } from "../context/ConductorContext";
+import { useConfirm } from "../context/ConfirmContext";
 import ConductorModal from "../components/modals/ConductorModal";
 import TablePagination from "../components/TablePagination";
 import { getRecordId } from "../utils/apiData";
@@ -16,6 +18,7 @@ function ConductoresPage() {
     limpiarErrores,
     paginationConductores,
   } = useConductores();
+  const confirm = useConfirm();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [mode, setMode] = useState("create");
@@ -84,26 +87,29 @@ function ConductoresPage() {
     const accion = nuevoEstado === "ACTIVO" ? "activar" : "desactivar";
 
     if (!conductorId) {
-      toast.error("No se encontró el ID del conductor");
+      notify.error("No se encontró el ID del conductor");
       return;
     }
 
-    const confirmar = window.confirm(
-      `¿Seguro que deseas ${accion} este conductor?`
-    );
+    const confirmar = await confirm({
+      title: nuevoEstado === "ACTIVO" ? "Activar conductor" : "Desactivar conductor",
+      message: `¿Seguro que deseas ${accion} este conductor?`,
+      confirmText: nuevoEstado === "ACTIVO" ? "Activar" : "Desactivar",
+      variant: nuevoEstado === "ACTIVO" ? "primary" : "danger",
+    });
 
     if (!confirmar) return;
 
     try {
       await cambiarEstadoConductor(conductorId, nuevoEstado);
-      toast.success(
+      notify.success(
         nuevoEstado === "ACTIVO"
           ? "Conductor activado correctamente"
           : "Conductor desactivado correctamente"
       );
       await cargarConductores(paginationConductores.page);
     } catch (error) {
-      toast.error(
+      notify.error(
         error.response?.data?.message || "Error al cambiar estado de conductor"
       );
     }
@@ -129,15 +135,17 @@ function ConductoresPage() {
     return (
       <div
         className={`flex ${
-          mobile ? "w-full flex-col sm:flex-row" : "justify-end"
+          mobile ? "flex-wrap" : "justify-end"
         } gap-2`}
       >
         <button
           type="button"
           onClick={() => abrirEditar(conductor)}
-          className="btn-primary px-3 py-2 text-xs"
+          className="btn-primary btn-icon"
+          title="Editar conductor"
+          aria-label="Editar conductor"
         >
-          Editar
+          <Pencil />
         </button>
 
         <button
@@ -145,9 +153,19 @@ function ConductoresPage() {
           onClick={() => handleCambiarEstado(conductor)}
           className={`${
             conductor.estado === "ACTIVO" ? "btn-danger" : "btn-success"
-          } px-3 py-2 text-xs`}
+          } btn-icon`}
+          title={
+            conductor.estado === "ACTIVO"
+              ? "Desactivar conductor"
+              : "Activar conductor"
+          }
+          aria-label={
+            conductor.estado === "ACTIVO"
+              ? "Desactivar conductor"
+              : "Activar conductor"
+          }
         >
-          {conductor.estado === "ACTIVO" ? "Desactivar" : "Activar"}
+          {conductor.estado === "ACTIVO" ? <PowerOff /> : <Power />}
         </button>
       </div>
     );
@@ -176,7 +194,7 @@ function ConductoresPage() {
             <button
               type="button"
               onClick={abrirCrear}
-              className="btn-primary px-5 py-3"
+              className="btn-primary px-3 py-2"
             >
               Nuevo conductor
             </button>
@@ -212,7 +230,7 @@ function ConductoresPage() {
             <button
               type="button"
               onClick={abrirCrear}
-              className="btn-primary mt-5 px-5 py-3"
+              className="btn-primary mt-4 px-3 py-2"
             >
               Crear conductor
             </button>

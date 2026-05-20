@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import toast from "react-hot-toast";
+import { notify } from "../../utils/notify";
 import { useGuiaTransportista } from "../../context/GuiaTransportistaContext";
 import { useProgramacionViaje } from "../../context/ProgramacionViajeContext";
 import { getRecordId } from "../../utils/apiData";
@@ -42,7 +42,7 @@ const DOCUMENTOS_RELACIONADOS_OPTIONS = [
 const mostrarErroresApi = (error, fallback) => {
   const mensajes = obtenerMensajesErrorApi(error, fallback);
 
-  toast.error(
+  notify.error(
     mensajes.length === 1 ? (
       mensajes[0]
     ) : (
@@ -368,10 +368,10 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
 
       if (isEdit) {
         await actualizarGuiaTransportista(getRecordId(guia), data);
-        toast.success("Guía actualizada correctamente");
+        notify.success("Guía actualizada correctamente");
       } else {
         await crearGuiaTransportista(data);
-        toast.success("Guía creada y enviada a Nubefact correctamente");
+        notify.success("Guía creada y enviada a Nubefact correctamente");
       }
 
       await obtenerGuiasTransportista();
@@ -385,7 +385,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
     try {
       const data = limpiarPayloadGuia();
       await validarGuiaTransportista(data);
-      toast.success("La guía está lista para emitir");
+      notify.success("La guía está lista para emitir");
     } catch (error) {
       mostrarErroresApi(error, "La guía tiene datos por corregir");
     }
@@ -795,7 +795,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
                       <button
                         type="button"
                         onClick={() => eliminarItem(index)}
-                        className="btn-danger w-full px-3 py-3 text-xs"
+                        className="btn-danger w-full px-3 py-2 text-xs"
                       >
                         X
                       </button>
@@ -870,7 +870,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
                         <button
                           type="button"
                           onClick={() => eliminarDocumento(index)}
-                          className="btn-danger w-full px-3 py-3 text-xs"
+                          className="btn-danger w-full px-3 py-2 text-xs"
                         >
                           X
                         </button>
@@ -886,7 +886,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
             <button
               type="button"
               onClick={onClose}
-              className="btn-secondary px-5 py-3 text-sm"
+              className="btn-secondary px-3 py-2 text-sm"
             >
               {isView ? "Cerrar" : "Cancelar"}
             </button>
@@ -898,7 +898,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
                     type="button"
                     onClick={handleValidar}
                     disabled={loadingGuia}
-                    className="rounded-xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-neutral-700"
+                    className="btn-success px-3 py-2 text-sm disabled:bg-neutral-700"
                   >
                     Validar
                   </button>
@@ -907,7 +907,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
                 <button
                   type="submit"
                   disabled={loadingGuia}
-                  className="btn-primary px-5 py-3 text-sm"
+                  className="btn-primary px-3 py-2 text-sm"
                 >
                   {loadingGuia
                     ? "Guardando..."

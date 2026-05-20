@@ -6,6 +6,7 @@ import logo from "/tj.png";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { useTheme } from "../context/ThemeContext";
 import { Moon, Sun } from "lucide-react";
+import { notify } from "../utils/notify";
 
 function LoginPage() {
   const { register, handleSubmit } = useForm();
@@ -91,7 +92,7 @@ function LoginPage() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="btn-primary w-full py-3"
+            className="btn-primary w-full py-2"
           >
             {isSubmitting ? (
               <div className="flex items-center justify-center gap-2">
@@ -127,7 +128,7 @@ function LoginPage() {
           <button
             type="button"
             className="text-sm font-medium text-blue-500 hover:underline"
-            onClick={() => alert("Funcionalidad en desarrollo")}
+            onClick={() => notify.info("Funcionalidad en desarrollo")}
           >
             ¿Olvidaste tu contraseña?
           </button>

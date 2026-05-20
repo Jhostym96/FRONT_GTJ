@@ -1,3 +1,5 @@
+import { ChevronLeft, ChevronRight } from "lucide-react";
+
 function TablePagination({
   page = 1,
   totalPages = 0,
@@ -32,11 +34,13 @@ function TablePagination({
       <div className="flex items-center gap-2">
         <button
           type="button"
-          className="btn-secondary px-3 py-2 text-xs"
+          className="btn-secondary btn-icon"
           disabled={safePage <= 1}
           onClick={() => goToPage(safePage - 1)}
+          title="Página anterior"
+          aria-label="Página anterior"
         >
-          Anterior
+          <ChevronLeft />
         </button>
 
         <span className="pagination-page">
@@ -45,11 +49,13 @@ function TablePagination({
 
         <button
           type="button"
-          className="btn-secondary px-3 py-2 text-xs"
+          className="btn-secondary btn-icon"
           disabled={safeTotalPages === 0 || safePage >= safeTotalPages}
           onClick={() => goToPage(safePage + 1)}
+          title="Página siguiente"
+          aria-label="Página siguiente"
         >
-          Siguiente
+          <ChevronRight />
         </button>
       </div>
     </div>
