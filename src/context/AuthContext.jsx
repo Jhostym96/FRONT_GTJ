@@ -3,7 +3,6 @@ import { createContext } from "react";
 import {
   loginRequest,
   registerRequest,
-  refreshTokenRequest,
   verifyTokenRequest,
   logoutRequest,
 } from "../api/auth";
@@ -105,39 +104,35 @@ export const AuthProvider = ({ children }) => {
   // 🔐 Verificar sesión al montar
   useEffect(() => {
     const checkLogin = async () => {
-      let token = getAccessToken();
-
-      if (!token) {
-        try {
-          const refreshRes = await refreshTokenRequest();
-          token = refreshRes.data?.accessToken;
-
-          if (token) {
-            setAccessToken(token);
-            axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-          }
-        } catch {
-          clearAccessToken();
-          setUser(null);
-          setIsAuthenticated(false);
-          setLoading(false);
-          return;
-        }
-      }
-
       try {
-        axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+        const token = getAccessToken();
+
+        if (token) {
+          axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+        } else {
+          delete axios.defaults.headers.common["Authorization"];
+        }
+
         const res = await verifyTokenRequest();
-        setUser(res.data);
+        const { accessToken, ...userData } = res.data;
+
+        if (accessToken) {
+          setAccessToken(accessToken);
+          axios.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
+        }
+
+        setUser(userData);
         setIsAuthenticated(true);
       } catch {
         clearAccessToken();
+        delete axios.defaults.headers.common["Authorization"];
         setUser(null);
         setIsAuthenticated(false);
       } finally {
         setLoading(false);
       }
     };
+
     checkLogin();
   }, []);
 
