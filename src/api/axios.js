@@ -6,11 +6,15 @@ import {
 } from "./tokenStore";
 
 let refreshPromise = null;
+const apiBaseUrl = import.meta.env.VITE_API_URL;
+
+if (!apiBaseUrl) {
+  throw new Error("Falta configurar VITE_API_URL en el entorno del frontend");
+}
 
 // Instancia principal de Axios
 const instance = axios.create({
-  baseURL:
-    import.meta.env.VITE_API_URL || "http://localhost:4000/api/",
+  baseURL: apiBaseUrl,
   withCredentials: true,
 });
 
