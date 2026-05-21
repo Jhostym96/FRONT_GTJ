@@ -1,34 +1,30 @@
 import { Link } from "react-router-dom";
+import { ShieldAlert } from "lucide-react";
 
 export default function UnauthorizedPage() {
   return (
-    <section className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-950 text-white px-4">
-      {/* Icono grande con fondo */}
-      <div className="w-24 h-24 flex items-center justify-center rounded-full bg-gradient-to-br from-red-600 to-red-800 shadow-lg shadow-red-900/40 mb-6 animate-pulse">
-        <span className="text-5xl">🚫</span>
+    <section className="app-shell flex min-h-screen flex-col items-center justify-center px-4 py-10 text-center">
+      <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl border border-red-500/30 bg-red-500/10 text-red-300 shadow-lg shadow-red-900/20">
+        <ShieldAlert size={40} />
       </div>
 
-      {/* Mensaje principal */}
-      <h1 className="text-4xl sm:text-5xl font-extrabold mb-4 bg-gradient-to-r from-red-400 to-red-600 bg-clip-text text-transparent drop-shadow-lg">
+      <h1 className="page-title mb-3 text-red-300">
         Acceso denegado
       </h1>
 
-      {/* Subtexto */}
-      <p className="text-gray-400 text-center max-w-md mb-10 leading-relaxed">
-        No tienes permisos para acceder a esta página.  
+      <p className="page-description mx-auto mb-8 max-w-md">
+        No tienes permisos para acceder a esta página.
         Si crees que se trata de un error, comunícate con el administrador.
       </p>
 
-      {/* Botón de regreso */}
       <Link
         to="/"
-        className="px-8 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 text-white font-semibold shadow-lg hover:shadow-indigo-600/40 hover:scale-105 transition-all duration-300"
+        className="btn-primary px-3 py-1.5"
       >
-        ⬅️ Volver al inicio
+        Volver al inicio
       </Link>
 
-      {/* Footer */}
-      <p className="text-gray-600 text-xs mt-16 tracking-wide">
+      <p className="text-faint mt-14 text-xs">
         © {new Date().getFullYear()} TRANSPORTES J EIRL. Todos los derechos reservados.
       </p>
     </section>

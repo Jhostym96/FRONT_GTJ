@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import toast from "react-hot-toast";
+import { notify } from "../../utils/notify";
 
 const initialForm = {
   placa: "",
@@ -8,6 +8,8 @@ const initialForm = {
   marca: "",
   modelo: "",
   estado: "ACTIVO",
+  permisoIMO: false,
+  permisoIQBF: false,
   observaciones: "",
 };
 
@@ -35,6 +37,8 @@ function UnidadModal({
         marca: unidad.marca || "",
         modelo: unidad.modelo || "",
         estado: unidad.estado || "ACTIVO",
+        permisoIMO: Boolean(unidad.permisoIMO),
+        permisoIQBF: Boolean(unidad.permisoIQBF),
         observaciones: unidad.observaciones || "",
       });
     } else {
@@ -45,11 +49,11 @@ function UnidadModal({
   if (!isOpen) return null;
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, type, checked, value } = e.target;
 
     setForm((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: type === "checkbox" ? checked : value,
     }));
   };
 
@@ -62,17 +66,17 @@ function UnidadModal({
     const estadoNormalizado = form.estado.trim().toUpperCase();
 
     if (!form.placa.trim()) {
-      toast.error("La placa es obligatoria");
+      notify.error("La placa es obligatoria");
       return;
     }
 
     if (!["TRACTO", "CARRETA"].includes(tipoUnidadNormalizado)) {
-      toast.error("Selecciona un tipo de unidad válido");
+      notify.error("Selecciona un tipo de unidad válido");
       return;
     }
 
     if (!["ACTIVO", "INACTIVO"].includes(estadoNormalizado)) {
-      toast.error("Selecciona un estado válido");
+      notify.error("Selecciona un estado válido");
       return;
     }
 
@@ -83,6 +87,8 @@ function UnidadModal({
       marca: form.marca.trim().toUpperCase(),
       modelo: form.modelo.trim().toUpperCase(),
       estado: estadoNormalizado,
+      permisoIMO: form.permisoIMO,
+      permisoIQBF: form.permisoIQBF,
       observaciones: form.observaciones.trim(),
     };
 
@@ -101,8 +107,8 @@ function UnidadModal({
   }[mode];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-4 backdrop-blur-sm">
-      <div className="panel w-full max-w-2xl p-6">
+    <div className="modal-backdrop">
+      <div className="modal-panel max-w-2xl">
         <div className="mb-5 flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold">{titulo}</h2>
@@ -207,6 +213,32 @@ function UnidadModal({
             </select>
           </div>
 
+          <div className="grid gap-3 rounded-lg border border-[var(--app-border)] p-3 md:col-span-2 sm:grid-cols-2">
+            <label className="flex items-center gap-3 text-sm">
+              <input
+                type="checkbox"
+                name="permisoIMO"
+                checked={form.permisoIMO}
+                onChange={handleChange}
+                disabled={isView || loading}
+                className="h-4 w-4"
+              />
+              <span className="text-main font-semibold">Permiso IMO</span>
+            </label>
+
+            <label className="flex items-center gap-3 text-sm">
+              <input
+                type="checkbox"
+                name="permisoIQBF"
+                checked={form.permisoIQBF}
+                onChange={handleChange}
+                disabled={isView || loading}
+                className="h-4 w-4"
+              />
+              <span className="text-main font-semibold">Permiso IQBF</span>
+            </label>
+          </div>
+
           <div className="md:col-span-2">
             <label className="text-muted mb-1 block text-sm">
               Observaciones
@@ -227,7 +259,7 @@ function UnidadModal({
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="btn-secondary px-4 py-2"
+              className="btn-secondary px-3 py-1.5"
             >
               {isView ? "Cerrar" : "Cancelar"}
             </button>
@@ -236,7 +268,7 @@ function UnidadModal({
               <button
                 type="submit"
                 disabled={loading}
-                className="btn-success px-4 py-2"
+                className="btn-success px-3 py-1.5"
               >
                 {loading
                   ? "Guardando..."

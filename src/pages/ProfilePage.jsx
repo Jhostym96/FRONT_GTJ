@@ -1,7 +1,7 @@
 import { useAuth } from "../context/AuthContext";
 import { useUsuarios } from "../context/UserContext"; // 👈 usamos el contexto
 import { useState } from "react";
-import toast from "react-hot-toast";
+import { notify } from "../utils/notify";
 
 function ProfilePage() {
   const { user } = useAuth();
@@ -22,7 +22,7 @@ function ProfilePage() {
     e.preventDefault();
 
     if (!form.email) {
-      toast.error("El correo no puede estar vacío");
+      notify.error("El correo no puede estar vacío");
       return;
     }
 
@@ -35,12 +35,12 @@ function ProfilePage() {
         password: form.password || undefined,
       });
 
-      toast.success("✅ Perfil actualizado correctamente");
+      notify.success("Perfil actualizado correctamente");
       setForm({ ...form, password: "" }); // limpiar campo contraseña
     } catch (err) {
       console.error(err);
-      toast.error(
-        err.response?.data?.error || "❌ No se pudo actualizar el perfil"
+      notify.error(
+        err.response?.data?.error || "No se pudo actualizar el perfil"
       );
     } finally {
       setLoading(false);
@@ -48,9 +48,12 @@ function ProfilePage() {
   };
 
   return (
-    <div className="p-6 flex justify-center">
-      <div className="w-full max-w-xl card animate-fade-in">
-        <h1 className="card-header">👤 Mi perfil</h1>
+    <div className="page-wrap py-4">
+      <div className="mx-auto w-full max-w-xl card animate-fade-in">
+        <h1 className="card-header">Mi perfil</h1>
+        <p className="page-description">
+          Actualiza tus datos de acceso de forma segura.
+        </p>
 
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
           {/* Nombre (solo lectura, pero lo puedes habilitar si quieres editarlo) */}

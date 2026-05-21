@@ -1,9 +1,8 @@
-import { useEffect, useState, useContext, useMemo } from "react";
+import { useCallback, useEffect, useState, useContext, useMemo } from "react";
 import { createContext } from "react";
 import {
   loginRequest,
   registerRequest,
-  refreshTokenRequest,
   verifyTokenRequest,
   logoutRequest,
 } from "../api/auth";
@@ -13,7 +12,7 @@ import {
   getAccessToken,
   setAccessToken,
 } from "../api/tokenStore";
-import toast from "react-hot-toast";
+import { notify } from "../utils/notify";
 
 const AuthContext = createContext();
 
@@ -38,13 +37,13 @@ export const AuthProvider = ({ children }) => {
   }, [errors]);
 
   // 📌 Normalizador de errores
-  const normalizeError = (error, fallback) => {
+  const normalizeError = useCallback((error, fallback) => {
     const err = error.response?.data;
     return Array.isArray(err) ? err[0] : err?.message || fallback;
-  };
+  }, []);
 
   // REGISTRO
-  const signup = async (formData) => {
+  const signup = useCallback(async (formData) => {
     try {
       const res = await registerRequest(formData);
       const { accessToken, user: userData } = res.data;
@@ -57,16 +56,16 @@ export const AuthProvider = ({ children }) => {
         axios.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
       }
 
-      toast.success("Usuario registrado con éxito");
+      notify.success("Usuario registrado con éxito");
     } catch (error) {
       const msg = normalizeError(error, "Error al registrarse");
       setErrors([msg]);
-      toast.error(msg);
+      notify.error(msg);
     }
-  };
+  }, [normalizeError]);
 
   // LOGIN
-  const signin = async (formData) => {
+  const signin = useCallback(async (formData) => {
     try {
       const res = await loginRequest(formData);
       const { accessToken, user: userData } = res.data;
@@ -79,16 +78,16 @@ export const AuthProvider = ({ children }) => {
         axios.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
       }
 
-      toast.success("¡Bienvenido!");
+      notify.success("¡Bienvenido!");
     } catch (error) {
       const msg = normalizeError(error, "Error al iniciar sesión");
       setErrors([msg]);
-      toast.error(msg);
+      notify.error(msg);
     }
-  };
+  }, [normalizeError]);
 
   // LOGOUT
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       await logoutRequest();
     } catch (error) {
@@ -98,46 +97,42 @@ export const AuthProvider = ({ children }) => {
       delete axios.defaults.headers.common["Authorization"];
       setUser(null);
       setIsAuthenticated(false);
-      toast("Sesión cerrada", { icon: "👋" });
+      notify.success("Sesión cerrada");
     }
-  };
+  }, []);
 
   // 🔐 Verificar sesión al montar
   useEffect(() => {
     const checkLogin = async () => {
-      let token = getAccessToken();
-
-      if (!token) {
-        try {
-          const refreshRes = await refreshTokenRequest();
-          token = refreshRes.data?.accessToken;
-
-          if (token) {
-            setAccessToken(token);
-            axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-          }
-        } catch {
-          clearAccessToken();
-          setUser(null);
-          setIsAuthenticated(false);
-          setLoading(false);
-          return;
-        }
-      }
-
       try {
-        axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+        const token = getAccessToken();
+
+        if (token) {
+          axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+        } else {
+          delete axios.defaults.headers.common["Authorization"];
+        }
+
         const res = await verifyTokenRequest();
-        setUser(res.data);
+        const { accessToken, ...userData } = res.data;
+
+        if (accessToken) {
+          setAccessToken(accessToken);
+          axios.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
+        }
+
+        setUser(userData);
         setIsAuthenticated(true);
       } catch {
         clearAccessToken();
+        delete axios.defaults.headers.common["Authorization"];
         setUser(null);
         setIsAuthenticated(false);
       } finally {
         setLoading(false);
       }
     };
+
     checkLogin();
   }, []);
 
@@ -148,7 +143,7 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(false);
       clearAccessToken();
       delete axios.defaults.headers.common["Authorization"];
-      toast.error("Tu sesión ha expirado. Vuelve a iniciar sesión.");
+      notify.error("Tu sesión ha expirado. Vuelve a iniciar sesión.");
     };
 
     window.addEventListener("sessionExpired", handleSessionExpired);
@@ -166,7 +161,7 @@ export const AuthProvider = ({ children }) => {
       errors,
       loading,
     }),
-    [user, isAuthenticated, errors, loading]
+    [user, signup, signin, logout, isAuthenticated, errors, loading]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { useState } from "react";
 
 // 🔹 Contextos y Providers
@@ -11,6 +11,7 @@ import { ConductorProvider } from "./context/ConductorContext";
 import { ProgramacionViajeProvider } from "./context/ProgramacionViajeContext";
 import { GuiaTransportistaProvider } from "./context/GuiaTransportistaContext";
 import { ThemeProvider } from "./context/ThemeContext";
+import { ConfirmProvider } from "./context/ConfirmContext";
 
 // 🔹 Componentes
 import Sidebar from "./components/Sidebar";
@@ -60,6 +61,7 @@ function Layout() {
               }`}
           >
             <Routes>
+              <Route index element={<Navigate to="/profile" replace />} />
               <Route path="/profile" element={<ProfileTask />} />
               <Route path="/admin/usuarios" element={<GestionUsuarios />} />
               <Route path="/usuarios" element={<UsuariosPage />} />
@@ -94,23 +96,25 @@ function App() {
               <UnidadProvider>
                 <ConductorProvider>
                   <ProgramacionViajeProvider>
-                    <Router>
-                      <RouteChangeLoader />
-                      <GuiaTransportistaProvider>
-                        <Routes>
-                          {/* Rutas públicas */}
-                          <Route
-                            path="/unauthorized"
-                            element={<UnauthorizedPage />}
-                          />
-                          <Route path="/login" element={<LoginPage />} />
-                          {/* Rutas protegidas */}
-                          <Route element={<ProtectedRoute />}>
-                            <Route path="/*" element={<Layout />} />
-                          </Route>
-                        </Routes>
-                      </GuiaTransportistaProvider>
-                    </Router>
+                    <ConfirmProvider>
+                      <Router>
+                        <RouteChangeLoader />
+                        <GuiaTransportistaProvider>
+                          <Routes>
+                            {/* Rutas públicas */}
+                            <Route
+                              path="/unauthorized"
+                              element={<UnauthorizedPage />}
+                            />
+                            <Route path="/login" element={<LoginPage />} />
+                            {/* Rutas protegidas */}
+                            <Route element={<ProtectedRoute />}>
+                              <Route path="/*" element={<Layout />} />
+                            </Route>
+                          </Routes>
+                        </GuiaTransportistaProvider>
+                      </Router>
+                    </ConfirmProvider>
                   </ProgramacionViajeProvider>
                 </ConductorProvider>
               </UnidadProvider>

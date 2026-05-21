@@ -8,6 +8,8 @@ const initialForm = {
   numeroLicencia: "",
   telefono: "",
   estado: "ACTIVO",
+  permisoIMO: false,
+  permisoIQBF: false,
   observaciones: "",
 };
 
@@ -34,6 +36,8 @@ function ConductorModal({
         numeroLicencia: data.numeroLicencia || "",
         telefono: data.telefono || "",
         estado: data.estado || "ACTIVO",
+        permisoIMO: Boolean(data.permisoIMO),
+        permisoIQBF: Boolean(data.permisoIQBF),
         observaciones: data.observaciones || "",
       });
     } else {
@@ -44,9 +48,11 @@ function ConductorModal({
   if (!open) return null;
 
   const handleChange = (e) => {
+    const { name, type, checked, value } = e.target;
+
     setForm({
       ...form,
-      [e.target.name]: e.target.value,
+      [name]: type === "checkbox" ? checked : value,
     });
   };
 
@@ -63,6 +69,8 @@ function ConductorModal({
       numeroLicencia: form.numeroLicencia.trim().toUpperCase(),
       telefono: form.telefono.trim(),
       estado: form.estado || "ACTIVO",
+      permisoIMO: form.permisoIMO,
+      permisoIQBF: form.permisoIQBF,
       observaciones: form.observaciones.trim(),
     };
 
@@ -75,8 +83,8 @@ function ConductorModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-4 backdrop-blur-sm">
-      <div className="panel w-full max-w-3xl p-6">
+    <div className="modal-backdrop">
+      <div className="modal-panel max-w-3xl">
         <div className="flex justify-between items-center mb-5">
           <div>
             <h2 className="text-xl font-bold">
@@ -205,6 +213,30 @@ function ConductorModal({
             </select>
           </div>
 
+          <div className="md:col-span-2 grid gap-3 rounded-lg border border-[var(--app-border)] p-3 sm:grid-cols-2">
+            <label className="flex items-center gap-3 text-sm">
+              <input
+                type="checkbox"
+                name="permisoIMO"
+                checked={form.permisoIMO}
+                onChange={handleChange}
+                className="h-4 w-4"
+              />
+              <span className="text-main font-semibold">Permiso IMO</span>
+            </label>
+
+            <label className="flex items-center gap-3 text-sm">
+              <input
+                type="checkbox"
+                name="permisoIQBF"
+                checked={form.permisoIQBF}
+                onChange={handleChange}
+                className="h-4 w-4"
+              />
+              <span className="text-main font-semibold">Permiso IQBF</span>
+            </label>
+          </div>
+
           <div className="md:col-span-2">
             <label className="text-muted mb-1 block text-sm">
               Observaciones
@@ -224,7 +256,7 @@ function ConductorModal({
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="btn-secondary px-4 py-2"
+              className="btn-secondary px-3 py-1.5"
             >
               Cancelar
             </button>
@@ -232,7 +264,7 @@ function ConductorModal({
             <button
               type="submit"
               disabled={loading}
-              className="btn-success px-4 py-2"
+              className="btn-success px-3 py-1.5"
             >
               {loading
                 ? "Guardando..."

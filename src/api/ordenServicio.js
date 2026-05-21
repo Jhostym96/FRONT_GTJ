@@ -5,8 +5,8 @@ export const crearOrdenServicioRequest = (orden) =>
   axios.post(`/ordenes-servicio`, orden);
 
 // Obtener todas las órdenes de servicio
-export const obtenerOrdenesServicioRequest = () =>
-  axios.get(`/ordenes-servicio`);
+export const obtenerOrdenesServicioRequest = (params = {}) =>
+  axios.get(`/ordenes-servicio`, { params });
 
 // Obtener orden de servicio por ID
 export const obtenerOrdenServicioRequest = (id) =>
@@ -20,8 +20,8 @@ export const actualizarOrdenServicioRequest = (id, datos) =>
 export const anularOrdenServicioRequest = (id) =>
   axios.patch(`/ordenes-servicio/${id}/anular`);
 
-export const obtenerDevolucionesPendientesRequest = () =>
-  axios.get(`/ordenes-servicio/devoluciones/pendientes`);
+export const obtenerDevolucionesPendientesRequest = (params = {}) =>
+  axios.get(`/ordenes-servicio/devoluciones/pendientes`, { params });
 
 export const actualizarEstadoDevolucionRequest = (id, data) =>
   axios.patch(`/ordenes-servicio/${id}/devolucion`, data);

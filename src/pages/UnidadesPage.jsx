@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
+import { notify } from "../utils/notify";
+import { Eye, Pencil, Power, PowerOff } from "lucide-react";
 import { useUnidades } from "../context/UnidadContext";
+import { useConfirm } from "../context/ConfirmContext";
 import UnidadModal from "../components/modals/UnidadModal";
+import TablePagination from "../components/TablePagination";
+import { getRecordId } from "../utils/apiData";
 
 function UnidadesPage() {
   const {
@@ -8,18 +13,20 @@ function UnidadesPage() {
     obtenerUnidades,
     crearUnidad,
     actualizarUnidad,
-    eliminarUnidad,
+    cambiarEstadoUnidad,
+    paginationUnidades,
   } = useUnidades();
+  const confirm = useConfirm();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [mode, setMode] = useState("create");
   const [unidadSeleccionada, setUnidadSeleccionada] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const cargarUnidades = async () => {
+  const cargarUnidades = async (page = paginationUnidades.page) => {
     try {
       setLoading(true);
-      await obtenerUnidades?.();
+      await obtenerUnidades?.({ page, limit: paginationUnidades.limit });
     } catch (error) {
       console.error("Error al cargar unidades:", error);
     } finally {
@@ -57,29 +64,53 @@ function UnidadesPage() {
 
   const handleSubmit = async (data) => {
     try {
-      if (mode === "edit" && unidadSeleccionada?.id) {
-        await actualizarUnidad(unidadSeleccionada.id, data);
+      const unidadId = getRecordId(unidadSeleccionada);
+
+      if (mode === "edit" && unidadId) {
+        await actualizarUnidad(unidadId, data);
       } else {
         await crearUnidad(data);
       }
 
       cerrarModal();
-      await cargarUnidades();
+      await cargarUnidades(paginationUnidades.page);
     } catch (error) {
       console.error("Error al guardar unidad:", error);
     }
   };
 
-  const handleEliminar = async (id) => {
-    const confirmar = confirm("¿Seguro que deseas eliminar esta unidad?");
+  const handleCambiarEstado = async (unidad) => {
+    const id = getRecordId(unidad);
+    const estadoActual = unidad.estado || "ACTIVO";
+    const nuevoEstado = estadoActual === "ACTIVO" ? "INACTIVO" : "ACTIVO";
+    const accion = nuevoEstado === "ACTIVO" ? "activar" : "desactivar";
+
+    const confirmar = await confirm({
+      title: nuevoEstado === "ACTIVO" ? "Activar unidad" : "Desactivar unidad",
+      message: `¿Seguro que deseas ${accion} esta unidad?`,
+      confirmText: nuevoEstado === "ACTIVO" ? "Activar" : "Desactivar",
+      variant: nuevoEstado === "ACTIVO" ? "primary" : "danger",
+    });
     if (!confirmar) return;
 
     try {
-      await eliminarUnidad(id);
-      await cargarUnidades();
+      await cambiarEstadoUnidad(id, nuevoEstado);
+      notify.success(
+        nuevoEstado === "ACTIVO"
+          ? "Unidad activada correctamente"
+          : "Unidad desactivada correctamente"
+      );
+      await cargarUnidades(paginationUnidades.page);
     } catch (error) {
-      console.error("Error al eliminar unidad:", error);
+      console.error("Error al cambiar estado de unidad:", error);
+      notify.error(
+        error.response?.data?.message || "Error al cambiar estado de unidad"
+      );
     }
+  };
+
+  const handlePageChange = (page) => {
+    cargarUnidades(page);
   };
 
   const EstadoBadge = ({ estado }) => {
@@ -118,31 +149,39 @@ function UnidadesPage() {
     return (
       <div
         className={`flex gap-2 ${
-          mobile ? "w-full flex-col sm:flex-row" : "justify-end"
+          mobile ? "flex-wrap" : "justify-end"
         }`}
       >
         <button
           type="button"
           onClick={() => abrirVer(unidad)}
-          className="btn-secondary px-3 py-2 text-xs"
+          className="btn-secondary btn-icon"
+          title="Ver unidad"
+          aria-label="Ver unidad"
         >
-          Ver
+          <Eye />
         </button>
 
         <button
           type="button"
           onClick={() => abrirEditar(unidad)}
-          className="btn-primary px-3 py-2 text-xs"
+          className="btn-primary btn-icon"
+          title="Editar unidad"
+          aria-label="Editar unidad"
         >
-          Editar
+          <Pencil />
         </button>
 
         <button
           type="button"
-          onClick={() => handleEliminar(unidad.id)}
-          className="btn-danger px-3 py-2 text-xs"
+          onClick={() => handleCambiarEstado(unidad)}
+          className={`${
+            unidad.estado === "ACTIVO" ? "btn-danger" : "btn-success"
+          } btn-icon`}
+          title={unidad.estado === "ACTIVO" ? "Desactivar unidad" : "Activar unidad"}
+          aria-label={unidad.estado === "ACTIVO" ? "Desactivar unidad" : "Activar unidad"}
         >
-          Eliminar
+          {unidad.estado === "ACTIVO" ? <PowerOff /> : <Power />}
         </button>
       </div>
     );
@@ -171,7 +210,7 @@ function UnidadesPage() {
             <button
               type="button"
               onClick={abrirCrear}
-              className="btn-primary px-5 py-3"
+              className="btn-primary px-3 py-2"
             >
               Nueva unidad
             </button>
@@ -197,7 +236,7 @@ function UnidadesPage() {
             <button
               type="button"
               onClick={abrirCrear}
-              className="btn-primary mt-5 px-5 py-3"
+              className="btn-primary mt-4 px-3 py-2"
             >
               Crear unidad
             </button>
@@ -208,7 +247,7 @@ function UnidadesPage() {
             <div className="grid gap-4 lg:hidden">
               {unidades.map((unidad) => (
                 <article
-                  key={unidad.id}
+                  key={getRecordId(unidad)}
                   className="mobile-card"
                 >
                   <div className="mb-4 flex items-start justify-between gap-3">
@@ -250,6 +289,18 @@ function UnidadesPage() {
                       </p>
                     </div>
 
+                    <div className="info-tile">
+                      <p className="text-faint text-xs">Permisos</p>
+                      <p className="text-main font-semibold">
+                        {[
+                          unidad.permisoIMO ? "IMO" : null,
+                          unidad.permisoIQBF ? "IQBF" : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" / ") || "GENERAL"}
+                      </p>
+                    </div>
+
                     {unidad.tuc && (
                       <div className="info-tile">
                         <p className="text-faint text-xs">TUCE / CHV</p>
@@ -282,7 +333,7 @@ function UnidadesPage() {
 
             {/* Tabla en desktop */}
             <div className="data-table-wrap">
-              <div className="overflow-x-auto">
+              <div className="table-scroll">
                 <table className="data-table w-full min-w-[1000px] text-sm">
                   <thead>
                     <tr>
@@ -290,6 +341,7 @@ function UnidadesPage() {
                       <th className="px-4 py-4 text-left">Tipo</th>
                       <th className="px-4 py-4 text-left">Marca</th>
                       <th className="px-4 py-4 text-left">Modelo</th>
+                      <th className="px-4 py-4 text-left">Permisos</th>
                       <th className="px-4 py-4 text-left">TUCE / CHV</th>
                       <th className="px-4 py-4 text-left">Observaciones</th>
                       <th className="px-4 py-4 text-center">Estado</th>
@@ -299,7 +351,7 @@ function UnidadesPage() {
 
                   <tbody>
                     {unidades.map((unidad) => (
-                      <tr key={unidad.id}>
+                      <tr key={getRecordId(unidad)}>
                         <td className="whitespace-nowrap px-4 py-4">
                           <p className="text-main font-bold">
                             {unidad.placa || "-"}
@@ -316,6 +368,15 @@ function UnidadesPage() {
 
                         <td className="text-muted whitespace-nowrap px-4 py-4">
                           {unidad.modelo || "-"}
+                        </td>
+
+                        <td className="text-muted whitespace-nowrap px-4 py-4">
+                          {[
+                            unidad.permisoIMO ? "IMO" : null,
+                            unidad.permisoIQBF ? "IQBF" : null,
+                          ]
+                            .filter(Boolean)
+                            .join(" / ") || "GENERAL"}
                         </td>
 
                         <td className="text-muted whitespace-nowrap px-4 py-4">
@@ -341,6 +402,14 @@ function UnidadesPage() {
                 </table>
               </div>
             </div>
+
+            <TablePagination
+              page={paginationUnidades.page}
+              totalPages={paginationUnidades.totalPages}
+              total={paginationUnidades.total}
+              limit={paginationUnidades.limit}
+              onPageChange={handlePageChange}
+            />
           </>
         )}
 

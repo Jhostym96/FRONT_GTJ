@@ -1,8 +1,10 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useState } from "react";
 import {
   crearGuiaTransportistaRequest,
+  validarGuiaTransportistaRequest,
   obtenerGuiasTransportistaRequest,
   obtenerGuiaTransportistaRequest,
+  obtenerHistorialGuiaTransportistaRequest,
   generarJsonGuiaTransportistaRequest,
   consultarGuiaTransportistaRequest,
   actualizarGuiaTransportistaRequest,
@@ -10,7 +12,18 @@ import {
   obtenerUrlTicketGuiaTransportistaRequest,
   obtenerPdfOficialGuiaTransportistaRequest,
 } from "../api/guiaTransportista";
-import { getListFromResponse } from "../utils/apiResponse";
+import {
+  obtenerMensajeErrorApi,
+  obtenerMensajesErrorApi,
+} from "../utils/apiErrorMessages";
+import {
+  DEFAULT_PAGINATION,
+  createPaginationParams,
+  normalizeCollection,
+  normalizePagination,
+  normalizeResource,
+  sameRecordId,
+} from "../utils/apiData";
 
 const GuiaTransportistaContext = createContext();
 
@@ -32,10 +45,11 @@ export const GuiaTransportistaProvider = ({ children }) => {
   const [jsonGuia, setJsonGuia] = useState(null);
   const [loadingGuia, setLoadingGuia] = useState(false);
   const [errorsGuia, setErrorsGuia] = useState([]);
+  const [paginationGuias, setPaginationGuias] = useState(DEFAULT_PAGINATION);
 
-  const limpiarErroresGuia = () => {
+  const limpiarErroresGuia = useCallback(() => {
     setErrorsGuia([]);
-  };
+  }, []);
 
   const obtenerMensajeError = async (error, mensajePorDefecto) => {
     const data = error.response?.data;
@@ -44,43 +58,55 @@ export const GuiaTransportistaProvider = ({ children }) => {
       try {
         const texto = await data.text();
         const json = JSON.parse(texto);
-        return json.message || mensajePorDefecto;
+        return obtenerMensajeErrorApi(json, mensajePorDefecto);
       } catch {
         return mensajePorDefecto;
       }
     }
 
-    return data?.message || mensajePorDefecto;
+    return obtenerMensajeErrorApi(data, mensajePorDefecto);
   };
 
-  const obtenerGuiasTransportista = async () => {
+  const obtenerGuiasTransportista = useCallback(async (params = {}) => {
     try {
       setLoadingGuia(true);
-      const res = await obtenerGuiasTransportistaRequest();
-      setGuiasTransportista(
-        getListFromResponse(res.data, ["guiasTransportista", "guias"])
+      const requestParams = createPaginationParams({
+        page: params.page ?? 1,
+        limit: params.limit ?? 10,
+        search: params.search,
+      });
+      const res = await obtenerGuiasTransportistaRequest(requestParams);
+      const data = normalizeCollection(res.data, ["guias", "guiasTransportista"]);
+      setGuiasTransportista(data);
+      setPaginationGuias(
+        normalizePagination(res.data, DEFAULT_PAGINATION)
       );
     } catch (error) {
-      setErrorsGuia([
-        error.response?.data?.message ||
-          "Error al obtener las guías de transportista",
-      ]);
+      setErrorsGuia(
+        obtenerMensajesErrorApi(
+          error,
+          "Error al obtener las guías de transportista"
+        )
+      );
     } finally {
       setLoadingGuia(false);
     }
-  };
+  }, []);
 
   const obtenerGuiaTransportista = async (id) => {
     try {
       setLoadingGuia(true);
       const res = await obtenerGuiaTransportistaRequest(id);
-      setGuiaSeleccionada(res.data);
-      return res.data;
+      const guia = normalizeResource(res.data, ["guia"]);
+      setGuiaSeleccionada(guia);
+      return guia;
     } catch (error) {
-      setErrorsGuia([
-        error.response?.data?.message ||
-          "Error al obtener la guía de transportista",
-      ]);
+      setErrorsGuia(
+        obtenerMensajesErrorApi(
+          error,
+          "Error al obtener la guía de transportista"
+        )
+      );
       throw error;
     } finally {
       setLoadingGuia(false);
@@ -93,17 +119,21 @@ export const GuiaTransportistaProvider = ({ children }) => {
       limpiarErroresGuia();
 
       const res = await crearGuiaTransportistaRequest(guia);
+      const guiaCreada = normalizeResource(res.data, ["guia"]);
 
-      setGuiasTransportista((prev) => [res.data.guia, ...prev]);
+      if (guiaCreada) {
+        setGuiasTransportista((prev) => [guiaCreada, ...prev]);
+      }
       setJsonGuia(res.data.json);
 
       return res.data;
     } catch (error) {
-      const mensaje =
-        error.response?.data?.message ||
-        "Error al crear la guía de transportista";
-
-      setErrorsGuia([mensaje]);
+      setErrorsGuia(
+        obtenerMensajesErrorApi(
+          error,
+          "Error al crear la guía de transportista"
+        )
+      );
       throw error;
     } finally {
       setLoadingGuia(false);
@@ -116,24 +146,26 @@ export const GuiaTransportistaProvider = ({ children }) => {
       limpiarErroresGuia();
 
       const res = await actualizarGuiaTransportistaRequest(id, datos);
+      const guiaActualizada = normalizeResource(res.data, ["guia"]);
 
       setGuiasTransportista((prev) =>
-        prev.map((guia) => (guia._id === id ? res.data.guia : guia))
+        prev.map((guia) => (sameRecordId(guia, id) ? guiaActualizada || guia : guia))
       );
 
       setJsonGuia(res.data.json);
 
       if (guiaSeleccionada?._id === id) {
-        setGuiaSeleccionada(res.data.guia);
+        setGuiaSeleccionada(guiaActualizada);
       }
 
       return res.data;
     } catch (error) {
-      const mensaje =
-        error.response?.data?.message ||
-        "Error al actualizar la guía de transportista";
-
-      setErrorsGuia([mensaje]);
+      setErrorsGuia(
+        obtenerMensajesErrorApi(
+          error,
+          "Error al actualizar la guía de transportista"
+        )
+      );
       throw error;
     } finally {
       setLoadingGuia(false);
@@ -151,10 +183,9 @@ export const GuiaTransportistaProvider = ({ children }) => {
 
       return res.data.json;
     } catch (error) {
-      const mensaje =
-        error.response?.data?.message || "Error al generar el JSON de la guía";
-
-      setErrorsGuia([mensaje]);
+      setErrorsGuia(
+        obtenerMensajesErrorApi(error, "Error al generar el JSON de la guía")
+      );
       throw error;
     } finally {
       setLoadingGuia(false);
@@ -167,50 +198,54 @@ export const GuiaTransportistaProvider = ({ children }) => {
       limpiarErroresGuia();
 
       const res = await consultarGuiaTransportistaRequest(id);
+      const guiaActualizada = normalizeResource(res.data, ["guia"]);
 
       setGuiasTransportista((prev) =>
-        prev.map((guia) => (guia._id === id ? res.data.guia : guia))
+        prev.map((guia) => (sameRecordId(guia, id) ? guiaActualizada || guia : guia))
       );
 
-      if (guiaSeleccionada?._id === id) {
-        setGuiaSeleccionada(res.data.guia);
+      if (sameRecordId(guiaSeleccionada, id)) {
+        setGuiaSeleccionada(guiaActualizada);
       }
 
       return res.data;
     } catch (error) {
-      const mensaje =
-        error.response?.data?.message ||
-        "Error al consultar la guía en Nubefact/SUNAT";
-
-      setErrorsGuia([mensaje]);
+      setErrorsGuia(
+        obtenerMensajesErrorApi(
+          error,
+          "Error al consultar la guía en Nubefact/SUNAT"
+        )
+      );
       throw error;
     } finally {
       setLoadingGuia(false);
     }
   };
 
-  const anularGuiaTransportista = async (id) => {
+  const anularGuiaTransportista = async (id, datos = {}) => {
     try {
       setLoadingGuia(true);
       limpiarErroresGuia();
 
-      const res = await anularGuiaTransportistaRequest(id);
+      const res = await anularGuiaTransportistaRequest(id, datos);
+      const guiaActualizada = normalizeResource(res.data, ["guia"]);
 
       setGuiasTransportista((prev) =>
-        prev.map((guia) => (guia._id === id ? res.data.guia : guia))
+        prev.map((guia) => (sameRecordId(guia, id) ? guiaActualizada || guia : guia))
       );
 
-      if (guiaSeleccionada?._id === id) {
-        setGuiaSeleccionada(res.data.guia);
+      if (sameRecordId(guiaSeleccionada, id)) {
+        setGuiaSeleccionada(guiaActualizada);
       }
 
       return res.data;
     } catch (error) {
-      const mensaje =
-        error.response?.data?.message ||
-        "Error al anular la guía de transportista";
-
-      setErrorsGuia([mensaje]);
+      setErrorsGuia(
+        obtenerMensajesErrorApi(
+          error,
+          "Error al anular la guía de transportista"
+        )
+      );
       throw error;
     } finally {
       setLoadingGuia(false);
@@ -226,11 +261,53 @@ export const GuiaTransportistaProvider = ({ children }) => {
 
       return res.data?.url || res.data?.enlace_pdf || "";
     } catch (error) {
-      const mensaje =
-        error.response?.data?.message ||
-        "Error al obtener el PDF oficial de Nubefact";
+      setErrorsGuia(
+        obtenerMensajesErrorApi(
+          error,
+          "Error al obtener el PDF oficial de Nubefact"
+        )
+      );
+      throw error;
+    } finally {
+      setLoadingGuia(false);
+    }
+  };
 
-      setErrorsGuia([mensaje]);
+  const validarGuiaTransportista = async (guia) => {
+    try {
+      setLoadingGuia(true);
+      limpiarErroresGuia();
+
+      const res = await validarGuiaTransportistaRequest(guia);
+
+      setJsonGuia(res.data.json || null);
+
+      return res.data;
+    } catch (error) {
+      setErrorsGuia(
+        obtenerMensajesErrorApi(
+          error,
+          "La guía tiene datos pendientes por corregir"
+        )
+      );
+      throw error;
+    } finally {
+      setLoadingGuia(false);
+    }
+  };
+
+  const obtenerHistorialGuiaTransportista = async (id) => {
+    try {
+      setLoadingGuia(true);
+      limpiarErroresGuia();
+
+      const res = await obtenerHistorialGuiaTransportistaRequest(id);
+
+      return res.data;
+    } catch (error) {
+      setErrorsGuia(
+        obtenerMensajesErrorApi(error, "Error al obtener el historial de la guía")
+      );
       throw error;
     } finally {
       setLoadingGuia(false);
@@ -277,8 +354,11 @@ export const GuiaTransportistaProvider = ({ children }) => {
         jsonGuia,
         loadingGuia,
         errorsGuia,
+        paginationGuias,
         obtenerGuiasTransportista,
         obtenerGuiaTransportista,
+        validarGuiaTransportista,
+        obtenerHistorialGuiaTransportista,
         crearGuiaTransportista,
         actualizarGuiaTransportista,
         generarJsonGuiaTransportista,

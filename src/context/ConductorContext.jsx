@@ -1,12 +1,21 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useState } from "react";
 
 import {
   getConductoresRequest,
   getConductorRequest,
   createConductorRequest,
   updateConductorRequest,
+  cambiarEstadoConductorRequest,
+  deleteConductorRequest,
 } from "../api/conductores";
-import { getListFromResponse } from "../utils/apiResponse";
+import {
+  DEFAULT_PAGINATION,
+  createPaginationParams,
+  normalizeCollection,
+  normalizePagination,
+  normalizeResource,
+  sameRecordId,
+} from "../utils/apiData";
 
 const ConductorContext = createContext();
 
@@ -26,15 +35,25 @@ export const useConductor = useConductores;
 export function ConductorProvider({ children }) {
   const [conductores, setConductores] = useState([]);
   const [errors, setErrors] = useState([]);
+  const [paginationConductores, setPaginationConductores] =
+    useState(DEFAULT_PAGINATION);
 
-  const limpiarErrores = () => setErrors([]);
+  const limpiarErrores = useCallback(() => setErrors([]), []);
 
-  const obtenerConductores = async () => {
+  const obtenerConductores = useCallback(async (params = {}) => {
     try {
       limpiarErrores();
-      const res = await getConductoresRequest();
-      const data = getListFromResponse(res.data, ["conductores"]);
+      const requestParams = createPaginationParams({
+        page: params.page ?? 1,
+        limit: params.limit ?? 10,
+        search: params.search,
+      });
+      const res = await getConductoresRequest(requestParams);
+      const data = normalizeCollection(res.data, ["conductores"]);
       setConductores(data);
+      setPaginationConductores(
+        normalizePagination(res.data, DEFAULT_PAGINATION)
+      );
       return data;
     } catch (error) {
       setErrors([
@@ -42,27 +61,30 @@ export function ConductorProvider({ children }) {
       ]);
       return [];
     }
-  };
+  }, [limpiarErrores]);
 
-  const obtenerConductor = async (id) => {
+  const obtenerConductor = useCallback(async (id) => {
     try {
       limpiarErrores();
       const res = await getConductorRequest(id);
-      return res.data;
+      return normalizeResource(res.data, ["conductor"]);
     } catch (error) {
       setErrors([
         error.response?.data?.message || "Error al obtener conductor",
       ]);
       return null;
     }
-  };
+  }, [limpiarErrores]);
 
-  const crearConductor = async (conductor) => {
+  const crearConductor = useCallback(async (conductor) => {
     try {
       limpiarErrores();
       const res = await createConductorRequest(conductor);
+      const conductorCreado = normalizeResource(res.data, ["conductor"]);
 
-      setConductores((prev) => [res.data.conductor, ...prev]);
+      if (conductorCreado) {
+        setConductores((prev) => [conductorCreado, ...prev]);
+      }
 
       return res.data;
     } catch (error) {
@@ -71,16 +93,17 @@ export function ConductorProvider({ children }) {
       ]);
       throw error;
     }
-  };
+  }, [limpiarErrores]);
 
-  const actualizarConductor = async (id, conductor) => {
+  const actualizarConductor = useCallback(async (id, conductor) => {
     try {
       limpiarErrores();
       const res = await updateConductorRequest(id, conductor);
+      const conductorActualizado = normalizeResource(res.data, ["conductor"]);
 
       setConductores((prev) =>
         prev.map((item) =>
-          item._id === id ? res.data.conductor : item
+          sameRecordId(item, id) ? conductorActualizado || item : item
         )
       );
 
@@ -91,13 +114,56 @@ export function ConductorProvider({ children }) {
       ]);
       throw error;
     }
-  };
+  }, [limpiarErrores]);
+
+  const eliminarConductor = useCallback(async (id) => {
+    try {
+      limpiarErrores();
+      const res = await deleteConductorRequest(id);
+
+      setConductores((prev) =>
+        prev.filter((conductor) => !sameRecordId(conductor, id))
+      );
+
+      return res.data;
+    } catch (error) {
+      setErrors([
+        error.response?.data?.message || "Error al eliminar conductor",
+      ]);
+      throw error;
+    }
+  }, [limpiarErrores]);
+
+  const cambiarEstadoConductor = useCallback(async (id, estado) => {
+    try {
+      limpiarErrores();
+      const res = await cambiarEstadoConductorRequest(id, estado);
+      const conductorActualizado = normalizeResource(res.data, ["conductor"]);
+
+      setConductores((prev) =>
+        prev.map((conductor) =>
+          sameRecordId(conductor, id)
+            ? conductorActualizado || conductor
+            : conductor
+        )
+      );
+
+      return res.data;
+    } catch (error) {
+      setErrors([
+        error.response?.data?.message ||
+          "Error al cambiar estado de conductor",
+      ]);
+      throw error;
+    }
+  }, [limpiarErrores]);
 
   return (
     <ConductorContext.Provider
       value={{
         conductores,
         errors,
+        paginationConductores,
         setErrors,
         limpiarErrores,
 
@@ -105,11 +171,15 @@ export function ConductorProvider({ children }) {
         obtenerConductor,
         crearConductor,
         actualizarConductor,
+        eliminarConductor,
+        cambiarEstadoConductor,
 
         getConductores: obtenerConductores,
         getConductor: obtenerConductor,
         createConductor: crearConductor,
         updateConductor: actualizarConductor,
+        deleteConductor: eliminarConductor,
+        updateEstadoConductor: cambiarEstadoConductor,
       }}
     >
       {children}

@@ -1,19 +1,34 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import toast from "react-hot-toast";
+import { useUsuarios } from "../context/UserContext";
+import { notify } from "../utils/notify";
+import TablePagination from "../components/TablePagination";
+import { getRecordId } from "../utils/apiData";
 
-const rolesDisponibles = ["usuario", "administrador", "superadministrador"];
+const rolesDisponibles = [
+  "User",
+  "Administrador",
+  "Superadministrador",
+  "Coordinador",
+  "Almacen",
+];
 
 const GestionUsuarios = () => {
-  const { user, isAuthenticated, users, getAllUsers, updateUserRole } = useAuth();
+  const { user, isAuthenticated } = useAuth();
+  const { usuarios, paginationUsuarios, cargarUsuarios, cambiarRol } =
+    useUsuarios();
   const [rolesEditados, setRolesEditados] = useState({});
   const [saving, setSaving] = useState({}); // estado de carga por usuario
+  const isAdmin = ["Administrador", "Superadministrador"].includes(user?.role);
 
   useEffect(() => {
-    if (isAuthenticated && ["administrador", "superadministrador"].includes(user.role)) {
-      getAllUsers();
+    if (isAuthenticated && isAdmin) {
+      cargarUsuarios({ page: 1, limit: 10 });
     }
-  }, [isAuthenticated, user, getAllUsers]);
+  }, [cargarUsuarios, isAdmin, isAuthenticated]);
+
+  const recargarUsuarios = (page = paginationUsuarios.page) =>
+    cargarUsuarios({ page, limit: paginationUsuarios.limit });
 
   const handleRoleChange = (userId, newRole) => {
     setRolesEditados((prev) => ({ ...prev, [userId]: newRole }));
@@ -25,17 +40,18 @@ const GestionUsuarios = () => {
 
     try {
       setSaving((prev) => ({ ...prev, [userId]: true }));
-      await updateUserRole(userId, nuevoRol);
-      toast.success("Rol actualizado con éxito");
+      await cambiarRol(userId, nuevoRol);
+      await recargarUsuarios();
+      notify.success("Rol actualizado con éxito");
     } catch (error) {
       console.error("Error al actualizar rol:", error);
-      toast.error(error.response?.data?.message || "Error al actualizar rol");
+      notify.error(error.response?.data?.message || "Error al actualizar rol");
     } finally {
       setSaving((prev) => ({ ...prev, [userId]: false }));
     }
   };
 
-  if (!isAuthenticated || !["administrador", "superadministrador"].includes(user.role)) {
+  if (!isAuthenticated || !isAdmin) {
     return (
       <div className="empty-panel mx-auto mt-20 max-w-xl">
         <h2 className="text-lg font-semibold text-red-500">Acceso denegado</h2>
@@ -59,14 +75,10 @@ const GestionUsuarios = () => {
               </p>
             </div>
 
-            <div className="info-tile border px-4 py-3">
-              <p className="text-faint text-xs">Usuarios</p>
-              <p className="text-main text-xl font-bold">{users.length}</p>
-            </div>
           </div>
         </header>
 
-        {users.length === 0 ? (
+        {usuarios.length === 0 ? (
           <div className="empty-panel">
             <h2 className="text-main text-lg font-semibold">
               No hay usuarios registrados
@@ -76,9 +88,10 @@ const GestionUsuarios = () => {
             </p>
           </div>
         ) : (
-          <div className="data-table-wrap">
-            <div className="overflow-x-auto">
-              <table className="data-table min-w-full text-sm">
+          <>
+            <div className="data-table-wrap !block">
+              <div className="table-scroll">
+                <table className="data-table min-w-[760px] text-sm">
                 <thead>
                   <tr>
                     <th className="px-4 py-4 text-left">Nombre</th>
@@ -88,12 +101,14 @@ const GestionUsuarios = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((u) => {
-                    const rolSeleccionado = rolesEditados[u._id] || u.role;
+                  {usuarios.map((u, index) => {
+                    const userId =
+                      getRecordId(u) || `${u.dni || "usuario"}-${index}`;
+                    const rolSeleccionado = rolesEditados[userId] || u.role;
                     const cambioPendiente = rolSeleccionado !== u.role;
 
                     return (
-                      <tr key={u._id}>
+                      <tr key={userId}>
                         <td className="text-main px-4 py-4 font-semibold">
                           {u.name}
                         </td>
@@ -102,7 +117,7 @@ const GestionUsuarios = () => {
                           <select
                             value={rolSeleccionado}
                             onChange={(e) =>
-                              handleRoleChange(u._id, e.target.value)
+                              handleRoleChange(userId, e.target.value)
                             }
                             className="input w-auto min-w-[180px] px-3 py-2 text-sm"
                           >
@@ -116,24 +131,33 @@ const GestionUsuarios = () => {
                         <td className="px-4 py-4 text-center">
                           <button
                             type="button"
-                            onClick={() => guardarCambio(u._id)}
-                            disabled={!cambioPendiente || saving[u._id]}
+                            onClick={() => guardarCambio(userId)}
+                            disabled={!cambioPendiente || saving[userId]}
                             className={
                               cambioPendiente
-                                ? "btn-primary px-4 py-2"
-                                : "btn-secondary px-4 py-2"
+                                ? "btn-primary px-3 py-1.5"
+                                : "btn-secondary px-3 py-1.5"
                             }
                           >
-                            {saving[u._id] ? "Guardando..." : "Guardar"}
+                            {saving[userId] ? "Guardando..." : "Guardar"}
                           </button>
                         </td>
                       </tr>
                     );
                   })}
                 </tbody>
-              </table>
+                </table>
+              </div>
             </div>
-          </div>
+
+            <TablePagination
+              page={paginationUsuarios.page}
+              totalPages={paginationUsuarios.totalPages}
+              total={paginationUsuarios.total}
+              limit={paginationUsuarios.limit}
+              onPageChange={recargarUsuarios}
+            />
+          </>
         )}
       </div>
     </div>

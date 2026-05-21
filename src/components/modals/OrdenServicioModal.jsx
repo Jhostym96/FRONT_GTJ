@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import toast from "react-hot-toast";
+import { notify } from "../../utils/notify";
 import { FaTimes } from "react-icons/fa";
 import { useOrdenesServicio } from "../../context/OrdenServicioContext";
 import { useClientes } from "../../context/ClienteContext";
@@ -12,10 +12,30 @@ const datosPersonaVacios = {
   direccion: "",
 };
 
+const TIPOS_CARGA = [
+  { value: "CONTENEDOR", label: "CONTENEDOR" },
+  { value: "CARGA_SUELTA", label: "CARGA SUELTA" },
+  { value: "TOLVA", label: "TOLVA" },
+];
+
+const CLASIFICACIONES_CARGA = [
+  { value: "GENERAL", label: "GENERAL" },
+  { value: "IMO", label: "IMO" },
+  { value: "IQBF", label: "IQBF" },
+];
+
+const DIMENSIONES_CARGA = [
+  { value: "20", label: "20 pies" },
+  { value: "40", label: "40 pies" },
+];
+
 const createInitialForm = () => ({
   fechaProgramada: getTodayInputDate(),
   estado: "PENDIENTE",
+  cantidadViajes: "1",
   tipoCarga: "CARGA_SUELTA",
+  clasificacionCarga: "GENERAL",
+  dimensionCarga: "",
 
   clienteSolicitante: { ...datosPersonaVacios },
   clienteEs: "OTRO",
@@ -101,7 +121,10 @@ const OrdenServicioModal = ({
           ? orden.fechaProgramada.slice(0, 10)
           : "",
         estado: orden.estado || "PENDIENTE",
+        cantidadViajes: String(orden.cantidadViajes || 1),
         tipoCarga: orden.tipoCarga || "CARGA_SUELTA",
+        clasificacionCarga: orden.clasificacionCarga || "GENERAL",
+        dimensionCarga: orden.dimensionCarga || "",
 
         clienteSolicitante: {
           tipoDocumento: clienteBase?.tipoDocumento || "6",
@@ -481,6 +504,7 @@ const OrdenServicioModal = ({
       setForm((prev) => ({
         ...prev,
         tipoCarga: value,
+        dimensionCarga: value === "CONTENEDOR" ? prev.dimensionCarga : "",
       }));
 
       return;
@@ -507,72 +531,89 @@ const OrdenServicioModal = ({
 
   const validarFormulario = () => {
     if (!form.fechaProgramada) {
-      toast.error("La fecha programada es obligatoria");
+      notify.error("La fecha programada es obligatoria");
+      return false;
+    }
+
+    const cantidadViajes = Number(form.cantidadViajes);
+
+    if (!Number.isInteger(cantidadViajes) || cantidadViajes < 1) {
+      notify.error("La cantidad de viajes debe ser mayor a 0");
       return false;
     }
 
     if (!form.clienteSolicitante.numeroDocumento.trim()) {
-      toast.error("Ingresa el número de documento del cliente");
+      notify.error("Ingresa el número de documento del cliente");
       return false;
     }
 
     if (!form.clienteSolicitante.razonSocial.trim()) {
-      toast.error("Ingresa la razón social del cliente");
+      notify.error("Ingresa la razón social del cliente");
       return false;
     }
 
     if (!form.clienteSolicitante.direccion.trim()) {
-      toast.error("Ingresa la dirección del cliente");
+      notify.error("Ingresa la dirección del cliente");
       return false;
     }
 
     if (!form.remitente.numeroDocumento.trim()) {
-      toast.error("Selecciona o ingresa el remitente");
+      notify.error("Selecciona o ingresa el remitente");
       return false;
     }
 
     if (!form.remitente.razonSocial.trim()) {
-      toast.error("Ingresa la razón social del remitente");
+      notify.error("Ingresa la razón social del remitente");
       return false;
     }
 
     if (!form.destinatario.numeroDocumento.trim()) {
-      toast.error("Selecciona o ingresa el destinatario");
+      notify.error("Selecciona o ingresa el destinatario");
       return false;
     }
 
     if (!form.destinatario.razonSocial.trim()) {
-      toast.error("Ingresa la razón social del destinatario");
+      notify.error("Ingresa la razón social del destinatario");
       return false;
     }
 
     if (!form.partida.ubigeo.trim()) {
-      toast.error("Ingresa el ubigeo de partida");
+      notify.error("Ingresa el ubigeo de partida");
       return false;
     }
 
     if (form.partida.ubigeo.trim().length !== 6) {
-      toast.error("El ubigeo de partida debe tener 6 dígitos");
+      notify.error("El ubigeo de partida debe tener 6 dígitos");
       return false;
     }
 
     if (!form.partida.direccion.trim()) {
-      toast.error("Ingresa la dirección de partida");
+      notify.error("Ingresa la dirección de partida");
       return false;
     }
 
     if (!form.llegada.ubigeo.trim()) {
-      toast.error("Ingresa el ubigeo de llegada");
+      notify.error("Ingresa el ubigeo de llegada");
       return false;
     }
 
     if (form.llegada.ubigeo.trim().length !== 6) {
-      toast.error("El ubigeo de llegada debe tener 6 dígitos");
+      notify.error("El ubigeo de llegada debe tener 6 dígitos");
       return false;
     }
 
     if (!form.llegada.direccion.trim()) {
-      toast.error("Ingresa la dirección de llegada");
+      notify.error("Ingresa la dirección de llegada");
+      return false;
+    }
+
+    if (!form.clasificacionCarga) {
+      notify.error("Selecciona la clasificación de la carga");
+      return false;
+    }
+
+    if (form.tipoCarga === "CONTENEDOR" && !form.dimensionCarga) {
+      notify.error("Selecciona la dimensión del contenedor");
       return false;
     }
 
@@ -582,7 +623,11 @@ const OrdenServicioModal = ({
   const limpiarPayloadOrden = () => {
     const data = {
       ...form,
+      cantidadViajes: Number(form.cantidadViajes),
       tipoCarga: form.tipoCarga,
+      clasificacionCarga: form.clasificacionCarga,
+      dimensionCarga:
+        form.tipoCarga === "CONTENEDOR" ? form.dimensionCarga : "",
 
       clienteSolicitante: {
         tipoDocumento: form.clienteSolicitante.tipoDocumento,
@@ -638,25 +683,25 @@ const OrdenServicioModal = ({
 
       if (isCreateMode) {
         await crearOrdenServicio(data);
-        toast.success("Orden de servicio creada correctamente");
+        notify.success("Orden de servicio creada correctamente");
       }
 
       if (isEditMode) {
         const ordenId = getItemId(orden);
 
         if (!ordenId) {
-          toast.error("No se encontró el ID de la orden");
+          notify.error("No se encontró el ID de la orden");
           return;
         }
 
         await editarOrdenServicio(ordenId, data);
-        toast.success("Orden de servicio actualizada correctamente");
+        notify.success("Orden de servicio actualizada correctamente");
       }
 
     resetForm();
       onClose();
     } catch (error) {
-      toast.error(
+      notify.error(
         error.response?.data?.message || "Error al guardar la orden de servicio"
       );
     } finally {
@@ -736,7 +781,7 @@ const OrdenServicioModal = ({
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-3 py-4 backdrop-blur-sm sm:px-4">
+    <div className="modal-backdrop">
       <div className="panel flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden">
         <div className="flex items-start justify-between gap-4 border-b px-5 py-4 sm:px-6">
           <div>
@@ -793,6 +838,9 @@ const OrdenServicioModal = ({
                       className={inputClass}
                     >
                       <option value="PENDIENTE">PENDIENTE</option>
+                      <option value="PARCIALMENTE_PROGRAMADA">
+                        PARCIALMENTE PROGRAMADA
+                      </option>
                       <option value="PROGRAMADA">PROGRAMADA</option>
                       <option value="EN_PROCESO">EN PROCESO</option>
                       <option value="FINALIZADA">FINALIZADA</option>
@@ -801,7 +849,21 @@ const OrdenServicioModal = ({
                   </div>
                 )}
 
-                <div className={isCreateMode ? "md:col-span-9" : "md:col-span-3"}>
+                <div className="md:col-span-3">
+                  <label className={labelClass}>Cantidad de viajes</label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    name="cantidadViajes"
+                    value={form.cantidadViajes}
+                    onChange={handleChange}
+                    disabled={disabled}
+                    className={inputClass}
+                  />
+                </div>
+
+                <div className="md:col-span-3">
                   <label className={labelClass}>Tipo de carga</label>
                   <select
                     name="tipoCarga"
@@ -810,12 +872,53 @@ const OrdenServicioModal = ({
                     disabled={disabled}
                     className={inputClass}
                   >
-                    <option value="CONTENEDOR">CONTENEDOR</option>
-                    <option value="CARGA_SUELTA">CARGA SUELTA</option>
-                    <option value="TOLVA">TOLVA</option>
+                    {TIPOS_CARGA.map((tipo) => (
+                      <option key={tipo.value} value={tipo.value}>
+                        {tipo.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
+                <div className="md:col-span-3">
+                  <label className={labelClass}>Clasificación</label>
+                  <select
+                    name="clasificacionCarga"
+                    value={form.clasificacionCarga}
+                    onChange={handleChange}
+                    disabled={disabled}
+                    className={inputClass}
+                  >
+                    {CLASIFICACIONES_CARGA.map((clasificacion) => (
+                      <option
+                        key={clasificacion.value}
+                        value={clasificacion.value}
+                      >
+                        {clasificacion.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {form.tipoCarga === "CONTENEDOR" && (
+                  <div className="md:col-span-3">
+                    <label className={labelClass}>Dimensión</label>
+                    <select
+                      name="dimensionCarga"
+                      value={form.dimensionCarga}
+                      onChange={handleChange}
+                      disabled={disabled}
+                      className={inputClass}
+                    >
+                      <option value="">Seleccione dimensión</option>
+                      {DIMENSIONES_CARGA.map((dimension) => (
+                        <option key={dimension.value} value={dimension.value}>
+                          {dimension.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
             </section>
 
@@ -1128,7 +1231,7 @@ const OrdenServicioModal = ({
                 type="button"
                 onClick={handleClose}
                 disabled={loading}
-                className="btn-secondary px-5 py-2"
+                className="btn-secondary px-3 py-1.5"
               >
                 {isViewMode ? "Cerrar" : "Cancelar"}
               </button>
@@ -1137,7 +1240,7 @@ const OrdenServicioModal = ({
                 <button
                   type="submit"
                   disabled={loading}
-                  className="btn-primary px-5 py-2"
+                  className="btn-primary px-3 py-1.5"
                 >
                   {loading
                     ? isEditMode

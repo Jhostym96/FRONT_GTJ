@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import toast from "react-hot-toast";
+import { notify } from "../../utils/notify";
 import { useGuiaTransportista } from "../../context/GuiaTransportistaContext";
 import { useProgramacionViaje } from "../../context/ProgramacionViajeContext";
+import { getRecordId } from "../../utils/apiData";
+import { obtenerMensajesErrorApi } from "../../utils/apiErrorMessages";
 import { getTodayInputDate } from "../../utils/date";
 
 const convertirFechaInputADdmmyyyy = (fecha) => {
@@ -30,6 +32,33 @@ const convertirFechaDdmmyyyyAInput = (fecha) => {
   return fecha;
 };
 
+const DOCUMENTOS_RELACIONADOS_OPTIONS = [
+  { value: "01", label: "01 - Factura" },
+  { value: "03", label: "03 - Boleta de venta" },
+  { value: "09", label: "09 - Guía de remisión remitente" },
+  { value: "31", label: "31 - Guía de remisión transportista" },
+];
+
+const mostrarErroresApi = (error, fallback) => {
+  const mensajes = obtenerMensajesErrorApi(error, fallback);
+
+  notify.error(
+    mensajes.length === 1 ? (
+      mensajes[0]
+    ) : (
+      <div>
+        <p className="mb-1 font-semibold">Corrige estos datos:</p>
+        <ul className="list-disc space-y-1 pl-4">
+          {mensajes.map((mensaje) => (
+            <li key={mensaje}>{mensaje}</li>
+          ))}
+        </ul>
+      </div>
+    ),
+    { duration: 9000 }
+  );
+};
+
 const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
   const isView = mode === "view";
   const isEdit = mode === "edit";
@@ -37,6 +66,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
   const {
     crearGuiaTransportista,
     actualizarGuiaTransportista,
+    validarGuiaTransportista,
     obtenerGuiasTransportista,
     loadingGuia,
   } = useGuiaTransportista();
@@ -87,6 +117,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
           codigo: "001",
           descripcion: "",
           cantidad: "1",
+          codigo_dam: "",
         },
       ],
 
@@ -154,6 +185,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
                   codigo: "001",
                   descripcion: "",
                   cantidad: "1",
+                  codigo_dam: "",
                 },
               ],
 
@@ -172,15 +204,16 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
     }
   }, [guia, mode, isOpen, isEdit, isView, initialForm]);
 
-  const programacionSeleccionada = useMemo(() => {
-    const listaProgramaciones = Array.isArray(programaciones)
-      ? programaciones
-      : [];
+  const listaProgramaciones = useMemo(
+    () => (Array.isArray(programaciones) ? programaciones : []),
+    [programaciones]
+  );
 
+  const programacionSeleccionada = useMemo(() => {
     return listaProgramaciones.find(
-      (p) => String(p.id) === String(form.programacionViaje)
+      (p) => String(getRecordId(p)) === String(form.programacionViaje)
     );
-  }, [programaciones, form.programacionViaje]);
+  }, [listaProgramaciones, form.programacionViaje]);
 
   if (!isOpen) return null;
 
@@ -237,6 +270,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
           codigo: String(prev.items.length + 1).padStart(3, "0"),
           descripcion: "",
           cantidad: "1",
+          codigo_dam: "",
         },
       ],
     }));
@@ -338,27 +372,32 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
       const data = limpiarPayloadGuia();
 
       if (isEdit) {
-        await actualizarGuiaTransportista(guia.id, data);
-        toast.success("Guía actualizada correctamente");
+        await actualizarGuiaTransportista(getRecordId(guia), data);
+        notify.success("Guía actualizada correctamente");
       } else {
         await crearGuiaTransportista(data);
-        toast.success("Guía enviada a Nubefact correctamente");
+        notify.success("Guía creada y enviada a Nubefact correctamente");
       }
 
       await obtenerGuiasTransportista();
       onClose();
     } catch (error) {
-      toast.error(
-        error.response?.data?.message ||
-          error.response?.data?.error?.errors ||
-          error.response?.data?.error ||
-          "Error al guardar la guía"
-      );
+      mostrarErroresApi(error, "Error al guardar la guía");
+    }
+  };
+
+  const handleValidar = async () => {
+    try {
+      const data = limpiarPayloadGuia();
+      await validarGuiaTransportista(data);
+      notify.success("La guía está lista para emitir");
+    } catch (error) {
+      mostrarErroresApi(error, "La guía tiene datos por corregir");
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-3 py-4 backdrop-blur-sm">
+    <div className="modal-backdrop">
       <div className="panel max-h-[95vh] w-full max-w-6xl overflow-y-auto">
         <div className="sticky top-0 z-10 border-b px-5 py-4" style={{ background: "var(--app-surface)" }}>
           <div className="flex items-center justify-between gap-3">
@@ -402,8 +441,8 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
                   : "Seleccione una programación"}
               </option>
 
-              {programaciones?.map((p) => (
-                <option key={p.id} value={p.id}>
+              {listaProgramaciones.map((p) => (
+                <option key={getRecordId(p)} value={getRecordId(p)}>
                   {p.ordenServicio?.numeroOrden || "Orden sin número"} -{" "}
                   {p.vehiculoPrincipal?.placa || "Sin placa"} -{" "}
                   {p.conductor
@@ -574,6 +613,14 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
                     value: "03",
                     label: "03 - Pagador flete: Tercero",
                   },
+                  {
+                    value: "04",
+                    label: "04 - Flete por cobrar",
+                  },
+                  {
+                    value: "05",
+                    label: "05 - Flete por pagar",
+                  },
                 ]}
               />
             </div>
@@ -716,7 +763,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
                     />
                   </div>
 
-                  <div className="md:col-span-6">
+                  <div className="md:col-span-4">
                     <Input
                       label="Descripción"
                       name="descripcion"
@@ -738,12 +785,22 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
                     />
                   </div>
 
+                  <div className="md:col-span-2">
+                    <Input
+                      label="Código DAM/DS"
+                      name="codigo_dam"
+                      value={item.codigo_dam || ""}
+                      onChange={(e) => handleItemChange(index, e)}
+                      disabled={isView}
+                    />
+                  </div>
+
                   <div className="flex items-end md:col-span-1">
                     {!isView && form.items.length > 1 && (
                       <button
                         type="button"
                         onClick={() => eliminarItem(index)}
-                        className="btn-danger w-full px-3 py-3 text-xs"
+                        className="btn-danger w-full px-3 py-2 text-xs"
                       >
                         X
                       </button>
@@ -783,12 +840,13 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
                     className="info-tile grid gap-3 border p-3 md:grid-cols-12"
                   >
                     <div className="md:col-span-3">
-                      <Input
+                      <Select
                         label="Tipo"
                         name="tipo"
                         value={doc.tipo}
                         onChange={(e) => handleDocumentoChange(index, e)}
                         disabled={isView}
+                        options={DOCUMENTOS_RELACIONADOS_OPTIONS}
                       />
                     </div>
 
@@ -817,7 +875,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
                         <button
                           type="button"
                           onClick={() => eliminarDocumento(index)}
-                          className="btn-danger w-full px-3 py-3 text-xs"
+                          className="btn-danger w-full px-3 py-2 text-xs"
                         >
                           X
                         </button>
@@ -833,23 +891,36 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
             <button
               type="button"
               onClick={onClose}
-              className="btn-secondary px-5 py-3 text-sm"
+              className="btn-secondary px-3 py-2 text-sm"
             >
               {isView ? "Cerrar" : "Cancelar"}
             </button>
 
             {!isView && (
-              <button
-                type="submit"
-                disabled={loadingGuia}
-                className="btn-primary px-5 py-3 text-sm"
-              >
-                {loadingGuia
-                  ? "Guardando..."
-                  : isEdit
-                  ? "Actualizar guía"
-                  : "Emitir guía"}
-              </button>
+              <>
+                {!isEdit && (
+                  <button
+                    type="button"
+                    onClick={handleValidar}
+                    disabled={loadingGuia}
+                    className="btn-success px-3 py-2 text-sm disabled:bg-neutral-700"
+                  >
+                    Validar
+                  </button>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loadingGuia}
+                  className="btn-primary px-3 py-2 text-sm"
+                >
+                  {loadingGuia
+                    ? "Guardando..."
+                    : isEdit
+                    ? "Actualizar guía"
+                    : "Crear y enviar guía"}
+                </button>
+              </>
             )}
           </div>
         </form>

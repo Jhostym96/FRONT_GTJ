@@ -18,6 +18,12 @@ function Sidebar({ collapsed, setCollapsed }) {
     setActiveDropdown((prev) => (prev === menuId ? null : menuId));
   };
 
+  const isPathActive = (path) =>
+    location.pathname === path || location.pathname.startsWith(`${path}/`);
+
+  const isMenuActive = (menu) =>
+    menu.children?.some((child) => isPathActive(child.path));
+
   // 👉 Nueva función: si está colapsado, auto-expande al hacer click
   const handleMenuClick = (menuId) => {
     if (collapsed) {
@@ -46,9 +52,19 @@ function Sidebar({ collapsed, setCollapsed }) {
         ${mobileOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0`}
       >
         {/* Logo + toggle desktop */}
-        <div className="flex h-16 items-center justify-between border-b px-5">
-          <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 text-sm font-black text-white">
+        <div
+          className={`flex border-b ${
+            collapsed
+              ? "h-24 flex-col items-center justify-center gap-2 px-0"
+              : "h-16 items-center justify-between px-5"
+          }`}
+        >
+          <div
+            className={`flex items-center ${
+              collapsed ? "justify-center" : "gap-2"
+            }`}
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-sm font-black text-white">
               TJ
             </div>
             {!collapsed && (
@@ -64,7 +80,7 @@ function Sidebar({ collapsed, setCollapsed }) {
 
           {/* Botón colapsar/expandir (solo desktop) */}
           <button
-            className="btn-secondary hidden h-9 w-9 px-0 md:inline-flex"
+            className="btn-secondary hidden h-9 w-9 shrink-0 px-0 md:inline-flex"
             onClick={() => setCollapsed(!collapsed)}
             aria-label={collapsed ? "Expandir menú" : "Colapsar menú"}
           >
@@ -73,22 +89,26 @@ function Sidebar({ collapsed, setCollapsed }) {
         </div>
 
         {/* Navegación */}
-        <nav className="flex-1 p-4 text-sm">
+        <nav className={`flex-1 text-sm ${collapsed ? "px-2 py-4" : "p-4"}`}>
           <ul className="space-y-2">
             {isAuthenticated ? (
               rolePermissions.map((menu) => (
                 <li key={menu.id}>
                   <button
                     onClick={() => handleMenuClick(menu.id)}
-                    className={`nav-item justify-between
+                    className={`nav-item ${
+                      collapsed ? "justify-center px-0" : "justify-between"
+                    }
                       ${
-                        location.pathname.startsWith(menu.basePath)
-                          ? "nav-item-active"
-                          : ""
+                        isMenuActive(menu) ? "nav-item-active" : ""
                       }`}
                   >
-                    <span className="flex items-center gap-3">
-                      <menu.icon className="h-5 w-5" />
+                    <span
+                      className={`flex items-center ${
+                        collapsed ? "justify-center" : "gap-3"
+                      }`}
+                    >
+                      <menu.icon className="h-5 w-5 shrink-0" />
                       {!collapsed && menu.label}
                     </span>
                     {!collapsed && (
@@ -109,7 +129,7 @@ function Sidebar({ collapsed, setCollapsed }) {
                             to={child.path}
                             className={`nav-item
                               ${
-                                location.pathname === child.path
+                                isPathActive(child.path)
                                   ? "nav-item-active"
                                   : ""
                               }`}

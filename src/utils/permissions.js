@@ -15,6 +15,7 @@ const dashboardMenu = {
   id: "dashboard",
   label: "Dashboard",
   icon: FaTachometerAlt,
+  basePath: "/profile",
   children: [{ path: "/profile", label: "Perfil", icon: FaUserTie }],
 };
 
@@ -22,6 +23,7 @@ const operacionesMenu = {
   id: "operaciones",
   label: "Operaciones",
   icon: FaClipboardList,
+  basePath: "/operaciones",
   children: [
     {
       path: "/ordenes-servicio",
@@ -50,6 +52,7 @@ const datosMaestrosMenu = {
   id: "datos-maestros",
   label: "Datos Maestros",
   icon: FaDatabase,
+  basePath: "/datos-maestros",
   children: [
     {
       path: "/clientes",
@@ -73,6 +76,7 @@ const adminMenu = {
   id: "admin",
   label: "Admin",
   icon: FaUserTie,
+  basePath: "/admin",
   children: [
     { path: "/usuarios", label: "Gestionar Usuarios", icon: FaUsers },
     { path: "/admin/usuarios", label: "Admin Usuarios", icon: FaUsers },
@@ -118,6 +122,12 @@ export function canAccess(user, path) {
   const normalizedPath = normalizePath(path);
 
   return allowed.some((menu) =>
-    menu.children?.some((child) => normalizedPath === normalizePath(child.path))
+    menu.children?.some((child) => {
+      const childPath = normalizePath(child.path);
+      return (
+        normalizedPath === childPath ||
+        normalizedPath.startsWith(`${childPath}/`)
+      );
+    })
   );
 }

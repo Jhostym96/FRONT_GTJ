@@ -7,9 +7,9 @@ export const registerRequest = (user) =>
 export const loginRequest = (user) =>
   axios.post("/v2/login", user, { withCredentials: true });
 
-// Verificar sesión con el access token (ya va en headers desde axios.defaults)
+// Verificar sesión. También envía la cookie httpOnly para recuperar sesión tras F5.
 export const verifyTokenRequest = () =>
-  axios.get("/v2/verify");
+  axios.get("/v2/verify", { withCredentials: true });
 
 // Pedir un access token nuevo usando la cookie de refresh
 export const refreshTokenRequest = () =>

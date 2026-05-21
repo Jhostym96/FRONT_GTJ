@@ -1,4 +1,5 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useState } from "react";
+import { useAuth } from "./AuthContext";
 import {
   crearUsuarioRequest,
   obtenerUsuariosRequest,
@@ -8,7 +9,12 @@ import {
   activarUsuarioRequest,
   actualizarPerfilRequest, // 👈 nuevo import
 } from "../api/usuarios";
-import { getListFromResponse } from "../utils/apiResponse";
+import {
+  DEFAULT_PAGINATION,
+  createPaginationParams,
+  normalizeCollection,
+  normalizePagination,
+} from "../utils/apiData";
 
 const UserContext = createContext();
 
@@ -16,21 +22,40 @@ const UserContext = createContext();
 export const useUsuarios = () => useContext(UserContext);
 
 export const UserProvider = ({ children }) => {
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [paginationUsuarios, setPaginationUsuarios] =
+    useState(DEFAULT_PAGINATION);
 
   // Obtener todos los usuarios
-  const cargarUsuarios = async () => {
+  const cargarUsuarios = useCallback(async (params = {}) => {
+    if (authLoading || !isAuthenticated) {
+      setUsuarios([]);
+      return [];
+    }
+
     try {
       setLoading(true);
-      const res = await obtenerUsuariosRequest();
-      setUsuarios(getListFromResponse(res.data, ["usuarios", "users"]));
+      const requestParams = createPaginationParams({
+        page: params.page ?? 1,
+        limit: params.limit ?? 10,
+        search: params.search,
+      });
+      const res = await obtenerUsuariosRequest(requestParams);
+      const data = normalizeCollection(res.data, ["usuarios", "users"]);
+      setUsuarios(data);
+      setPaginationUsuarios(
+        normalizePagination(res.data, DEFAULT_PAGINATION)
+      );
+      return data;
     } catch (error) {
       console.error("Error al obtener usuarios:", error);
+      return [];
     } finally {
       setLoading(false);
     }
-  };
+  }, [authLoading, isAuthenticated]);
 
   // Crear nuevo usuario
   const crearUsuario = async (usuario) => {
@@ -78,6 +103,7 @@ export const UserProvider = ({ children }) => {
       value={{
         usuarios,
         loading,
+        paginationUsuarios,
         crearUsuario,
         editarUsuario,
         cambiarRol,

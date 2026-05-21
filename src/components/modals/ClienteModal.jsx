@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import toast from "react-hot-toast";
+import { notify } from "../../utils/notify";
 
 const initialForm = {
   tipoDocumento: "6",
@@ -193,7 +193,7 @@ function EntidadesResumen({ tipo, entidades, onAdd, onEdit, onRemove, isView }) 
           <button
             type="button"
             onClick={onAdd}
-            className="btn-primary px-4 py-2 text-sm"
+            className="btn-primary px-3 py-1.5 text-sm"
           >
             + Agregar {tipo === "REMITENTE" ? "remitente" : "destinatario"}
           </button>
@@ -323,17 +323,17 @@ function EntidadRelacionadaModal({
       !direccionNormalizada.ubigeo ||
       !direccionNormalizada.direccion
     ) {
-      toast.error("Completa nombre, ubigeo y dirección");
+      notify.error("Completa nombre, ubigeo y dirección");
       return;
     }
 
     if (!validarUbigeo(direccionNormalizada.ubigeo)) {
-      toast.error("El ubigeo debe tener 6 dígitos numéricos");
+      notify.error("El ubigeo debe tener 6 dígitos numéricos");
       return;
     }
 
     if (!validarCodigoSunat(direccionNormalizada.codigoEstablecimientoSunat)) {
-      toast.error("El código SUNAT debe tener 4 dígitos numéricos");
+      notify.error("El código SUNAT debe tener 4 dígitos numéricos");
       return;
     }
 
@@ -356,12 +356,12 @@ function EntidadRelacionadaModal({
     const entidadNormalizada = normalizarEntidad(entidad, tipo);
 
     if (!entidadNormalizada.numeroDocumento || !entidadNormalizada.razonSocial) {
-      toast.error("Completa el documento y la razón social");
+      notify.error("Completa el documento y la razón social");
       return;
     }
 
     if (entidadNormalizada.direcciones.length === 0) {
-      toast.error("Agrega al menos una dirección");
+      notify.error("Agrega al menos una dirección");
       return;
     }
 
@@ -371,7 +371,7 @@ function EntidadRelacionadaModal({
     });
 
     if (existe) {
-      toast.error(
+      notify.error(
         tipo === "REMITENTE"
           ? "Este remitente ya fue agregado"
           : "Este destinatario ya fue agregado"
@@ -509,7 +509,7 @@ function EntidadRelacionadaModal({
                 <button
                   type="button"
                   onClick={agregarDireccion}
-                  className="btn-success w-full px-4 py-2"
+                  className="btn-success w-full px-3 py-1.5"
                 >
                   Agregar
                 </button>
@@ -551,7 +551,7 @@ function EntidadRelacionadaModal({
             <button
               type="button"
               onClick={onClose}
-              className="btn-secondary px-5 py-2"
+              className="btn-secondary px-3 py-1.5"
             >
               Cancelar
             </button>
@@ -559,7 +559,7 @@ function EntidadRelacionadaModal({
             <button
               type="button"
               onClick={guardarEntidad}
-              className="btn-primary px-5 py-2"
+              className="btn-primary px-3 py-1.5"
             >
               {esEdicion ? "Guardar cambios" : "Agregar al cliente"}
             </button>
@@ -701,7 +701,7 @@ function ClienteModal({
     };
 
     if (!data.numeroDocumento || !data.razonSocial || !data.direccionFiscal) {
-      toast.error("Completa los datos principales del cliente");
+      notify.error("Completa los datos principales del cliente");
       return;
     }
 
@@ -710,7 +710,7 @@ function ClienteModal({
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-3 py-4 backdrop-blur-sm sm:px-4">
+      <div className="modal-backdrop">
         <div className="panel flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden">
           <div className="flex items-start justify-between gap-4 border-b px-5 py-4 sm:px-6">
             <div>
@@ -830,7 +830,7 @@ function ClienteModal({
                   type="button"
                   onClick={onClose}
                   disabled={loading}
-                  className="btn-secondary px-5 py-2"
+                  className="btn-secondary px-3 py-1.5"
                 >
                   {isView ? "Cerrar" : "Cancelar"}
                 </button>
@@ -839,7 +839,7 @@ function ClienteModal({
                   <button
                     type="submit"
                     disabled={loading}
-                    className="btn-primary px-5 py-2"
+                    className="btn-primary px-3 py-1.5"
                   >
                     {loading
                       ? "Guardando..."

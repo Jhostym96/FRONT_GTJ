@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
-import toast from "react-hot-toast";
+import { useEffect, useState } from "react";
+import { notify } from "../utils/notify";
+import { CheckCircle2, LoaderCircle, Pencil } from "lucide-react";
 import { useOrdenesServicio } from "../context/OrdenServicioContext";
 import { useConductores } from "../context/ConductorContext";
+import TablePagination from "../components/TablePagination";
 import { getTodayInputDate } from "../utils/date";
 
 const getItemId = (item) => item?.id ?? item?._id;
@@ -10,6 +12,7 @@ function DevolucionesPage() {
   const {
     devolucionesPendientes = [],
     loading,
+    paginationDevoluciones,
     cargarDevolucionesPendientes,
     actualizarEstadoDevolucion,
   } = useOrdenesServicio();
@@ -27,7 +30,7 @@ function DevolucionesPage() {
   });
 
   useEffect(() => {
-    cargarDevolucionesPendientes();
+    cargarDevolucionesPendientes({ page: 1, limit: 10 });
     if (obtenerConductores) {
       obtenerConductores();
     } else {
@@ -36,10 +39,11 @@ function DevolucionesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const total = useMemo(
-    () => devolucionesPendientes?.length || 0,
-    [devolucionesPendientes]
-  );
+  const recargarDevoluciones = (page = paginationDevoluciones.page) =>
+    cargarDevolucionesPendientes({
+      page,
+      limit: paginationDevoluciones.limit,
+    });
 
   const formatearFecha = (fecha) => {
     if (!fecha) return "-";
@@ -104,7 +108,7 @@ function DevolucionesPage() {
 
   const abrirMarcarDevuelto = (orden) => {
     if (!tieneDatosDevolucion(orden)) {
-      toast.error("Primero completa los datos de devolución");
+      notify.error("Primero completa los datos de devolución");
       abrirModalDevolucion(orden, "edit");
       return;
     }
@@ -114,17 +118,17 @@ function DevolucionesPage() {
 
   const validarDatosContenedor = () => {
     if (!formDevolucion.numeroContenedor.trim()) {
-      toast.error("Ingresa el número de contenedor");
+      notify.error("Ingresa el número de contenedor");
       return false;
     }
 
     if (!formDevolucion.fechaVencimientoDevolucion) {
-      toast.error("Selecciona la fecha de vencimiento");
+      notify.error("Selecciona la fecha de vencimiento");
       return false;
     }
 
     if (!formDevolucion.almacenDevolucion.trim()) {
-      toast.error("Ingresa el almacén de devolución");
+      notify.error("Ingresa el almacén de devolución");
       return false;
     }
 
@@ -146,10 +150,11 @@ function DevolucionesPage() {
         fechaVencimientoDevolucion: formDevolucion.fechaVencimientoDevolucion,
         almacenDevolucion: formDevolucion.almacenDevolucion,
       });
-      toast.success("Datos de devolución guardados");
+      notify.success("Datos de devolución guardados");
       cerrarModalDevolucion();
+      await recargarDevoluciones();
     } catch (error) {
-      toast.error(
+      notify.error(
         error.response?.data?.message ||
           "No se pudieron guardar los datos de devolución"
       );
@@ -166,12 +171,12 @@ function DevolucionesPage() {
     if (!validarDatosContenedor()) return;
 
     if (!formDevolucion.fechaDevolucion) {
-      toast.error("Selecciona la fecha de devolución");
+      notify.error("Selecciona la fecha de devolución");
       return;
     }
 
     if (!formDevolucion.conductorDevolucionId) {
-      toast.error("Selecciona el conductor que devuelve");
+      notify.error("Selecciona el conductor que devuelve");
       return;
     }
 
@@ -185,16 +190,25 @@ function DevolucionesPage() {
         fechaDevolucion: formDevolucion.fechaDevolucion,
         conductorDevolucionId: Number(formDevolucion.conductorDevolucionId),
       });
-      toast.success("Devolución marcada como devuelta");
+      notify.success("Devolución marcada como devuelta");
       cerrarModalDevolucion();
+      const nextPage =
+        devolucionesPendientes.length === 1 && paginationDevoluciones.page > 1
+          ? paginationDevoluciones.page - 1
+          : paginationDevoluciones.page;
+      await recargarDevoluciones(nextPage);
     } catch (error) {
-      toast.error(
+      notify.error(
         error.response?.data?.message ||
           "No se pudo actualizar la devolución"
       );
     } finally {
       setActualizando((prev) => ({ ...prev, [id]: false }));
     }
+  };
+
+  const handlePageChange = (page) => {
+    recargarDevoluciones(page);
   };
 
   const ConductoresSelect = () => (
@@ -211,7 +225,7 @@ function DevolucionesPage() {
     >
       <option value="">Seleccione conductor</option>
       {conductores.map((conductor) => (
-        <option key={conductor.id} value={conductor.id}>
+        <option key={getItemId(conductor)} value={getItemId(conductor)}>
           {conductor.nombres} {conductor.apellidos}
         </option>
       ))}
@@ -231,10 +245,6 @@ function DevolucionesPage() {
               </p>
             </div>
 
-            <div className="info-tile border px-4 py-3">
-              <p className="text-faint text-xs">Pendientes</p>
-              <p className="text-main text-xl font-bold">{total}</p>
-            </div>
           </div>
         </header>
 
@@ -243,7 +253,7 @@ function DevolucionesPage() {
             <div className="mx-auto mb-3 h-9 w-9 animate-spin rounded-full border-2 border-[var(--app-border)] border-t-blue-500" />
             <p className="text-muted text-sm">Cargando devoluciones...</p>
           </div>
-        ) : total === 0 ? (
+        ) : devolucionesPendientes.length === 0 ? (
           <div className="empty-panel">
             <h2 className="text-main text-lg font-semibold">
               No hay devoluciones pendientes
@@ -351,19 +361,25 @@ function DevolucionesPage() {
                           type="button"
                           onClick={() => abrirModalDevolucion(orden, "edit")}
                           disabled={actualizando[id]}
-                          className="btn-secondary w-full px-4 py-2"
+                          className="btn-secondary btn-icon"
+                          title="Editar datos de devolución"
+                          aria-label="Editar datos de devolución"
                         >
-                          Editar datos
+                          <Pencil />
                         </button>
                         <button
                           type="button"
                           onClick={() => abrirMarcarDevuelto(orden)}
                           disabled={actualizando[id]}
-                          className="btn-success w-full px-4 py-2"
+                          className="btn-success btn-icon"
+                          title="Marcar devuelto"
+                          aria-label="Marcar devuelto"
                         >
-                          {actualizando[id]
-                            ? "Actualizando..."
-                            : "Marcar devuelto"}
+                          {actualizando[id] ? (
+                            <LoaderCircle className="animate-spin" />
+                          ) : (
+                            <CheckCircle2 />
+                          )}
                         </button>
                       </div>
                     </div>
@@ -373,7 +389,7 @@ function DevolucionesPage() {
             </div>
 
             <div className="data-table-wrap">
-              <div className="overflow-x-auto">
+              <div className="table-scroll">
                 <table className="data-table w-full min-w-[1000px] text-sm">
                   <thead>
                     <tr>
@@ -449,17 +465,25 @@ function DevolucionesPage() {
                                 type="button"
                                 onClick={() => abrirModalDevolucion(orden, "edit")}
                                 disabled={actualizando[id]}
-                                className="btn-secondary px-3 py-2 text-xs"
+                                className="btn-secondary btn-icon"
+                                title="Editar datos de devolución"
+                                aria-label="Editar datos de devolución"
                               >
-                                Editar datos
+                                <Pencil />
                               </button>
                               <button
                                 type="button"
                                 onClick={() => abrirMarcarDevuelto(orden)}
                                 disabled={actualizando[id]}
-                                className="btn-success px-3 py-2 text-xs"
+                                className="btn-success btn-icon"
+                                title="Marcar devuelto"
+                                aria-label="Marcar devuelto"
                               >
-                                {actualizando[id] ? "Actualizando..." : "Marcar devuelto"}
+                                {actualizando[id] ? (
+                                  <LoaderCircle className="animate-spin" />
+                                ) : (
+                                  <CheckCircle2 />
+                                )}
                               </button>
                             </div>
                           </td>
@@ -470,13 +494,21 @@ function DevolucionesPage() {
                 </table>
               </div>
             </div>
+
+            <TablePagination
+              page={paginationDevoluciones.page}
+              totalPages={paginationDevoluciones.totalPages}
+              total={paginationDevoluciones.total}
+              limit={paginationDevoluciones.limit}
+              onPageChange={handlePageChange}
+            />
           </>
         )}
       </div>
 
       {ordenSeleccionada && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-4 backdrop-blur-sm">
-          <div className="panel w-full max-w-lg p-6">
+        <div className="modal-backdrop">
+          <div className="modal-panel max-w-lg">
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-main text-xl font-bold">
@@ -625,7 +657,7 @@ function DevolucionesPage() {
               <button
                 type="button"
                 onClick={cerrarModalDevolucion}
-                className="btn-secondary px-4 py-2"
+                className="btn-secondary px-3 py-1.5"
               >
                 Cancelar
               </button>
@@ -634,7 +666,7 @@ function DevolucionesPage() {
                   type="button"
                   onClick={guardarDatosDevolucion}
                   disabled={actualizando[getItemId(ordenSeleccionada)]}
-                  className="btn-primary px-4 py-2"
+                  className="btn-primary px-3 py-1.5"
                 >
                   {actualizando[getItemId(ordenSeleccionada)]
                     ? "Guardando..."
@@ -645,7 +677,7 @@ function DevolucionesPage() {
                   type="button"
                   onClick={marcarDevuelto}
                   disabled={actualizando[getItemId(ordenSeleccionada)]}
-                  className="btn-success px-4 py-2"
+                  className="btn-success px-3 py-1.5"
                 >
                   {actualizando[getItemId(ordenSeleccionada)]
                     ? "Actualizando..."

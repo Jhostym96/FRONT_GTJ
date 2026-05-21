@@ -6,10 +6,25 @@ import {
 } from "./tokenStore";
 
 let refreshPromise = null;
+const apiBaseUrl = import.meta.env.VITE_API_URL;
+const authRefreshExcludedPaths = [
+  "/v2/login",
+  "/v2/register",
+  "/v2/verify",
+  "/v2/refresh",
+  "/v2/logout",
+];
+
+const isAuthRefreshExcluded = (url = "") =>
+  authRefreshExcludedPaths.some((path) => url.includes(path));
+
+if (!apiBaseUrl) {
+  throw new Error("Falta configurar VITE_API_URL en el entorno del frontend");
+}
 
 // Instancia principal de Axios
 const instance = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "/api",
+  baseURL: apiBaseUrl,
   withCredentials: true,
 });
 
@@ -31,18 +46,7 @@ instance.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    const authEndpoints = [
-      "/v2/login",
-      "/v2/register",
-      "/v2/verify",
-      "/v2/refresh",
-      "/v2/logout",
-    ];
-    const isAuthEndpoint = authEndpoints.some((endpoint) =>
-      originalRequest?.url?.includes(endpoint)
-    );
-
-    if (!originalRequest || isAuthEndpoint) {
+    if (!originalRequest || isAuthRefreshExcluded(originalRequest.url)) {
       return Promise.reject(error);
     }
 
@@ -59,7 +63,11 @@ instance.interceptors.response.use(
         }
 
         const res = await refreshPromise;
-        const newAccessToken = res.data.accessToken;
+        const newAccessToken = res.data?.accessToken;
+
+        if (!newAccessToken) {
+          throw new Error("No se recibió access token al refrescar la sesión");
+        }
 
         setAccessToken(newAccessToken);
 

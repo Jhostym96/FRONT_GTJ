@@ -1,18 +1,31 @@
-import { useEffect, useMemo, useState } from "react";
-import toast from "react-hot-toast";
+import { useEffect, useState } from "react";
+import { notify } from "../utils/notify";
+import { Ban, Eye, LoaderCircle, Pencil } from "lucide-react";
 import { useOrdenesServicio } from "../context/OrdenServicioContext";
+import { useConfirm } from "../context/ConfirmContext";
 
 import OrdenServicioModal from "../components/modals/OrdenServicioModal";
+import TablePagination from "../components/TablePagination";
 
 const getItemId = (item) => item?.id ?? item?._id;
+
+const formatearTipoCarga = (tipoCarga) =>
+  tipoCarga ? tipoCarga.replace("_", " ") : "-";
+
+const formatearDimensionCarga = (dimensionCarga) =>
+  dimensionCarga ? `${dimensionCarga} pies` : "-";
+
+const estadosNoAnulables = ["ANULADA", "FINALIZADA", "FINALIZADO"];
 
 const OrdenesServicioPage = () => {
   const {
     ordenes = [],
     loading,
+    paginationOrdenes,
     cargarOrdenesServicio,
     anularOrdenServicio,
   } = useOrdenesServicio();
+  const confirm = useConfirm();
 
   const [anulando, setAnulando] = useState({});
 
@@ -21,10 +34,8 @@ const OrdenesServicioPage = () => {
   const [ordenSeleccionada, setOrdenSeleccionada] = useState(null);
 
   useEffect(() => {
-    cargarOrdenesServicio();
-  }, []);
-
-  const totalOrdenes = useMemo(() => ordenes?.length || 0, [ordenes]);
+    cargarOrdenesServicio({ page: 1, limit: 10 });
+  }, [cargarOrdenesServicio]);
 
   const formatearFecha = (fecha) => {
     if (!fecha) return "-";
@@ -40,6 +51,8 @@ const OrdenesServicioPage = () => {
     switch (estado) {
       case "PENDIENTE":
         return "bg-yellow-500/10 text-yellow-300 border-yellow-500/30";
+      case "PARCIALMENTE_PROGRAMADA":
+        return "bg-cyan-500/10 text-cyan-300 border-cyan-500/30";
       case "PROGRAMADA":
         return "bg-blue-500/10 text-blue-300 border-blue-500/30";
       case "EN_PROCESO":
@@ -75,12 +88,56 @@ const OrdenesServicioPage = () => {
     setOpenOrdenModal(false);
     setOrdenSeleccionada(null);
     setModalMode("create");
+    cargarOrdenesServicio({
+      page: paginationOrdenes.page,
+      limit: paginationOrdenes.limit,
+    });
   };
 
-  const handleAnular = async (id) => {
-    const confirmar = window.confirm(
-      "¿Seguro que deseas anular esta orden de servicio?"
+  const getViajesAsignados = (orden) => {
+    const viajesProgramados = Number(orden?.viajesProgramados) || 0;
+
+    const relaciones = [
+      orden?.programaciones,
+      orden?.programacionesViaje,
+      orden?.viajes,
+      orden?.viajesAsignados,
+    ];
+
+    const viajesEnRelaciones = relaciones.some(
+      (relacion) => Array.isArray(relacion) && relacion.length > 0
     );
+
+    return viajesProgramados > 0 || viajesEnRelaciones || Boolean(orden?.programacionViaje);
+  };
+
+  const getMotivoBloqueoAnulacion = (orden) => {
+    if (estadosNoAnulables.includes(orden?.estado)) {
+      return "La orden ya está finalizada o anulada.";
+    }
+
+    if (getViajesAsignados(orden)) {
+      return "La orden ya tiene viajes asignados.";
+    }
+
+    return "";
+  };
+
+  const handleAnular = async (orden) => {
+    const id = getItemId(orden);
+    const motivoBloqueo = getMotivoBloqueoAnulacion(orden);
+
+    if (motivoBloqueo) {
+      notify.info(`No se puede anular esta orden. ${motivoBloqueo}`);
+      return;
+    }
+
+    const confirmar = await confirm({
+      title: "Anular orden",
+      message: "¿Seguro que deseas anular esta orden de servicio?",
+      confirmText: "Anular",
+      variant: "danger",
+    });
 
     if (!confirmar) return;
 
@@ -89,14 +146,25 @@ const OrdenesServicioPage = () => {
 
       await anularOrdenServicio(id);
 
-      toast.success("Orden anulada correctamente");
-      await cargarOrdenesServicio();
+      notify.success("Orden anulada correctamente");
+      const nextPage =
+        ordenes.length === 1 && paginationOrdenes.page > 1
+          ? paginationOrdenes.page - 1
+          : paginationOrdenes.page;
+      await cargarOrdenesServicio({
+        page: nextPage,
+        limit: paginationOrdenes.limit,
+      });
     } catch (error) {
       console.error("Error al anular orden:", error);
-      toast.error(error.response?.data?.message || "Error al anular la orden");
+      notify.error(error.response?.data?.message || "Error al anular la orden");
     } finally {
       setAnulando((prev) => ({ ...prev, [id]: false }));
     }
+  };
+
+  const handlePageChange = (page) => {
+    cargarOrdenesServicio({ page, limit: paginationOrdenes.limit });
   };
 
   const EstadoBadge = ({ estado }) => (
@@ -118,11 +186,10 @@ const OrdenesServicioPage = () => {
 
     return (
       <span
-        className={`inline-flex items-center justify-center rounded-full border px-3 py-1 text-[11px] font-bold tracking-wide ${
-          pendiente
+        className={`inline-flex items-center justify-center rounded-full border px-3 py-1 text-[11px] font-bold tracking-wide ${pendiente
             ? "border-amber-500/30 bg-amber-500/10 text-amber-400"
             : "border-green-500/30 bg-green-500/10 text-green-400"
-        }`}
+          }`}
       >
         {pendiente ? "PENDIENTE" : "DEVUELTO"}
       </span>
@@ -131,38 +198,44 @@ const OrdenesServicioPage = () => {
 
   const AccionesOrden = ({ orden, mobile = false }) => {
     const ordenId = getItemId(orden);
+    const motivoBloqueoAnulacion = getMotivoBloqueoAnulacion(orden);
 
     return (
       <div
-        className={`flex ${
-          mobile ? "w-full flex-col sm:flex-row" : "justify-center"
-        } gap-2`}
+        className={`flex ${mobile ? "flex-wrap" : "justify-center"
+          } gap-2`}
       >
         <button
           type="button"
           onClick={() => abrirVer(orden)}
-          className="btn-secondary px-3 py-2 text-xs"
+          className="btn-secondary btn-icon"
+          title="Ver orden"
+          aria-label="Ver orden"
         >
-          Ver
+          <Eye />
         </button>
 
         <button
           type="button"
           onClick={() => abrirEditar(orden)}
           disabled={orden.estado === "ANULADA"}
-          className="btn-primary px-3 py-2 text-xs"
+          className="btn-primary btn-icon"
+          title="Editar orden"
+          aria-label="Editar orden"
         >
-          Editar
+          <Pencil />
         </button>
 
-        {orden.estado !== "ANULADA" && (
+        {!motivoBloqueoAnulacion && (
           <button
             type="button"
-            onClick={() => handleAnular(ordenId)}
+            onClick={() => handleAnular(orden)}
             disabled={anulando[ordenId]}
-            className="btn-danger px-3 py-2 text-xs"
+            className="btn-danger btn-icon"
+            title="Anular orden"
+            aria-label="Anular orden"
           >
-            {anulando[ordenId] ? "Anulando..." : "Anular"}
+            {anulando[ordenId] ? <LoaderCircle className="animate-spin" /> : <Ban />}
           </button>
         )}
       </div>
@@ -175,13 +248,9 @@ const OrdenesServicioPage = () => {
         <header className="page-hero">
           <div className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <div className="eyebrow">
-                Gestión de transporte
-              </div>
+              <div className="eyebrow">Gestión de transporte</div>
 
-              <h1 className="page-title">
-                Órdenes de Servicio
-              </h1>
+              <h1 className="page-title">Órdenes de Servicio</h1>
 
               <p className="page-description">
                 Visualiza, registra y administra las órdenes de servicio para
@@ -189,22 +258,13 @@ const OrdenesServicioPage = () => {
               </p>
             </div>
 
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <div className="info-tile border px-4 py-3">
-                <p className="text-faint text-xs">Total órdenes</p>
-                <p className="text-main text-xl font-bold">
-                  {totalOrdenes}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={abrirCrear}
-                className="btn-primary px-5 py-3"
-              >
-                Nueva orden
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={abrirCrear}
+              className="btn-primary px-3 py-2"
+            >
+              Nueva orden
+            </button>
           </div>
         </header>
 
@@ -228,7 +288,7 @@ const OrdenesServicioPage = () => {
             <button
               type="button"
               onClick={abrirCrear}
-              className="btn-primary mt-5 px-5 py-3"
+              className="btn-primary mt-4 px-3 py-2"
             >
               Crear orden
             </button>
@@ -240,10 +300,7 @@ const OrdenesServicioPage = () => {
                 const ordenId = getItemId(orden);
 
                 return (
-                  <article
-                    key={ordenId}
-                    className="mobile-card"
-                  >
+                  <article key={ordenId} className="mobile-card">
                     <div className="mb-4 flex items-start justify-between gap-3">
                       <div>
                         <p className="text-faint text-xs font-medium">
@@ -268,7 +325,18 @@ const OrdenesServicioPage = () => {
                       <div className="info-tile">
                         <p className="text-faint text-xs">Tipo de carga</p>
                         <p className="text-main font-semibold">
-                          {(orden.tipoCarga || "-").replace("_", " ")}
+                          {formatearTipoCarga(orden.tipoCarga)}
+                        </p>
+                        <p className="text-faint text-xs">
+                          {orden.clasificacionCarga || "GENERAL"}
+                        </p>
+                      </div>
+
+                      <div className="info-tile">
+                        <p className="text-faint text-xs">Viajes</p>
+                        <p className="text-main font-semibold">
+                          {orden.viajesProgramados || 0}/
+                          {orden.cantidadViajes || 1}
                         </p>
                       </div>
 
@@ -276,10 +344,18 @@ const OrdenesServicioPage = () => {
                         <div className="info-tile">
                           <p className="text-faint text-xs">Contenedor</p>
                           <p className="text-main font-semibold">
-                            {orden.numeroContenedor || "-"}
+                            {formatearDimensionCarga(orden.dimensionCarga)}
                           </p>
+                          {orden.numeroContenedor && (
+                            <p className="text-faint text-xs">
+                              N° {orden.numeroContenedor}
+                            </p>
+                          )}
                           <p className="text-faint text-xs">
-                            Vence: {formatearFecha(orden.fechaVencimientoDevolucion)}
+                            Vence:{" "}
+                            {formatearFecha(
+                              orden.fechaVencimientoDevolucion
+                            )}
                           </p>
                         </div>
                       )}
@@ -292,30 +368,6 @@ const OrdenesServicioPage = () => {
                         <p className="text-faint text-xs">
                           {orden.clienteSolicitante?.numeroDocumento || ""}
                         </p>
-                      </div>
-
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <div className="info-tile">
-                          <p className="text-faint text-xs">Remitente</p>
-                          <p className="text-main font-semibold">
-                            {orden.remitente?.razonSocial || "-"}
-                          </p>
-                          <p className="text-faint text-xs">
-                            {orden.remitente?.numeroDocumento || ""}
-                          </p>
-                        </div>
-
-                        <div className="info-tile">
-                          <p className="text-faint text-xs">
-                            Destinatario
-                          </p>
-                          <p className="text-main font-semibold">
-                            {orden.destinatario?.razonSocial || "-"}
-                          </p>
-                          <p className="text-faint text-xs">
-                            {orden.destinatario?.numeroDocumento || ""}
-                          </p>
-                        </div>
                       </div>
 
                       <div className="info-tile">
@@ -343,17 +395,16 @@ const OrdenesServicioPage = () => {
             </div>
 
             <div className="data-table-wrap">
-              <div className="overflow-x-auto">
+              <div className="table-scroll">
                 <table className="data-table w-full min-w-[1200px] text-sm">
                   <thead>
                     <tr>
                       <th className="px-4 py-4 text-left">N° Orden</th>
                       <th className="px-4 py-4 text-left">Fecha</th>
-                      <th className="px-4 py-4 text-left">Tipo carga</th>
+                      <th className="px-4 py-4 text-left">Carga</th>
+                      <th className="px-4 py-4 text-left">Viajes</th>
                       <th className="px-4 py-4 text-left">Contenedor</th>
                       <th className="px-4 py-4 text-left">Cliente</th>
-                      <th className="px-4 py-4 text-left">Remitente</th>
-                      <th className="px-4 py-4 text-left">Destinatario</th>
                       <th className="px-4 py-4 text-left">Ruta</th>
                       <th className="px-4 py-4 text-center">Estado</th>
                       <th className="px-4 py-4 text-center">Devolución</th>
@@ -374,18 +425,41 @@ const OrdenesServicioPage = () => {
                           </td>
 
                           <td className="text-muted whitespace-nowrap px-4 py-4">
-                            {formatearFecha(orden.fechaProgramada)}
+                            <p className="text-main font-semibold">
+                              {orden.viajesProgramados || 0}/
+                              {orden.cantidadViajes || 1}
+                            </p>
+                            <p className="text-faint text-xs">
+                              Pendientes: {orden.viajesPendientes ?? "-"}
+                            </p>
                           </td>
 
                           <td className="text-muted whitespace-nowrap px-4 py-4">
-                            {(orden.tipoCarga || "-").replace("_", " ")}
+                            {formatearFecha(orden.fechaProgramada)}
+                          </td>
+
+                          <td className="whitespace-nowrap px-4 py-4">
+                            <p className="text-main font-semibold">
+                              {formatearTipoCarga(orden.tipoCarga)}
+                            </p>
+                            <p className="text-faint text-xs">
+                              {orden.clasificacionCarga || "GENERAL"}
+                            </p>
+                            {orden.tipoCarga === "CONTENEDOR" && (
+                              <p className="text-faint text-xs">
+                                {formatearDimensionCarga(orden.dimensionCarga)}
+                              </p>
+                            )}
                           </td>
 
                           <td className="text-muted whitespace-nowrap px-4 py-4">
                             {orden.tipoCarga === "CONTENEDOR" ? (
                               <>
                                 <p className="text-main font-semibold">
-                                  {orden.numeroContenedor || "-"}
+                                  {orden.numeroContenedor ||
+                                    formatearDimensionCarga(
+                                      orden.dimensionCarga
+                                    )}
                                 </p>
                                 <p className="text-faint text-xs">
                                   Vence:{" "}
@@ -405,24 +479,6 @@ const OrdenesServicioPage = () => {
                             </p>
                             <p className="text-faint text-xs">
                               {orden.clienteSolicitante?.numeroDocumento || ""}
-                            </p>
-                          </td>
-
-                          <td className="min-w-[190px] px-4 py-4">
-                            <p className="text-main max-w-[230px] truncate font-semibold">
-                              {orden.remitente?.razonSocial || "-"}
-                            </p>
-                            <p className="text-faint text-xs">
-                              {orden.remitente?.numeroDocumento || ""}
-                            </p>
-                          </td>
-
-                          <td className="min-w-[190px] px-4 py-4">
-                            <p className="text-main max-w-[230px] truncate font-semibold">
-                              {orden.destinatario?.razonSocial || "-"}
-                            </p>
-                            <p className="text-faint text-xs">
-                              {orden.destinatario?.numeroDocumento || ""}
                             </p>
                           </td>
 
@@ -453,6 +509,14 @@ const OrdenesServicioPage = () => {
                 </table>
               </div>
             </div>
+
+            <TablePagination
+              page={paginationOrdenes.page}
+              totalPages={paginationOrdenes.totalPages}
+              total={paginationOrdenes.total}
+              limit={paginationOrdenes.limit}
+              onPageChange={handlePageChange}
+            />
           </>
         )}
 

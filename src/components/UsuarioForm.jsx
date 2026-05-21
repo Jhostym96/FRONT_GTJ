@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useUsuarios } from "../context/UserContext";
+import { getRecordId } from "../utils/apiData";
 
 const rolesDisponibles = ["User", "Administrador", "Superadministrador", "Almacen"];
 
@@ -39,7 +40,7 @@ const UsuarioForm = ({ usuario = null, onSuccess }) => {
 
     try {
       if (usuario) {
-        await editarUsuario(usuario._id, form);
+        await editarUsuario(getRecordId(usuario), form);
       } else {
         if (!form.password || form.password.length < 6) {
           setError("La contraseña debe tener al menos 6 caracteres");

@@ -1,16 +1,18 @@
 import { useForm } from "react-hook-form";
 import { useAuth } from "../context/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import logo from "/tj.png";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { useTheme } from "../context/ThemeContext";
 import { Moon, Sun } from "lucide-react";
+import { notify } from "../utils/notify";
 
 function LoginPage() {
   const { register, handleSubmit } = useForm();
   const { signin, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { isDark, toggleTheme } = useTheme();
 
   const [showPassword, setShowPassword] = useState(false);
@@ -27,9 +29,9 @@ function LoginPage() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate("/"); // redirección si está autenticado
+      navigate(location.state?.from?.pathname || "/profile", { replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, location.state?.from?.pathname, navigate]);
 
   return (
     <div className="app-shell flex min-h-screen items-center justify-center px-4 py-8">
@@ -90,7 +92,7 @@ function LoginPage() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="btn-primary w-full py-3"
+            className="btn-primary w-full py-2"
           >
             {isSubmitting ? (
               <div className="flex items-center justify-center gap-2">
@@ -126,7 +128,7 @@ function LoginPage() {
           <button
             type="button"
             className="text-sm font-medium text-blue-500 hover:underline"
-            onClick={() => alert("Funcionalidad en desarrollo")}
+            onClick={() => notify.info("Funcionalidad en desarrollo")}
           >
             ¿Olvidaste tu contraseña?
           </button>
