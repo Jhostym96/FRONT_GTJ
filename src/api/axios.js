@@ -9,8 +9,7 @@ let refreshPromise = null;
 
 // Instancia principal de Axios
 const instance = axios.create({
-  baseURL:
-    import.meta.env.VITE_API_URL || "http://localhost:4000/api/",
+  baseURL: import.meta.env.VITE_API_URL || "/api",
   withCredentials: true,
 });
 
@@ -32,7 +31,18 @@ instance.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    if (!originalRequest || originalRequest.url?.includes("/v2/refresh")) {
+    const authEndpoints = [
+      "/v2/login",
+      "/v2/register",
+      "/v2/verify",
+      "/v2/refresh",
+      "/v2/logout",
+    ];
+    const isAuthEndpoint = authEndpoints.some((endpoint) =>
+      originalRequest?.url?.includes(endpoint)
+    );
+
+    if (!originalRequest || isAuthEndpoint) {
       return Promise.reject(error);
     }
 
