@@ -4,6 +4,7 @@ import {
   loginRequest,
   registerRequest,
   verifyTokenRequest,
+  refreshTokenRequest,
   logoutRequest,
 } from "../api/auth";
 import axios from "../api/axios";
@@ -97,7 +98,7 @@ export const AuthProvider = ({ children }) => {
       delete axios.defaults.headers.common["Authorization"];
       setUser(null);
       setIsAuthenticated(false);
-      toast("Sesión cerrada", { icon: "👋" });
+      notify.success("Sesión cerrada");
     }
   }, []);
 
@@ -124,10 +125,29 @@ export const AuthProvider = ({ children }) => {
         setUser(userData);
         setIsAuthenticated(true);
       } catch {
-        clearAccessToken();
-        delete axios.defaults.headers.common["Authorization"];
-        setUser(null);
-        setIsAuthenticated(false);
+        try {
+          clearAccessToken();
+          delete axios.defaults.headers.common["Authorization"];
+
+          const refreshRes = await refreshTokenRequest();
+          const accessToken = refreshRes.data?.accessToken;
+
+          if (!accessToken) {
+            throw new Error("No se recibió access token al refrescar la sesión");
+          }
+
+          setAccessToken(accessToken);
+          axios.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
+
+          const verifyRes = await verifyTokenRequest();
+          setUser(verifyRes.data);
+          setIsAuthenticated(true);
+        } catch {
+          clearAccessToken();
+          delete axios.defaults.headers.common["Authorization"];
+          setUser(null);
+          setIsAuthenticated(false);
+        }
       } finally {
         setLoading(false);
       }
