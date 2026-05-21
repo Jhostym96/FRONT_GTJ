@@ -5,6 +5,7 @@ import {
   obtenerUnidadRequest,
   actualizarUnidadRequest,
 } from "../api/unidades";
+import { getListFromResponse } from "../utils/apiResponse";
 
 const UnidadContext = createContext();
 
@@ -32,8 +33,9 @@ export function UnidadProvider({ children }) {
     try {
       limpiarErrores();
       const res = await obtenerUnidadesRequest();
-      setUnidades(res.data);
-      return res.data;
+      const data = getListFromResponse(res.data, ["unidades"]);
+      setUnidades(data);
+      return data;
     } catch (error) {
       const message =
         error.response?.data?.message || "Error al obtener unidades";

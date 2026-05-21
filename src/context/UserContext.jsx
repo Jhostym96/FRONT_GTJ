@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState } from "react";
 import {
   crearUsuarioRequest,
   obtenerUsuariosRequest,
@@ -8,6 +8,7 @@ import {
   activarUsuarioRequest,
   actualizarPerfilRequest, // 👈 nuevo import
 } from "../api/usuarios";
+import { getListFromResponse } from "../utils/apiResponse";
 
 const UserContext = createContext();
 
@@ -23,7 +24,7 @@ export const UserProvider = ({ children }) => {
     try {
       setLoading(true);
       const res = await obtenerUsuariosRequest();
-      setUsuarios(res.data);
+      setUsuarios(getListFromResponse(res.data, ["usuarios", "users"]));
     } catch (error) {
       console.error("Error al obtener usuarios:", error);
     } finally {
@@ -71,10 +72,6 @@ export const UserProvider = ({ children }) => {
     const res = await actualizarPerfilRequest(datos);
     return res.data;
   };
-
-  useEffect(() => {
-    cargarUsuarios();
-  }, []);
 
   return (
     <UserContext.Provider

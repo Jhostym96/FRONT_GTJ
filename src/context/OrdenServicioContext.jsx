@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState } from "react";
 
 import {
   crearOrdenServicioRequest,
@@ -9,6 +9,7 @@ import {
   obtenerDevolucionesPendientesRequest,
   actualizarEstadoDevolucionRequest,
 } from "../api/ordenServicio";
+import { getListFromResponse } from "../utils/apiResponse";
 
 const OrdenServicioContext = createContext();
 
@@ -42,9 +43,10 @@ export const OrdenServicioProvider = ({ children }) => {
       setLoading(true);
 
       const res = await obtenerOrdenesServicioRequest();
-      setOrdenes(res.data);
+      const ordenesData = getListFromResponse(res.data, ["ordenes"]);
+      setOrdenes(ordenesData);
 
-      return res.data;
+      return ordenesData;
     } catch (error) {
       setErrors([
         error.response?.data?.message || "Error al obtener órdenes de servicio",
@@ -126,8 +128,9 @@ export const OrdenServicioProvider = ({ children }) => {
     try {
       setLoading(true);
       const res = await obtenerDevolucionesPendientesRequest();
-      setDevolucionesPendientes(res.data);
-      return res.data;
+      const devolucionesData = getListFromResponse(res.data, ["ordenes"]);
+      setDevolucionesPendientes(devolucionesData);
+      return devolucionesData;
     } catch (error) {
       setErrors([
         error.response?.data?.message || "Error al obtener devoluciones",
@@ -156,10 +159,6 @@ export const OrdenServicioProvider = ({ children }) => {
   const limpiarOrdenSeleccionada = () => {
     setOrdenSeleccionada(null);
   };
-
-  useEffect(() => {
-    cargarOrdenesServicio();
-  }, []);
 
   return (
     <OrdenServicioContext.Provider

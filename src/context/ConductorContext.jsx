@@ -6,6 +6,7 @@ import {
   createConductorRequest,
   updateConductorRequest,
 } from "../api/conductores";
+import { getListFromResponse } from "../utils/apiResponse";
 
 const ConductorContext = createContext();
 
@@ -32,8 +33,9 @@ export function ConductorProvider({ children }) {
     try {
       limpiarErrores();
       const res = await getConductoresRequest();
-      setConductores(res.data);
-      return res.data;
+      const data = getListFromResponse(res.data, ["conductores"]);
+      setConductores(data);
+      return data;
     } catch (error) {
       setErrors([
         error.response?.data?.message || "Error al obtener conductores",

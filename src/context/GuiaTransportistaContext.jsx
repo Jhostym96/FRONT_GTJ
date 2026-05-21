@@ -10,6 +10,7 @@ import {
   obtenerUrlTicketGuiaTransportistaRequest,
   obtenerPdfOficialGuiaTransportistaRequest,
 } from "../api/guiaTransportista";
+import { getListFromResponse } from "../utils/apiResponse";
 
 const GuiaTransportistaContext = createContext();
 
@@ -56,7 +57,9 @@ export const GuiaTransportistaProvider = ({ children }) => {
     try {
       setLoadingGuia(true);
       const res = await obtenerGuiasTransportistaRequest();
-      setGuiasTransportista(res.data);
+      setGuiasTransportista(
+        getListFromResponse(res.data, ["guiasTransportista", "guias"])
+      );
     } catch (error) {
       setErrorsGuia([
         error.response?.data?.message ||

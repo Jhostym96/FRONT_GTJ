@@ -8,6 +8,7 @@ import {
   getOrdenesDisponiblesParaViajeRequest,
   getProgramacionesDisponiblesParaGuiaRequest,
 } from "../api/programacionViaje";
+import { getListFromResponse } from "../utils/apiResponse";
 
 const ProgramacionViajeContext = createContext();
 
@@ -29,21 +30,27 @@ export function ProgramacionViajeProvider({ children }) {
   const getProgramacionesViaje = async () => {
     try {
       const res = await getProgramacionesViajeRequest();
-      setProgramaciones(res.data);
+      const data = getListFromResponse(res.data, ["programaciones"]);
+      setProgramaciones(data);
+      return data;
     } catch (error) {
       setErrors([error.response?.data?.message || "Error al obtener programaciones"]);
+      return [];
     }
   };
 
   const getProgramacionesDisponiblesParaGuia = async () => {
     try {
       const res = await getProgramacionesDisponiblesParaGuiaRequest();
-      setProgramaciones(res.data);
+      const data = getListFromResponse(res.data, ["programaciones"]);
+      setProgramaciones(data);
+      return data;
     } catch (error) {
       setErrors([
         error.response?.data?.message ||
           "Error al obtener programaciones disponibles para guía",
       ]);
+      return [];
     }
   };
 
@@ -102,12 +109,15 @@ export function ProgramacionViajeProvider({ children }) {
   const getOrdenesDisponibles = async () => {
     try {
       const res = await getOrdenesDisponiblesParaViajeRequest();
-      setOrdenesDisponibles(res.data);
+      const data = getListFromResponse(res.data, ["ordenes"]);
+      setOrdenesDisponibles(data);
+      return data;
     } catch (error) {
       setErrors([
         error.response?.data?.message ||
           "Error al obtener órdenes disponibles",
       ]);
+      return [];
     }
   };
 

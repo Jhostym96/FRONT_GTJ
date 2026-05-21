@@ -173,7 +173,11 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
   }, [guia, mode, isOpen, isEdit, isView, initialForm]);
 
   const programacionSeleccionada = useMemo(() => {
-    return programaciones?.find(
+    const listaProgramaciones = Array.isArray(programaciones)
+      ? programaciones
+      : [];
+
+    return listaProgramaciones.find(
       (p) => String(p.id) === String(form.programacionViaje)
     );
   }, [programaciones, form.programacionViaje]);
