@@ -2,7 +2,13 @@ import { useState, useEffect } from "react";
 import { useUsuarios } from "../context/UserContext";
 import { getRecordId } from "../utils/apiData";
 
-const rolesDisponibles = ["User", "Administrador", "Superadministrador", "Almacen"];
+const rolesDisponibles = [
+  "User",
+  "Administrador",
+  "Superadministrador",
+  "Coordinador",
+  "Almacen",
+];
 
 const UsuarioForm = ({ usuario = null, onSuccess }) => {
   const { crearUsuario, editarUsuario } = useUsuarios();

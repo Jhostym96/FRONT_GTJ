@@ -5,6 +5,7 @@ import {
   obtenerUsuariosRequest,
   actualizarUsuarioRequest,
   cambiarRolRequest,
+  actualizarPermisosUsuarioRequest,
   desactivarUsuarioRequest,
   activarUsuarioRequest,
   actualizarPerfilRequest, // 👈 nuevo import
@@ -78,6 +79,12 @@ export const UserProvider = ({ children }) => {
     return res;
   };
 
+  const actualizarPermisosUsuario = async (id, permisos) => {
+    const res = await actualizarPermisosUsuarioRequest(id, permisos);
+    await cargarUsuarios();
+    return res;
+  };
+
   // Activar usuario
   const activarUsuario = async (id) => {
     const res = await activarUsuarioRequest(id);
@@ -107,6 +114,7 @@ export const UserProvider = ({ children }) => {
         crearUsuario,
         editarUsuario,
         cambiarRol,
+        actualizarPermisosUsuario,
         activarUsuario,
         desactivarUsuario,
         cargarUsuarios,

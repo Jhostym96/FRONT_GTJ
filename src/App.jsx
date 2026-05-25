@@ -12,6 +12,10 @@ import { ProgramacionViajeProvider } from "./context/ProgramacionViajeContext";
 import { GuiaTransportistaProvider } from "./context/GuiaTransportistaContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { ConfirmProvider } from "./context/ConfirmContext";
+import { AuditoriaProvider } from "./context/AuditoriaContext";
+import { AlmacenProvider } from "./context/AlmacenContext";
+import { MaquinariaProvider } from "./context/MaquinariaContext";
+import { MantenimientoProvider } from "./context/MantenimientoContext";
 
 // 🔹 Componentes
 import Sidebar from "./components/Sidebar";
@@ -24,8 +28,9 @@ import OrdenServicioFormPage from "./components/modals/OrdenServicioModal";
 
 // 🔹 Páginas
 import LoginPage from "./pages/LoginPage";
+import DashboardPage from "./pages/DashboardPage";
+import AuditoriaPage from "./pages/AuditoriaPage";
 import ProfileTask from "./pages/ProfilePage";
-import GestionUsuarios from "./pages/GestionUsuarios";
 import UsuariosPage from "./pages/UsuariosPage";
 import UnauthorizedPage from "./pages/UnauthorizedPage";
 import OrdenesServicioPage from "./pages/OrdenesServicioPage";
@@ -35,6 +40,9 @@ import UnidadesPage from "./pages/UnidadesPage";
 import ConductoresPage from "./pages/ConductoresPage";
 import GuiaTransportistaPage from "./pages/GuiaTransportistaPage";
 import DevolucionesPage from "./pages/DevolucionesPage";
+import AlmacenPage from "./pages/AlmacenPage";
+import MaquinariasPage from "./pages/MaquinariasPage";
+import MantenimientoPage from "./pages/MantenimientoPage";
 
 
 
@@ -61,18 +69,23 @@ function Layout() {
               }`}
           >
             <Routes>
-              <Route index element={<Navigate to="/profile" replace />} />
+              <Route index element={<Navigate to="/dashboard" replace />} />
+              <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/profile" element={<ProfileTask />} />
-              <Route path="/admin/usuarios" element={<GestionUsuarios />} />
+              <Route path="/admin/usuarios" element={<Navigate to="/usuarios" replace />} />
+              <Route path="/auditoria" element={<AuditoriaPage />} />
               <Route path="/usuarios" element={<UsuariosPage />} />
               <Route path="/ordenes-servicio" element={<OrdenesServicioPage />} />
               <Route path="/ordenes-servicio/nueva" element={<OrdenServicioFormPage />} />
               <Route path="/clientes" element={<ClientesPage />} />
               <Route path="/programacion-viaje" element={<ProgramacionViajePage />} />
               <Route path="/unidades" element={<UnidadesPage />} />
+              <Route path="/maquinarias" element={<MaquinariasPage />} />
               <Route path="/conductores" element={<ConductoresPage />} />
               <Route path="/guia-transportista" element={<GuiaTransportistaPage />} />
               <Route path="/devoluciones" element={<DevolucionesPage />} />
+              <Route path="/almacen" element={<AlmacenPage />} />
+              <Route path="/mantenimiento" element={<MantenimientoPage />} />
 
             </Routes>
           </main>
@@ -94,29 +107,37 @@ function App() {
           <OrdenServicioProvider>
             <ClienteProvider>
               <UnidadProvider>
-                <ConductorProvider>
-                  <ProgramacionViajeProvider>
-                    <ConfirmProvider>
-                      <Router>
-                        <RouteChangeLoader />
-                        <GuiaTransportistaProvider>
-                          <Routes>
-                            {/* Rutas públicas */}
-                            <Route
-                              path="/unauthorized"
-                              element={<UnauthorizedPage />}
-                            />
-                            <Route path="/login" element={<LoginPage />} />
-                            {/* Rutas protegidas */}
-                            <Route element={<ProtectedRoute />}>
-                              <Route path="/*" element={<Layout />} />
-                            </Route>
-                          </Routes>
-                        </GuiaTransportistaProvider>
-                      </Router>
-                    </ConfirmProvider>
-                  </ProgramacionViajeProvider>
-                </ConductorProvider>
+                <MaquinariaProvider>
+                  <MantenimientoProvider>
+                    <ConductorProvider>
+                      <ProgramacionViajeProvider>
+                        <AlmacenProvider>
+                          <AuditoriaProvider>
+                            <ConfirmProvider>
+                              <Router>
+                                <RouteChangeLoader />
+                                <GuiaTransportistaProvider>
+                                  <Routes>
+                                    {/* Rutas públicas */}
+                                    <Route
+                                      path="/unauthorized"
+                                      element={<UnauthorizedPage />}
+                                    />
+                                    <Route path="/login" element={<LoginPage />} />
+                                    {/* Rutas protegidas */}
+                                    <Route element={<ProtectedRoute />}>
+                                      <Route path="/*" element={<Layout />} />
+                                    </Route>
+                                  </Routes>
+                                </GuiaTransportistaProvider>
+                              </Router>
+                            </ConfirmProvider>
+                          </AuditoriaProvider>
+                        </AlmacenProvider>
+                      </ProgramacionViajeProvider>
+                    </ConductorProvider>
+                  </MantenimientoProvider>
+                </MaquinariaProvider>
               </UnidadProvider>
             </ClienteProvider>
           </OrdenServicioProvider>

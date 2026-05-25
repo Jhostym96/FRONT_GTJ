@@ -4,6 +4,12 @@ import { useUsuarios } from "../context/UserContext";
 import UsuarioForm from "../components/UsuarioForm";
 import TablePagination from "../components/TablePagination";
 import { getRecordId } from "../utils/apiData";
+import {
+  allMenus,
+  getDefaultUserPermissions,
+  getEffectiveUserPermissions,
+} from "../utils/permissions";
+import { notify } from "../utils/notify";
 
 // 👇 Definimos los roles igual que en el modelo Employee
 const rolesDisponibles = [
@@ -22,11 +28,15 @@ const UsuariosPage = () => {
     desactivarUsuario,
     activarUsuario,
     cambiarRol,
+    actualizarPermisosUsuario,
     cargarUsuarios,
   } = useUsuarios();
 
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [mostrarPermisos, setMostrarPermisos] = useState(false);
   const [usuarioSeleccionado, setUsuarioSeleccionado] = useState(null);
+  const [permisosForm, setPermisosForm] = useState({ routes: {} });
+  const [guardandoPermisos, setGuardandoPermisos] = useState(false);
 
   useEffect(() => {
     cargarUsuarios({ page: 1, limit: 10 });
@@ -63,6 +73,69 @@ const UsuariosPage = () => {
   const abrirFormulario = (usuario = null) => {
     setUsuarioSeleccionado(usuario);
     setMostrarFormulario(true);
+  };
+
+  const abrirPermisos = (usuario) => {
+    setUsuarioSeleccionado(usuario);
+    setPermisosForm(getEffectiveUserPermissions(usuario));
+    setMostrarPermisos(true);
+  };
+
+  const cerrarPermisos = () => {
+    setMostrarPermisos(false);
+    setUsuarioSeleccionado(null);
+    setPermisosForm({ routes: {} });
+  };
+
+  const togglePermiso = (path, action) => {
+    setPermisosForm((prev) => {
+      const current = prev.routes?.[path] || {};
+      const nextValue = !current[action];
+      const nextPerms = {
+        ...current,
+        [action]: nextValue,
+      };
+
+      if (action !== "view" && nextValue) {
+        nextPerms.view = true;
+      }
+
+      if (action === "view" && !nextValue) {
+        nextPerms.create = false;
+        nextPerms.edit = false;
+        nextPerms.delete = false;
+      }
+
+      return {
+        routes: {
+          ...(prev.routes || {}),
+          [path]: nextPerms,
+        },
+      };
+    });
+  };
+
+  const resetPermisosPorRol = () => {
+    setPermisosForm(getDefaultUserPermissions(usuarioSeleccionado?.role));
+  };
+
+  const guardarPermisos = async () => {
+    const usuarioId = getRecordId(usuarioSeleccionado);
+    if (!usuarioId) return;
+
+    try {
+      setGuardandoPermisos(true);
+      await actualizarPermisosUsuario(usuarioId, permisosForm);
+      notify.success("Permisos actualizados correctamente");
+      cerrarPermisos();
+      await recargarUsuarios();
+    } catch (error) {
+      notify.error(
+        error.response?.data?.message || "No se pudieron actualizar permisos"
+      );
+    } finally {
+      setGuardandoPermisos(false);
+    }
   };
 
   const cerrarFormulario = () => {
@@ -119,15 +192,16 @@ const UsuariosPage = () => {
             </button>
           </div>
         ) : (
-          <div className="data-table-wrap !block">
+          <div className="data-table-wrap !block w-full">
             <div className="table-scroll">
-              <table className="data-table min-w-[900px] text-left text-sm">
+              <table className="data-table w-full min-w-[1040px] text-left text-sm">
                 <thead>
                   <tr>
                     <th className="px-4 py-4">DNI</th>
                     <th className="px-4 py-4">Nombre</th>
                     <th className="px-4 py-4">Email</th>
                     <th className="px-4 py-4">Rol</th>
+                    <th className="px-4 py-4">Permisos</th>
                     <th className="px-4 py-4">Activo</th>
                     <th className="px-4 py-4 text-right">Acciones</th>
                   </tr>
@@ -161,6 +235,15 @@ const UsuariosPage = () => {
                               </option>
                             ))}
                           </select>
+                        </td>
+                        <td className="px-4 py-4">
+                          <button
+                            type="button"
+                            onClick={() => abrirPermisos(usuario)}
+                            className="btn-secondary px-3 py-1.5 text-xs"
+                          >
+                            Configurar
+                          </button>
                         </td>
                         <td className="px-4 py-4">
                           <span
@@ -236,6 +319,98 @@ const UsuariosPage = () => {
                   recargarUsuarios();
                 }}
               />
+            </div>
+          </div>
+        )}
+
+        {mostrarPermisos && (
+          <div className="modal-backdrop">
+            <div className="modal-panel max-w-5xl">
+              <div className="mb-5 flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-bold">Permisos de usuario</h2>
+                  <p className="text-muted text-sm">
+                    {usuarioSeleccionado?.name} - {usuarioSeleccionado?.role}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={cerrarPermisos}
+                  className="text-muted text-2xl hover:text-blue-500"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="mb-4 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={resetPermisosPorRol}
+                  className="btn-secondary px-3 py-2"
+                >
+                  Restablecer por rol
+                </button>
+              </div>
+
+              <div className="table-scroll max-h-[60vh]">
+                <table className="data-table w-full min-w-[820px] text-sm">
+                  <thead>
+                    <tr>
+                      <th className="px-4 py-3 text-left">Módulo</th>
+                      <th className="px-4 py-3 text-center">Ver</th>
+                      <th className="px-4 py-3 text-center">Crear</th>
+                      <th className="px-4 py-3 text-center">Editar</th>
+                      <th className="px-4 py-3 text-center">Eliminar</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allMenus.flatMap((menu) =>
+                      menu.children.map((child) => {
+                        const permisos = permisosForm.routes?.[child.path] || {};
+
+                        return (
+                          <tr key={child.path}>
+                            <td className="px-4 py-3">
+                              <p className="text-main font-semibold">
+                                {child.label}
+                              </p>
+                              <p className="text-faint text-xs">{menu.label}</p>
+                            </td>
+                            {["view", "create", "edit", "delete"].map((action) => (
+                              <td key={action} className="px-4 py-3 text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={Boolean(permisos[action])}
+                                  onChange={() => togglePermiso(child.path, action)}
+                                  className="h-4 w-4"
+                                />
+                              </td>
+                            ))}
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="mt-5 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={cerrarPermisos}
+                  className="btn-secondary px-4 py-2"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={guardarPermisos}
+                  disabled={guardandoPermisos}
+                  className="btn-primary px-4 py-2"
+                >
+                  {guardandoPermisos ? "Guardando..." : "Guardar permisos"}
+                </button>
+              </div>
             </div>
           </div>
         )}

@@ -6,6 +6,12 @@ import { useConfirm } from "../context/ConfirmContext";
 import UnidadModal from "../components/modals/UnidadModal";
 import TablePagination from "../components/TablePagination";
 import { getRecordId } from "../utils/apiData";
+import { formatDateOnly } from "../utils/date";
+
+const formatNumber = (value) => {
+  const number = Number(value || 0);
+  return Number.isInteger(number) ? String(number) : number.toFixed(2);
+};
 
 function UnidadesPage() {
   const {
@@ -141,6 +147,25 @@ function UnidadesPage() {
         }`}
       >
         {tipo || "UNIDAD"}
+      </span>
+    );
+  };
+
+  const EstadoOperativoBadge = ({ estado }) => {
+    const styles = {
+      OPERATIVA: "border-green-500/30 bg-green-500/10 text-green-300",
+      EN_MANTENIMIENTO: "border-amber-500/30 bg-amber-500/10 text-amber-300",
+      INACTIVA: "border-red-500/30 bg-red-500/10 text-red-300",
+      BAJA: "border-neutral-500/30 bg-neutral-500/10 text-neutral-300",
+    };
+
+    return (
+      <span
+        className={`inline-flex items-center justify-center rounded-full border px-3 py-1 text-[11px] font-bold tracking-wide ${
+          styles[estado] || styles.INACTIVA
+        }`}
+      >
+        {estado || "OPERATIVA"}
       </span>
     );
   };
@@ -285,7 +310,32 @@ function UnidadesPage() {
                       <p className="text-faint text-xs">Modelo</p>
 
                       <p className="text-main font-semibold">
-                        {unidad.modelo || "-"}
+                        {[unidad.modelo, unidad.anio].filter(Boolean).join(" / ") || "-"}
+                      </p>
+                    </div>
+
+                    <div className="info-tile">
+                      <p className="text-faint text-xs">Estado operativo</p>
+                      <div className="mt-1">
+                        <EstadoOperativoBadge estado={unidad.estadoOperativo} />
+                      </div>
+                    </div>
+
+                    <div className="info-tile">
+                      <p className="text-faint text-xs">Km / Horómetro</p>
+                      <p className="text-main font-semibold">
+                        {formatNumber(unidad.kilometrajeActual)} km / {formatNumber(unidad.horometroActual)} h
+                      </p>
+                    </div>
+
+                    <div className="info-tile">
+                      <p className="text-faint text-xs">Próximo mantenimiento</p>
+                      <p className="text-main font-semibold">
+                        {unidad.proximoMantenimientoFecha
+                          ? formatDateOnly(unidad.proximoMantenimientoFecha)
+                          : unidad.proximoMantenimientoKm
+                            ? `${formatNumber(unidad.proximoMantenimientoKm)} km`
+                            : "-"}
                       </p>
                     </div>
 
@@ -301,12 +351,12 @@ function UnidadesPage() {
                       </p>
                     </div>
 
-                    {unidad.tuc && (
+                    {unidad.numeroTUCE_CHV && (
                       <div className="info-tile">
                         <p className="text-faint text-xs">TUCE / CHV</p>
 
                         <p className="text-main font-semibold">
-                          {unidad.tuc}
+                          {unidad.numeroTUCE_CHV}
                         </p>
                       </div>
                     )}
@@ -334,16 +384,19 @@ function UnidadesPage() {
             {/* Tabla en desktop */}
             <div className="data-table-wrap">
               <div className="table-scroll">
-                <table className="data-table w-full min-w-[1000px] text-sm">
+                <table className="data-table w-full min-w-[1320px] text-sm">
                   <thead>
                     <tr>
                       <th className="px-4 py-4 text-left">Placa</th>
                       <th className="px-4 py-4 text-left">Tipo</th>
                       <th className="px-4 py-4 text-left">Marca</th>
                       <th className="px-4 py-4 text-left">Modelo</th>
+                      <th className="px-4 py-4 text-left">Estado operativo</th>
+                      <th className="px-4 py-4 text-left">Km / Horómetro</th>
+                      <th className="px-4 py-4 text-left">Próximo mant.</th>
+                      <th className="px-4 py-4 text-left">Ubicación</th>
                       <th className="px-4 py-4 text-left">Permisos</th>
                       <th className="px-4 py-4 text-left">TUCE / CHV</th>
-                      <th className="px-4 py-4 text-left">Observaciones</th>
                       <th className="px-4 py-4 text-center">Estado</th>
                       <th className="px-4 py-4 text-right">Acciones</th>
                     </tr>
@@ -367,7 +420,27 @@ function UnidadesPage() {
                         </td>
 
                         <td className="text-muted whitespace-nowrap px-4 py-4">
-                          {unidad.modelo || "-"}
+                          {[unidad.modelo, unidad.anio].filter(Boolean).join(" / ") || "-"}
+                        </td>
+
+                        <td className="whitespace-nowrap px-4 py-4">
+                          <EstadoOperativoBadge estado={unidad.estadoOperativo} />
+                        </td>
+
+                        <td className="text-muted whitespace-nowrap px-4 py-4">
+                          {formatNumber(unidad.kilometrajeActual)} km / {formatNumber(unidad.horometroActual)} h
+                        </td>
+
+                        <td className="text-muted whitespace-nowrap px-4 py-4">
+                          {unidad.proximoMantenimientoFecha
+                            ? formatDateOnly(unidad.proximoMantenimientoFecha)
+                            : unidad.proximoMantenimientoKm
+                              ? `${formatNumber(unidad.proximoMantenimientoKm)} km`
+                              : "-"}
+                        </td>
+
+                        <td className="text-muted whitespace-nowrap px-4 py-4">
+                          {unidad.ubicacionOperativa || "-"}
                         </td>
 
                         <td className="text-muted whitespace-nowrap px-4 py-4">
@@ -380,13 +453,7 @@ function UnidadesPage() {
                         </td>
 
                         <td className="text-muted whitespace-nowrap px-4 py-4">
-                          {unidad.tuc || "-"}
-                        </td>
-
-                        <td className="text-muted min-w-[260px] px-4 py-4">
-                          <p className="max-w-[320px] truncate">
-                            {unidad.observaciones || "-"}
-                          </p>
+                          {unidad.numeroTUCE_CHV || "-"}
                         </td>
 
                         <td className="whitespace-nowrap px-4 py-4 text-center">

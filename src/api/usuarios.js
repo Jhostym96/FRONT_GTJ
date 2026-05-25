@@ -16,6 +16,9 @@ export const actualizarUsuarioRequest = (id, datos) =>
 export const cambiarRolRequest = (id, nuevoRol) =>
   axios.patch(`/usuarios/${id}/rol`, { nuevoRol });
 
+export const actualizarPermisosUsuarioRequest = (id, permisos) =>
+  axios.patch(`/usuarios/${id}/permisos`, { permisos });
+
 // Desactivar usuario
 export const desactivarUsuarioRequest = (id) =>
   axios.patch(`/usuarios/${id}/desactivar`);

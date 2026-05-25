@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { permissions } from "../utils/permissions";
+import { getAllowedRoutes } from "../utils/permissions";
 import { ChevronDown } from "lucide-react";
 import { FaBars, FaTimes, FaSignInAlt } from "react-icons/fa";
 
@@ -11,8 +11,7 @@ function Sidebar({ collapsed, setCollapsed }) {
   const [activeDropdown, setActiveDropdown] = useState(null);
   const location = useLocation();
 
-  const role = user?.role;
-  const rolePermissions = permissions[role]?.routes || [];
+  const rolePermissions = getAllowedRoutes(user);
 
   const toggleDropdown = (menuId) => {
     setActiveDropdown((prev) => (prev === menuId ? null : menuId));

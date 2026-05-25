@@ -6,6 +6,7 @@ import { Moon, Sun } from "lucide-react";
 function Navbar({ collapsed }) {
   const { user, logout } = useAuth();
   const { isDark, toggleTheme } = useTheme();
+  const displayName = user?.name || user?.email || "Invitado";
 
   return (
     <header
@@ -29,11 +30,16 @@ function Navbar({ collapsed }) {
           {isDark ? <Sun size={17} /> : <Moon size={17} />}
         </button>
 
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           <FaUserCircle className="text-main text-xl" />
-          <span className="text-muted text-sm hidden sm:block">
-            {user?.role || "Invitado"}
-          </span>
+          <div className="hidden min-w-0 flex-col items-center sm:flex">
+            <span className="text-main max-w-[180px] truncate text-center text-sm font-semibold leading-4 lg:max-w-[260px]">
+              {displayName}
+            </span>
+            <span className="text-faint max-w-[180px] truncate text-center text-[11px] leading-4 lg:max-w-[260px]">
+              {user?.role || "Invitado"}
+            </span>
+          </div>
         </div>
 
         <button

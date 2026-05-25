@@ -3,6 +3,7 @@ import { notify } from "../utils/notify";
 import { Ban, Eye, LoaderCircle, Pencil } from "lucide-react";
 import { useOrdenesServicio } from "../context/OrdenServicioContext";
 import { useConfirm } from "../context/ConfirmContext";
+import { formatDateOnly } from "../utils/date";
 
 import OrdenServicioModal from "../components/modals/OrdenServicioModal";
 import TablePagination from "../components/TablePagination";
@@ -38,13 +39,7 @@ const OrdenesServicioPage = () => {
   }, [cargarOrdenesServicio]);
 
   const formatearFecha = (fecha) => {
-    if (!fecha) return "-";
-
-    return new Date(fecha).toLocaleDateString("es-PE", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
+    return formatDateOnly(fecha);
   };
 
   const getEstadoStyle = (estado) => {
