@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { notify } from "../utils/notify";
-import { Ban, Eye, FileText, LoaderCircle, Pencil, SearchCheck } from "lucide-react";
+import { Ban, Eye, FileText, LoaderCircle, Pencil, Send, SearchCheck } from "lucide-react";
 import { useGuiaTransportista } from "../context/GuiaTransportistaContext";
 import { useConfirm } from "../context/ConfirmContext";
 
@@ -13,6 +13,7 @@ const GuiaTransportistaPage = () => {
     loadingGuia,
     paginationGuias,
     obtenerGuiasTransportista,
+    enviarGuiaTransportistaNubefact,
     consultarGuiaTransportista,
     anularGuiaTransportista,
     abrirPdfOficialGuiaTransportista,
@@ -142,6 +143,47 @@ const GuiaTransportistaPage = () => {
     }
   };
 
+  const handleEnviarNubefact = async (guia) => {
+    const id = getGuiaId(guia);
+
+    if (!id) {
+      notify.error("No se encontró el ID de la guía");
+      return;
+    }
+
+    const confirmar = await confirm({
+      title: "Enviar a Nubefact",
+      message:
+        "Se enviará esta guía a Nubefact. Después del envío ya no podrás editarla si es aceptada/generada.",
+      confirmText: "Enviar",
+      variant: "primary",
+    });
+
+    if (!confirmar) return;
+
+    try {
+      setConsultandoSunat((prev) => ({ ...prev, [id]: true }));
+
+      const res = await enviarGuiaTransportistaNubefact(id);
+
+      if (res?.guia?.estado === "ERROR") {
+        notify.error("Nubefact devolvió errores en la guía");
+      } else {
+        notify.success("Guía enviada a Nubefact correctamente");
+      }
+
+      await recargarGuias();
+    } catch (error) {
+      notify.error(
+        error.response?.data?.message ||
+          error.response?.data?.errors ||
+          "Error al enviar la guía a Nubefact"
+      );
+    } finally {
+      setConsultandoSunat((prev) => ({ ...prev, [id]: false }));
+    }
+  };
+
   const handleTicket = async (guia) => {
     const id = getGuiaId(guia);
 
@@ -175,7 +217,8 @@ const GuiaTransportistaPage = () => {
 
     const confirmar = await confirm({
       title: "Anular guía",
-      message: "¿Seguro que deseas anular esta guía de transportista?",
+      message:
+        "Esta anulación es interna del sistema. No se enviará a Nubefact y la programación quedará disponible para generar otra guía.",
       confirmText: "Anular",
       variant: "danger",
     });
@@ -279,7 +322,7 @@ const GuiaTransportistaPage = () => {
         <button
           type="button"
           onClick={() => abrirEditar(guia)}
-          disabled={["ANULADA", "ENVIADA", "ACEPTADA"].includes(guia.estado)}
+          disabled={["ANULADA", "ENVIADA", "GENERADA", "ACEPTADA"].includes(guia.estado)}
           className="btn-primary btn-icon"
           title="Editar guía"
           aria-label="Editar guía"
@@ -287,9 +330,24 @@ const GuiaTransportistaPage = () => {
           <Pencil />
         </button>
 
-        {["ENVIADA", "GENERADA", "PENDIENTE", "ERROR"].includes(
-          guia.estado
-        ) && (
+        {["PENDIENTE", "ERROR"].includes(guia.estado) && (
+          <button
+            type="button"
+            onClick={() => handleEnviarNubefact(guia)}
+            disabled={consultandoSunat[id] || guia.estado === "ANULADA"}
+            className="btn-success btn-icon"
+            title="Enviar a Nubefact"
+            aria-label="Enviar a Nubefact"
+          >
+            {consultandoSunat[id] ? (
+              <LoaderCircle className="animate-spin" />
+            ) : (
+              <Send />
+            )}
+          </button>
+        )}
+
+        {["ENVIADA", "GENERADA"].includes(guia.estado) && (
             <button
               type="button"
               onClick={() => handleConsultarSunat(guia)}
@@ -321,7 +379,7 @@ const GuiaTransportistaPage = () => {
           )}
         </button>
 
-        {guia.estado !== "ANULADA" && guia.estado !== "ACEPTADA" && (
+        {guia.estado !== "ANULADA" && (
           <button
             type="button"
             onClick={() => handleAnular(guia)}

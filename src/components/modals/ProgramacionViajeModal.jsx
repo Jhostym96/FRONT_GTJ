@@ -33,6 +33,7 @@ function ProgramacionViajeModal({
   const {
     crearProgramacionViaje,
     createProgramacionViaje,
+    actualizarProgramacionViaje,
     obtenerProgramacionesViaje,
     getProgramacionesViaje,
   } = useProgramacionViaje();
@@ -62,6 +63,9 @@ function ProgramacionViajeModal({
   const [error, setError] = useState("");
 
   const isView = mode === "view";
+  const isEdit = mode === "edit";
+  const isReadOnly = isView;
+  const requiresRouteEditReason = isEdit && data?.estado === "EN_RUTA";
 
   const normalizar = (valor) =>
     String(valor || "")
@@ -115,7 +119,7 @@ function ProgramacionViajeModal({
 
     setError("");
 
-    if (isView && data) {
+    if ((isView || isEdit) && data) {
       setForm({
         ordenServicioId:
           data.ordenServicioId ||
@@ -143,11 +147,12 @@ function ProgramacionViajeModal({
         fechaInicioTraslado: formatearFechaInput(data.fechaInicioTraslado),
 
         observaciones: data.observaciones || "",
+        motivoEdicionEnRuta: "",
       });
     } else {
       setForm(createInitialForm());
     }
-  }, [modalOpen, isView, data]);
+  }, [modalOpen, isView, isEdit, data]);
 
   if (!modalOpen) return null;
 
@@ -247,7 +252,7 @@ function ProgramacionViajeModal({
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (isView) return;
+    if (isReadOnly) return;
 
     try {
       setError("");
@@ -269,6 +274,14 @@ function ProgramacionViajeModal({
 
       if (!form.fechaInicioTraslado) {
         setError("Debes seleccionar la fecha de inicio de traslado");
+        return;
+      }
+
+      if (
+        requiresRouteEditReason &&
+        String(form.motivoEdicionEnRuta || "").trim().length < 8
+      ) {
+        setError("Debes ingresar un motivo de edición en ruta de al menos 8 caracteres");
         return;
       }
 
@@ -346,9 +359,12 @@ function ProgramacionViajeModal({
         conductorId: Number(form.conductorId),
         fechaInicioTraslado: form.fechaInicioTraslado,
         observaciones: form.observaciones,
+        motivoEdicionEnRuta: form.motivoEdicionEnRuta || "",
       };
 
-      if (crearProgramacionViaje) {
+      if (isEdit && data) {
+        await actualizarProgramacionViaje(getId(data), dataEnviar);
+      } else if (crearProgramacionViaje) {
         await crearProgramacionViaje(dataEnviar);
       } else {
         await createProgramacionViaje(dataEnviar);
@@ -365,7 +381,7 @@ function ProgramacionViajeModal({
       setError(
         error?.response?.data?.message ||
           error?.message ||
-          "Error al crear la programación de viaje"
+          "Error al guardar la programación de viaje"
       );
     }
   };
@@ -378,6 +394,8 @@ function ProgramacionViajeModal({
             <h2 className="text-xl font-bold">
               {isView
                 ? "Detalle de programación"
+                : isEdit
+                ? "Editar programación de viaje"
                 : "Nueva programación de viaje"}
             </h2>
 
@@ -401,7 +419,7 @@ function ProgramacionViajeModal({
           </div>
         )}
 
-        {isView && data && (
+        {(isView || isEdit) && data && (
           <div className="mb-4 grid gap-3 rounded-lg border border-[var(--app-border)] p-3 text-sm md:grid-cols-2">
             <div>
               <p className="text-faint text-xs">Llegada cliente</p>
@@ -445,13 +463,13 @@ function ProgramacionViajeModal({
               name="ordenServicioId"
               value={form.ordenServicioId}
               onChange={handleChange}
-              disabled={isView}
+              disabled={isReadOnly || isEdit}
               className="input p-3"
               required
             >
               <option value="">Seleccionar orden de servicio</option>
 
-              {isView && data?.ordenServicio && (
+              {(isView || isEdit) && data?.ordenServicio && (
                 <option value={form.ordenServicioId}>
                   {data.ordenServicio?.numeroOrden || "Orden seleccionada"} -{" "}
                   {obtenerRazonSocialCliente(data.ordenServicio)} -{" "}
@@ -460,7 +478,7 @@ function ProgramacionViajeModal({
                 </option>
               )}
 
-              {!isView &&
+              {!isView && !isEdit &&
                 ordenesDisponibles.map((orden) => (
                   <option key={getId(orden)} value={getId(orden)}>
                     {orden.numeroOrden || "SIN N°"} -{" "}
@@ -480,7 +498,7 @@ function ProgramacionViajeModal({
               name="vehiculoPrincipalId"
               value={form.vehiculoPrincipalId}
               onChange={handleChange}
-              disabled={isView}
+              disabled={isReadOnly}
               className="input p-3"
               required
             >
@@ -511,7 +529,7 @@ function ProgramacionViajeModal({
               name="vehiculoSecundarioId"
               value={form.vehiculoSecundarioId}
               onChange={handleChange}
-              disabled={isView}
+              disabled={isReadOnly}
               className="input p-3"
             >
               <option value="">Seleccionar CARRETA</option>
@@ -541,7 +559,7 @@ function ProgramacionViajeModal({
               name="conductorId"
               value={form.conductorId}
               onChange={handleChange}
-              disabled={isView}
+              disabled={isReadOnly}
               className="input p-3"
               required
             >
@@ -572,7 +590,7 @@ function ProgramacionViajeModal({
               name="fechaInicioTraslado"
               value={form.fechaInicioTraslado}
               onChange={handleChange}
-              disabled={isView}
+              disabled={isReadOnly}
               className="input p-3"
               required
             />
@@ -587,12 +605,34 @@ function ProgramacionViajeModal({
               name="observaciones"
               value={form.observaciones}
               onChange={handleChange}
-              disabled={isView}
+              disabled={isReadOnly}
               placeholder="Indique una observación para la programación"
               className="input resize-none p-3"
               rows="3"
             />
           </div>
+
+          {requiresRouteEditReason && (
+            <div className="md:col-span-2">
+              <label className="text-muted mb-1 block text-sm">
+                Motivo de edición en ruta
+              </label>
+
+              <textarea
+                name="motivoEdicionEnRuta"
+                value={form.motivoEdicionEnRuta || ""}
+                onChange={handleChange}
+                placeholder="Ejemplo: cambio de tracto por falla mecánica"
+                className="input resize-none p-3"
+                rows="2"
+                required
+              />
+
+              <p className="text-faint mt-1 text-xs">
+                Este motivo quedará registrado en el historial de la programación.
+              </p>
+            </div>
+          )}
 
           <div className="mt-4 flex justify-end gap-3 md:col-span-2">
             <button
@@ -608,7 +648,7 @@ function ProgramacionViajeModal({
                 type="submit"
                 className="btn-primary px-3 py-1.5"
               >
-                Guardar programación
+                {isEdit ? "Guardar cambios" : "Guardar programación"}
               </button>
             )}
           </div>

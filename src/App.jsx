@@ -13,9 +13,7 @@ import { GuiaTransportistaProvider } from "./context/GuiaTransportistaContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { ConfirmProvider } from "./context/ConfirmContext";
 import { AuditoriaProvider } from "./context/AuditoriaContext";
-import { AlmacenProvider } from "./context/AlmacenContext";
-import { MaquinariaProvider } from "./context/MaquinariaContext";
-import { MantenimientoProvider } from "./context/MantenimientoContext";
+import { EmpresaConfigProvider } from "./context/EmpresaConfigContext";
 
 // 🔹 Componentes
 import Sidebar from "./components/Sidebar";
@@ -39,10 +37,9 @@ import ProgramacionViajePage from "./pages/ProgramacionViajePage";
 import UnidadesPage from "./pages/UnidadesPage";
 import ConductoresPage from "./pages/ConductoresPage";
 import GuiaTransportistaPage from "./pages/GuiaTransportistaPage";
+import NubefactPruebasPage from "./pages/NubefactPruebasPage";
 import DevolucionesPage from "./pages/DevolucionesPage";
-import AlmacenPage from "./pages/AlmacenPage";
-import MaquinariasPage from "./pages/MaquinariasPage";
-import MantenimientoPage from "./pages/MantenimientoPage";
+import EmpresaConfigPage from "./pages/EmpresaConfigPage";
 
 
 
@@ -80,12 +77,11 @@ function Layout() {
               <Route path="/clientes" element={<ClientesPage />} />
               <Route path="/programacion-viaje" element={<ProgramacionViajePage />} />
               <Route path="/unidades" element={<UnidadesPage />} />
-              <Route path="/maquinarias" element={<MaquinariasPage />} />
               <Route path="/conductores" element={<ConductoresPage />} />
               <Route path="/guia-transportista" element={<GuiaTransportistaPage />} />
+              <Route path="/admin/nubefact-pruebas" element={<NubefactPruebasPage />} />
+              <Route path="/admin/empresa" element={<EmpresaConfigPage />} />
               <Route path="/devoluciones" element={<DevolucionesPage />} />
-              <Route path="/almacen" element={<AlmacenPage />} />
-              <Route path="/mantenimiento" element={<MantenimientoPage />} />
 
             </Routes>
           </main>
@@ -107,37 +103,33 @@ function App() {
           <OrdenServicioProvider>
             <ClienteProvider>
               <UnidadProvider>
-                <MaquinariaProvider>
-                  <MantenimientoProvider>
-                    <ConductorProvider>
-                      <ProgramacionViajeProvider>
-                        <AlmacenProvider>
-                          <AuditoriaProvider>
-                            <ConfirmProvider>
-                              <Router>
-                                <RouteChangeLoader />
-                                <GuiaTransportistaProvider>
-                                  <Routes>
-                                    {/* Rutas públicas */}
-                                    <Route
-                                      path="/unauthorized"
-                                      element={<UnauthorizedPage />}
-                                    />
-                                    <Route path="/login" element={<LoginPage />} />
-                                    {/* Rutas protegidas */}
-                                    <Route element={<ProtectedRoute />}>
-                                      <Route path="/*" element={<Layout />} />
-                                    </Route>
-                                  </Routes>
-                                </GuiaTransportistaProvider>
-                              </Router>
-                            </ConfirmProvider>
-                          </AuditoriaProvider>
-                        </AlmacenProvider>
-                      </ProgramacionViajeProvider>
-                    </ConductorProvider>
-                  </MantenimientoProvider>
-                </MaquinariaProvider>
+                <ConductorProvider>
+                  <ProgramacionViajeProvider>
+                    <EmpresaConfigProvider>
+                      <AuditoriaProvider>
+                        <ConfirmProvider>
+                          <Router>
+                            <RouteChangeLoader />
+                            <GuiaTransportistaProvider>
+                              <Routes>
+                                {/* Rutas públicas */}
+                                <Route
+                                  path="/unauthorized"
+                                  element={<UnauthorizedPage />}
+                                />
+                                <Route path="/login" element={<LoginPage />} />
+                                {/* Rutas protegidas */}
+                                <Route element={<ProtectedRoute />}>
+                                  <Route path="/*" element={<Layout />} />
+                                </Route>
+                              </Routes>
+                            </GuiaTransportistaProvider>
+                          </Router>
+                        </ConfirmProvider>
+                      </AuditoriaProvider>
+                    </EmpresaConfigProvider>
+                  </ProgramacionViajeProvider>
+                </ConductorProvider>
               </UnidadProvider>
             </ClienteProvider>
           </OrdenServicioProvider>

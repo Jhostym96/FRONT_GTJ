@@ -6,6 +6,7 @@ import {
   obtenerGuiaTransportistaRequest,
   obtenerHistorialGuiaTransportistaRequest,
   generarJsonGuiaTransportistaRequest,
+  enviarGuiaTransportistaNubefactRequest,
   consultarGuiaTransportistaRequest,
   actualizarGuiaTransportistaRequest,
   anularGuiaTransportistaRequest,
@@ -222,6 +223,38 @@ export const GuiaTransportistaProvider = ({ children }) => {
     }
   };
 
+  const enviarGuiaTransportistaNubefact = async (id) => {
+    try {
+      setLoadingGuia(true);
+      limpiarErroresGuia();
+
+      const res = await enviarGuiaTransportistaNubefactRequest(id);
+      const guiaActualizada = normalizeResource(res.data, ["guia"]);
+
+      setGuiasTransportista((prev) =>
+        prev.map((guia) => (sameRecordId(guia, id) ? guiaActualizada || guia : guia))
+      );
+
+      if (sameRecordId(guiaSeleccionada, id)) {
+        setGuiaSeleccionada(guiaActualizada);
+      }
+
+      setJsonGuia(res.data.json || null);
+
+      return res.data;
+    } catch (error) {
+      setErrorsGuia(
+        obtenerMensajesErrorApi(
+          error,
+          "Error al enviar la guía a Nubefact"
+        )
+      );
+      throw error;
+    } finally {
+      setLoadingGuia(false);
+    }
+  };
+
   const anularGuiaTransportista = async (id, datos = {}) => {
     try {
       setLoadingGuia(true);
@@ -362,6 +395,7 @@ export const GuiaTransportistaProvider = ({ children }) => {
         crearGuiaTransportista,
         actualizarGuiaTransportista,
         generarJsonGuiaTransportista,
+        enviarGuiaTransportistaNubefact,
         consultarGuiaTransportista,
         anularGuiaTransportista,
         obtenerUrlTicketGuiaTransportista,

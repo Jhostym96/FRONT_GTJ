@@ -7,6 +7,7 @@ import {
   Flag,
   LoaderCircle,
   MapPin,
+  Pencil,
   Route,
   Warehouse,
 } from "lucide-react";
@@ -15,6 +16,7 @@ import { useProgramacionViaje } from "../context/ProgramacionViajeContext";
 import { useUnidades } from "../context/UnidadContext";
 import { useConductores } from "../context/ConductorContext";
 import { useConfirm } from "../context/ConfirmContext";
+import { formatDateOnly } from "../utils/date";
 
 import ProgramacionViajeModal from "../components/modals/ProgramacionViajeModal";
 import TablePagination from "../components/TablePagination";
@@ -115,17 +117,7 @@ const ProgramacionViajePage = () => {
   ]);
 
   const formatearFecha = (fecha) => {
-    if (!fecha) return "-";
-
-    const fechaObj = new Date(fecha);
-
-    if (Number.isNaN(fechaObj.getTime())) return "-";
-
-    return fechaObj.toLocaleDateString("es-PE", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
+    return formatDateOnly(fecha);
   };
 
   const formatearFechaHora = (fecha) => {
@@ -189,6 +181,26 @@ const ProgramacionViajePage = () => {
 
   const abrirVer = (viaje) => {
     setModalMode("view");
+    setViajeSeleccionado(viaje);
+    setOpenModal(true);
+  };
+
+  const abrirEditar = async (viaje) => {
+    const requiereConfirmacion = viaje.estado === "EN_RUTA";
+
+    if (requiereConfirmacion) {
+      const confirmar = await confirm({
+        title: "Editar viaje en ruta",
+        message:
+          "El viaje ya está en ruta. Solo continúa si hay una incidencia operativa y registrarás el motivo.",
+        confirmText: "Continuar",
+        variant: "primary",
+      });
+
+      if (!confirmar) return;
+    }
+
+    setModalMode("edit");
     setViajeSeleccionado(viaje);
     setOpenModal(true);
   };
@@ -317,8 +329,32 @@ const ProgramacionViajePage = () => {
     }
   };
 
-  const puedeAnular = (estado) => {
-    return !["FINALIZADO", "ANULADO"].includes(estado);
+  const tieneGuiaAsociada = (viaje) => {
+    return (viaje?.guiasTransportista || []).some(
+      (guia) => guia.estado !== "ANULADA"
+    );
+  };
+
+  const puedeAnular = (viaje) => {
+    return (
+      viaje &&
+      !["FINALIZADO", "ANULADO"].includes(viaje.estado) &&
+      !tieneGuiaAsociada(viaje)
+    );
+  };
+
+  const tieneGuiaEmitida = (viaje) => {
+    return (viaje?.guiasTransportista || []).some(
+      (guia) => !["ANULADA", "ERROR"].includes(guia.estado)
+    );
+  };
+
+  const puedeEditar = (viaje) => {
+    return (
+      viaje &&
+      !["FINALIZADO", "ANULADO"].includes(viaje.estado) &&
+      !tieneGuiaEmitida(viaje)
+    );
   };
 
   const obtenerNombreConductor = (conductor) => {
@@ -360,6 +396,22 @@ const ProgramacionViajePage = () => {
           <Eye />
         </button>
 
+        {puedeEditar(viaje) && (
+          <button
+            type="button"
+            onClick={() => abrirEditar(viaje)}
+            className="btn-secondary btn-icon"
+            title={
+              viaje.estado === "EN_RUTA"
+                ? "Editar con motivo operativo"
+                : "Editar programación"
+            }
+            aria-label="Editar programación"
+          >
+            <Pencil />
+          </button>
+        )}
+
         {(TRANSICIONES[viaje.estado] || []).map((accion) => (
           <button
             key={accion.estado}
@@ -378,7 +430,7 @@ const ProgramacionViajePage = () => {
           </button>
         ))}
 
-        {puedeAnular(viaje.estado) && (
+        {puedeAnular(viaje) && (
           <button
             type="button"
             disabled={cambiandoEstado[viajeId]}

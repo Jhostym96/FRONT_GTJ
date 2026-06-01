@@ -26,6 +26,10 @@ export const obtenerHistorialGuiaTransportistaRequest = (id) =>
 export const generarJsonGuiaTransportistaRequest = (id) =>
   axios.post(`/guia-transportista/${id}/generar-json`);
 
+// Enviar guía guardada a Nubefact
+export const enviarGuiaTransportistaNubefactRequest = (id) =>
+  axios.post(`/guia-transportista/${id}/enviar-nubefact`);
+
 // Consultar guía en Nubefact / SUNAT
 export const consultarGuiaTransportistaRequest = (id) =>
   axios.post(`/guia-transportista/${id}/consultar`);

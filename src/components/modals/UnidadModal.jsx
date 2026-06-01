@@ -11,21 +11,9 @@ const initialForm = {
   serieMotor: "",
   serieChasis: "",
   estado: "ACTIVO",
-  estadoOperativo: "OPERATIVA",
-  ubicacionOperativa: "",
-  kilometrajeActual: "0",
-  horometroActual: "0",
-  fechaUltimoMantenimiento: "",
-  proximoMantenimientoKm: "",
-  proximoMantenimientoFecha: "",
   permisoIMO: false,
   permisoIQBF: false,
   observaciones: "",
-};
-
-const toInputDate = (value) => {
-  if (!value) return "";
-  return String(value).slice(0, 10);
 };
 
 function UnidadModal({
@@ -55,13 +43,6 @@ function UnidadModal({
         serieMotor: unidad.serieMotor || "",
         serieChasis: unidad.serieChasis || "",
         estado: unidad.estado || "ACTIVO",
-        estadoOperativo: unidad.estadoOperativo || "OPERATIVA",
-        ubicacionOperativa: unidad.ubicacionOperativa || "",
-        kilometrajeActual: String(unidad.kilometrajeActual ?? "0"),
-        horometroActual: String(unidad.horometroActual ?? "0"),
-        fechaUltimoMantenimiento: toInputDate(unidad.fechaUltimoMantenimiento),
-        proximoMantenimientoKm: String(unidad.proximoMantenimientoKm ?? ""),
-        proximoMantenimientoFecha: toInputDate(unidad.proximoMantenimientoFecha),
         permisoIMO: Boolean(unidad.permisoIMO),
         permisoIQBF: Boolean(unidad.permisoIQBF),
         observaciones: unidad.observaciones || "",
@@ -89,13 +70,7 @@ function UnidadModal({
 
     const tipoUnidadNormalizado = form.tipoUnidad.trim().toUpperCase();
     const estadoNormalizado = form.estado.trim().toUpperCase();
-    const estadoOperativoNormalizado = form.estadoOperativo.trim().toUpperCase();
     const anio = form.anio ? Number(form.anio) : null;
-    const kilometrajeActual = Number(form.kilometrajeActual || 0);
-    const horometroActual = Number(form.horometroActual || 0);
-    const proximoMantenimientoKm = form.proximoMantenimientoKm
-      ? Number(form.proximoMantenimientoKm)
-      : null;
 
     if (!form.placa.trim()) {
       notify.error("La placa es obligatoria");
@@ -112,27 +87,8 @@ function UnidadModal({
       return;
     }
 
-    if (
-      !["OPERATIVA", "EN_MANTENIMIENTO", "INACTIVA", "BAJA"].includes(
-        estadoOperativoNormalizado
-      )
-    ) {
-      notify.error("Selecciona un estado operativo válido");
-      return;
-    }
-
     if (form.anio && (!Number.isInteger(anio) || anio < 1900)) {
       notify.error("Ingresa un año válido");
-      return;
-    }
-
-    if (kilometrajeActual < 0 || horometroActual < 0) {
-      notify.error("Kilometraje y horómetro no pueden ser negativos");
-      return;
-    }
-
-    if (proximoMantenimientoKm !== null && proximoMantenimientoKm < 0) {
-      notify.error("El próximo mantenimiento por km no puede ser negativo");
       return;
     }
 
@@ -146,13 +102,6 @@ function UnidadModal({
       serieMotor: form.serieMotor.trim().toUpperCase(),
       serieChasis: form.serieChasis.trim().toUpperCase(),
       estado: estadoNormalizado,
-      estadoOperativo: estadoOperativoNormalizado,
-      ubicacionOperativa: form.ubicacionOperativa.trim().toUpperCase(),
-      kilometrajeActual,
-      horometroActual,
-      fechaUltimoMantenimiento: form.fechaUltimoMantenimiento || null,
-      proximoMantenimientoKm,
-      proximoMantenimientoFecha: form.proximoMantenimientoFecha || null,
       permisoIMO: form.permisoIMO,
       permisoIQBF: form.permisoIQBF,
       observaciones: form.observaciones.trim(),
@@ -179,7 +128,7 @@ function UnidadModal({
           <div>
             <h2 className="text-xl font-bold">{titulo}</h2>
             <p className="text-muted text-sm">
-              Registra datos documentarios, técnicos y de mantenimiento.
+              Registra datos documentarios y técnicos de la unidad.
             </p>
           </div>
 
@@ -294,24 +243,6 @@ function UnidadModal({
 
           <div>
             <label className="text-muted mb-1 block text-sm">
-              Estado operativo
-            </label>
-            <select
-              name="estadoOperativo"
-              value={form.estadoOperativo}
-              onChange={handleChange}
-              disabled={isView || loading}
-              className="input p-3"
-            >
-              <option value="OPERATIVA">OPERATIVA</option>
-              <option value="EN_MANTENIMIENTO">EN MANTENIMIENTO</option>
-              <option value="INACTIVA">INACTIVA</option>
-              <option value="BAJA">BAJA</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="text-muted mb-1 block text-sm">
               Serie motor
             </label>
             <input
@@ -333,95 +264,6 @@ function UnidadModal({
               onChange={handleChange}
               disabled={isView || loading}
               className="input p-3 uppercase"
-            />
-          </div>
-
-          <div>
-            <label className="text-muted mb-1 block text-sm">
-              Ubicación operativa
-            </label>
-            <input
-              name="ubicacionOperativa"
-              value={form.ubicacionOperativa}
-              onChange={handleChange}
-              disabled={isView || loading}
-              className="input p-3 uppercase"
-            />
-          </div>
-
-          <div>
-            <label className="text-muted mb-1 block text-sm">
-              Kilometraje actual
-            </label>
-            <input
-              name="kilometrajeActual"
-              value={form.kilometrajeActual}
-              onChange={handleChange}
-              disabled={isView || loading}
-              type="number"
-              min="0"
-              step="0.01"
-              className="input p-3"
-            />
-          </div>
-
-          <div>
-            <label className="text-muted mb-1 block text-sm">
-              Horómetro actual
-            </label>
-            <input
-              name="horometroActual"
-              value={form.horometroActual}
-              onChange={handleChange}
-              disabled={isView || loading}
-              type="number"
-              min="0"
-              step="0.01"
-              className="input p-3"
-            />
-          </div>
-
-          <div>
-            <label className="text-muted mb-1 block text-sm">
-              Último mantenimiento
-            </label>
-            <input
-              name="fechaUltimoMantenimiento"
-              value={form.fechaUltimoMantenimiento}
-              onChange={handleChange}
-              disabled={isView || loading}
-              type="date"
-              className="input p-3"
-            />
-          </div>
-
-          <div>
-            <label className="text-muted mb-1 block text-sm">
-              Próximo mantenimiento km
-            </label>
-            <input
-              name="proximoMantenimientoKm"
-              value={form.proximoMantenimientoKm}
-              onChange={handleChange}
-              disabled={isView || loading}
-              type="number"
-              min="0"
-              step="0.01"
-              className="input p-3"
-            />
-          </div>
-
-          <div>
-            <label className="text-muted mb-1 block text-sm">
-              Próximo mantenimiento fecha
-            </label>
-            <input
-              name="proximoMantenimientoFecha"
-              value={form.proximoMantenimientoFecha}
-              onChange={handleChange}
-              disabled={isView || loading}
-              type="date"
-              className="input p-3"
             />
           </div>
 

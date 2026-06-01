@@ -10,9 +10,7 @@ import {
   FaFileInvoice,
   FaUndoAlt,
   FaHistory,
-  FaBoxes,
-  FaCogs,
-  FaTools,
+  FaFlask,
 } from "react-icons/fa";
 
 export const dashboardMenu = {
@@ -22,7 +20,16 @@ export const dashboardMenu = {
   basePath: "/dashboard",
   children: [
     { path: "/dashboard", label: "Panel operativo", icon: FaTachometerAlt },
-    { path: "/profile", label: "Perfil", icon: FaUserTie },
+  ],
+};
+
+export const profileMenu = {
+  id: "perfil",
+  label: "Perfil",
+  icon: FaUserTie,
+  basePath: "/profile",
+  children: [
+    { path: "/profile", label: "Mi perfil", icon: FaUserTie },
   ],
 };
 
@@ -76,31 +83,6 @@ export const datosMaestrosMenu = {
       label: "Unidades",
       icon: FaTruckMoving,
     },
-    {
-      path: "/maquinarias",
-      label: "Maquinarias",
-      icon: FaCogs,
-    },
-  ],
-};
-
-export const almacenMenu = {
-  id: "almacen",
-  label: "Almacén",
-  icon: FaBoxes,
-  basePath: "/almacen",
-  children: [
-    { path: "/almacen", label: "Inventario", icon: FaBoxes },
-  ],
-};
-
-export const mantenimientoMenu = {
-  id: "mantenimiento",
-  label: "Mantenimiento",
-  icon: FaTools,
-  basePath: "/mantenimiento",
-  children: [
-    { path: "/mantenimiento", label: "Órdenes", icon: FaTools },
   ],
 };
 
@@ -111,42 +93,43 @@ export const adminMenu = {
   basePath: "/admin",
   children: [
     { path: "/usuarios", label: "Gestionar Usuarios", icon: FaUsers },
+    { path: "/admin/empresa", label: "Datos de Empresa", icon: FaBuilding },
+    { path: "/admin/nubefact-pruebas", label: "Prueba Nubefact", icon: FaFlask },
     { path: "/auditoria", label: "Auditoría", icon: FaHistory },
   ],
 };
 
 export const permissions = {
   Superadministrador: {
-    routes: [dashboardMenu, operacionesMenu, mantenimientoMenu, almacenMenu, datosMaestrosMenu, adminMenu],
+    routes: [dashboardMenu, profileMenu, operacionesMenu, datosMaestrosMenu, adminMenu],
     actions: ["view", "edit", "delete", "create"],
   },
 
   Administrador: {
-    routes: [dashboardMenu, operacionesMenu, mantenimientoMenu, almacenMenu, datosMaestrosMenu, adminMenu],
+    routes: [dashboardMenu, profileMenu, operacionesMenu, datosMaestrosMenu, adminMenu],
     actions: ["view", "edit", "delete", "create"],
   },
 
   Coordinador: {
-    routes: [dashboardMenu, operacionesMenu, mantenimientoMenu, almacenMenu, datosMaestrosMenu],
+    routes: [dashboardMenu, profileMenu, operacionesMenu, datosMaestrosMenu],
     actions: ["view", "edit", "create"],
   },
 
   User: {
-    routes: [dashboardMenu, operacionesMenu, mantenimientoMenu, almacenMenu, datosMaestrosMenu],
+    routes: [dashboardMenu, profileMenu, operacionesMenu, datosMaestrosMenu],
     actions: ["view"],
   },
 
   Almacen: {
-    routes: [dashboardMenu, mantenimientoMenu, almacenMenu, datosMaestrosMenu],
+    routes: [dashboardMenu, profileMenu, datosMaestrosMenu],
     actions: ["view", "edit", "create"],
   },
 };
 
 export const allMenus = [
   dashboardMenu,
+  profileMenu,
   operacionesMenu,
-  mantenimientoMenu,
-  almacenMenu,
   datosMaestrosMenu,
   adminMenu,
 ];
@@ -203,10 +186,21 @@ export function getDefaultUserPermissions(role = "User") {
 
 export function getEffectiveUserPermissions(user) {
   if (!user) return { routes: {} };
-  if (user.role === "Superadministrador") {
-    return getDefaultUserPermissions("Superadministrador");
-  }
-  return user.permisos?.routes ? user.permisos : getDefaultUserPermissions(user.role);
+  const effective = user.permisos?.routes ? user.permisos : getDefaultUserPermissions(user.role);
+
+  return {
+    ...effective,
+    routes: {
+      ...effective.routes,
+      "/profile": {
+        view: true,
+        create: false,
+        edit: true,
+        delete: false,
+        ...(effective.routes?.["/profile"] || {}),
+      },
+    },
+  };
 }
 
 export function getAllowedRoutes(user) {
@@ -231,7 +225,7 @@ export function getAllowedRoutes(user) {
 
 export function hasAction(user, path, action = "view") {
   if (!user) return false;
-  if (user.role === "Superadministrador") return true;
+  if (user.role === "Superadministrador" && !user.permisos?.routes) return true;
 
   const effective = getEffectiveUserPermissions(user);
   const normalizedPath = resolveLegacyPath(path);

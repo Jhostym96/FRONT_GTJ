@@ -9,6 +9,9 @@ export const getProgramacionViajeRequest = (id) =>
 export const createProgramacionViajeRequest = (programacion) =>
   axios.post("/programacion-viaje", programacion);
 
+export const updateProgramacionViajeRequest = (id, programacion) =>
+  axios.put(`/programacion-viaje/${id}`, programacion);
+
 export const updateEstadoProgramacionViajeRequest = (id, data) =>
   axios.patch(
     `/programacion-viaje/${id}/estado`,

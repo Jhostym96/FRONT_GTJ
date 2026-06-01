@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { notify } from "../../utils/notify";
 import { useGuiaTransportista } from "../../context/GuiaTransportistaContext";
 import { useProgramacionViaje } from "../../context/ProgramacionViajeContext";
+import { useEmpresaConfig } from "../../context/EmpresaConfigContext";
 import { getRecordId } from "../../utils/apiData";
 import { obtenerMensajesErrorApi } from "../../utils/apiErrorMessages";
 import { getTodayInputDate } from "../../utils/date";
@@ -76,6 +77,8 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
     getProgramacionesViaje,
     getProgramacionesDisponiblesParaGuia,
   } = useProgramacionViaje();
+  const { config: empresaConfig, obtenerConfig: obtenerEmpresaConfig } =
+    useEmpresaConfig();
 
   const cargarProgramacionesRef = useRef({
     getProgramacionesViaje,
@@ -97,7 +100,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
       peso_bruto_total: "",
       peso_bruto_unidad_de_medida: "KGM",
 
-      mtc: "158661CNG",
+      mtc: "",
       sunat_envio_indicador: "01",
 
       subcontratador_documento_tipo: "6",
@@ -132,12 +135,14 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
   useEffect(() => {
     if (!isOpen) return;
 
+    obtenerEmpresaConfig?.().catch(() => {});
+
     if (mode === "create") {
       cargarProgramacionesRef.current.getProgramacionesDisponiblesParaGuia?.();
     } else {
       cargarProgramacionesRef.current.getProgramacionesViaje?.();
     }
-  }, [isOpen, mode]);
+  }, [isOpen, mode, obtenerEmpresaConfig]);
 
   useEffect(() => {
     if (guia && (isEdit || isView)) {
@@ -155,7 +160,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
         peso_bruto_total: guia.peso_bruto_total || "",
         peso_bruto_unidad_de_medida: guia.peso_bruto_unidad_de_medida || "KGM",
 
-        mtc: guia.mtc || "158661CNG",
+        mtc: guia.mtc || "",
         sunat_envio_indicador: guia.sunat_envio_indicador || "01",
 
         subcontratador_documento_tipo:
@@ -234,7 +239,11 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
     programacionSeleccionada?.conductor ||
     guia?.programacionViaje?.conductor;
 
-  const serieVisible = guia?.serie || "VVV1";
+  const serieEmpresa =
+    empresaConfig?.serieGuiaTransportista || guia?.serie || "VVV1";
+  const mtcEmpresa = empresaConfig?.mtc || guia?.mtc || "";
+  const serieVisible = isView ? guia?.serie || serieEmpresa : serieEmpresa;
+  const mtcVisible = isView ? guia?.mtc || mtcEmpresa : mtcEmpresa;
   const numeroVisible = guia?.numero || "Automático";
 
   const handleChange = (e) => {
@@ -339,6 +348,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
     delete data.tipo_de_comprobante;
     delete data.serie_visible;
     delete data.numero_visible;
+    delete data.mtc;
 
     delete data.motivo_de_traslado;
     delete data.numero_de_bultos;
@@ -376,7 +386,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
         notify.success("Guía actualizada correctamente");
       } else {
         await crearGuiaTransportista(data);
-        notify.success("Guía creada y enviada a Nubefact correctamente");
+        notify.success("Guía guardada. Pendiente de envío a Nubefact");
       }
 
       await obtenerGuiasTransportista();
@@ -588,9 +598,8 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
               <Input
                 label="MTC"
                 name="mtc"
-                value={form.mtc}
-                onChange={handleChange}
-                disabled={isView}
+                value={mtcVisible}
+                disabled={true}
                 required
               />
 
@@ -918,7 +927,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
                     ? "Guardando..."
                     : isEdit
                     ? "Actualizar guía"
-                    : "Crear y enviar guía"}
+                    : "Crear"}
                 </button>
               </>
             )}

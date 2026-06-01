@@ -4,6 +4,7 @@ import {
   getProgramacionesViajeRequest,
   getProgramacionViajeRequest,
   createProgramacionViajeRequest,
+  updateProgramacionViajeRequest,
   updateEstadoProgramacionViajeRequest,
   getOrdenesDisponiblesParaViajeRequest,
   getProgramacionesDisponiblesParaGuiaRequest,
@@ -14,6 +15,7 @@ import {
   normalizeCollection,
   normalizePagination,
   normalizeResource,
+  sameRecordId,
 } from "../utils/apiData";
 
 const ProgramacionViajeContext = createContext();
@@ -102,6 +104,34 @@ export function ProgramacionViajeProvider({ children }) {
     }
   }, []);
 
+  const actualizarProgramacionViaje = useCallback(async (id, data) => {
+    try {
+      setErrors([]);
+
+      const res = await updateProgramacionViajeRequest(id, data);
+      const programacionActualizada = normalizeResource(res.data, ["programacion"]);
+
+      if (programacionActualizada) {
+        setProgramaciones((prev) =>
+          prev.map((item) =>
+            sameRecordId(item, id) ? programacionActualizada : item
+          )
+        );
+      }
+
+      return res.data;
+    } catch (error) {
+      const mensaje =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        "Error al actualizar programación";
+
+      setErrors([mensaje]);
+
+      throw error;
+    }
+  }, []);
+
   const cambiarEstadoProgramacion = useCallback(async (id, data) => {
     try {
       const res = await updateEstadoProgramacionViajeRequest(id, data);
@@ -146,6 +176,7 @@ export function ProgramacionViajeProvider({ children }) {
         getProgramacionesDisponiblesParaGuia,
         getProgramacionViaje,
         createProgramacionViaje,
+        actualizarProgramacionViaje,
         cambiarEstadoProgramacion,
         getOrdenesDisponibles,
       }}

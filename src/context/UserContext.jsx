@@ -81,7 +81,20 @@ export const UserProvider = ({ children }) => {
 
   const actualizarPermisosUsuario = async (id, permisos) => {
     const res = await actualizarPermisosUsuarioRequest(id, permisos);
-    await cargarUsuarios();
+    const usuarioActualizado = res.data?.user || res.data?.usuario;
+
+    if (usuarioActualizado) {
+      setUsuarios((prev) =>
+        prev.map((usuario) =>
+          String(usuario.id || usuario._id) === String(id)
+            ? usuarioActualizado
+            : usuario
+        )
+      );
+    } else {
+      await cargarUsuarios();
+    }
+
     return res;
   };
 
