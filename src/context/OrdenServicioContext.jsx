@@ -152,7 +152,7 @@ export const OrdenServicioProvider = ({ children }) => {
         search: params.search,
       });
       const res = await obtenerDevolucionesPendientesRequest(requestParams);
-      const data = normalizeCollection(res.data, ["ordenes"]);
+      const data = normalizeCollection(res.data, ["devoluciones", "ordenes"]);
       setDevolucionesPendientes(data);
       setPaginationDevoluciones(
         normalizePagination(res.data, DEFAULT_PAGINATION)

@@ -5,12 +5,16 @@ import { useConductores } from "../../context/ConductorContext";
 import { useProgramacionViaje } from "../../context/ProgramacionViajeContext";
 import { getTodayInputDate } from "../../utils/date";
 
+const SELECT_OPTIONS_LIMIT = 1000;
+const APP_TIME_ZONE = "America/Lima";
+
 const createInitialForm = () => ({
   ordenServicioId: "",
   vehiculoPrincipalId: "",
   vehiculoSecundarioId: "",
   conductorId: "",
   fechaInicioTraslado: getTodayInputDate(),
+  numeroContenedor: "",
   observaciones: "",
 });
 
@@ -92,6 +96,7 @@ function ProgramacionViajeModal({
     if (Number.isNaN(fechaObj.getTime())) return "-";
 
     return fechaObj.toLocaleString("es-PE", {
+      timeZone: APP_TIME_ZONE,
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
@@ -108,13 +113,15 @@ function ProgramacionViajeModal({
   useEffect(() => {
     if (!modalOpen) return;
 
-    cargarDatosRef.current.obtenerOrdenesServicio?.();
-    cargarDatosRef.current.obtenerUnidades?.();
+    const selectParams = { page: 1, limit: SELECT_OPTIONS_LIMIT };
+
+    cargarDatosRef.current.obtenerOrdenesServicio?.(selectParams);
+    cargarDatosRef.current.obtenerUnidades?.(selectParams);
 
     if (cargarDatosRef.current.obtenerConductores) {
-      cargarDatosRef.current.obtenerConductores();
+      cargarDatosRef.current.obtenerConductores(selectParams);
     } else {
-      cargarDatosRef.current.getConductores?.();
+      cargarDatosRef.current.getConductores?.(selectParams);
     }
 
     setError("");
@@ -146,6 +153,7 @@ function ProgramacionViajeModal({
 
         fechaInicioTraslado: formatearFechaInput(data.fechaInicioTraslado),
 
+        numeroContenedor: data.numeroContenedor || "",
         observaciones: data.observaciones || "",
         motivoEdicionEnRuta: "",
       });
@@ -358,6 +366,7 @@ function ProgramacionViajeModal({
           : null,
         conductorId: Number(form.conductorId),
         fechaInicioTraslado: form.fechaInicioTraslado,
+        numeroContenedor: form.numeroContenedor,
         observaciones: form.observaciones,
         motivoEdicionEnRuta: form.motivoEdicionEnRuta || "",
       };
@@ -596,7 +605,23 @@ function ProgramacionViajeModal({
             />
           </div>
 
-          <div className="md:col-span-2">
+          <div>
+            <label className="text-muted mb-1 block text-sm">
+              N° contenedor
+            </label>
+
+            <input
+              type="text"
+              name="numeroContenedor"
+              value={form.numeroContenedor}
+              onChange={handleChange}
+              disabled={isReadOnly}
+              placeholder="Opcional"
+              className="input p-3"
+            />
+          </div>
+
+          <div>
             <label className="text-muted mb-1 block text-sm">
               Observaciones
             </label>

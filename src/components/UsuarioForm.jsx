@@ -8,6 +8,7 @@ const rolesDisponibles = [
   "Superadministrador",
   "Coordinador",
   "Almacen",
+  "Facturacion",
 ];
 
 const UsuarioForm = ({ usuario = null, onSuccess }) => {

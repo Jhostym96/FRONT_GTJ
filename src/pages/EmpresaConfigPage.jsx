@@ -11,6 +11,8 @@ const initialForm = {
   mtc: "",
   serieGuiaTransportista: "VVV1",
   activo: true,
+  permitirConductorViajesActivos: false,
+  permitirUnidadViajesActivos: false,
 };
 
 const toUpper = (value) => String(value || "").toUpperCase();
@@ -41,6 +43,10 @@ function EmpresaConfigPage() {
       mtc: config.mtc || "",
       serieGuiaTransportista: config.serieGuiaTransportista || "VVV1",
       activo: config.activo !== false,
+      permitirConductorViajesActivos:
+        config.permitirConductorViajesActivos === true,
+      permitirUnidadViajesActivos:
+        config.permitirUnidadViajesActivos === true,
     });
   }, [config]);
 
@@ -193,6 +199,32 @@ function EmpresaConfigPage() {
                   />
                   <span className="text-main text-sm font-semibold">
                     Configuración activa
+                  </span>
+                </label>
+
+                <label className="flex items-center gap-3 rounded-lg border border-[var(--app-border)] bg-[var(--app-surface)] px-4 py-3">
+                  <input
+                    type="checkbox"
+                    name="permitirConductorViajesActivos"
+                    checked={form.permitirConductorViajesActivos}
+                    onChange={handleChange}
+                    className="h-4 w-4"
+                  />
+                  <span className="text-main text-sm font-semibold">
+                    Permitir conductor con viaje activo
+                  </span>
+                </label>
+
+                <label className="flex items-center gap-3 rounded-lg border border-[var(--app-border)] bg-[var(--app-surface)] px-4 py-3">
+                  <input
+                    type="checkbox"
+                    name="permitirUnidadViajesActivos"
+                    checked={form.permitirUnidadViajesActivos}
+                    onChange={handleChange}
+                    className="h-4 w-4"
+                  />
+                  <span className="text-main text-sm font-semibold">
+                    Permitir unidad con viaje activo
                   </span>
                 </label>
               </div>

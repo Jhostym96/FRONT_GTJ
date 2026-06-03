@@ -8,6 +8,7 @@ import {
   FaDatabase,
   FaIdCard,
   FaFileInvoice,
+  FaFileSignature,
   FaUndoAlt,
   FaHistory,
   FaFlask,
@@ -55,11 +56,23 @@ export const operacionesMenu = {
       icon: FaFileInvoice,
     },
     {
+      path: "/documentos-facturacion",
+      label: "Recepción Documentos",
+      icon: FaFileSignature,
+    },
+    {
       path: "/devoluciones",
       label: "Devoluciones",
       icon: FaUndoAlt,
     },
   ],
+};
+
+export const facturacionOperacionesMenu = {
+  ...operacionesMenu,
+  children: operacionesMenu.children.filter(
+    (child) => child.path === "/documentos-facturacion"
+  ),
 };
 
 export const datosMaestrosMenu = {
@@ -123,6 +136,11 @@ export const permissions = {
   Almacen: {
     routes: [dashboardMenu, profileMenu, datosMaestrosMenu],
     actions: ["view", "edit", "create"],
+  },
+
+  Facturacion: {
+    routes: [dashboardMenu, profileMenu, facturacionOperacionesMenu],
+    actions: ["view", "edit"],
   },
 };
 

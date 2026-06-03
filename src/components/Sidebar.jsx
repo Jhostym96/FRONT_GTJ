@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { getAllowedRoutes } from "../utils/permissions";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Home } from "lucide-react";
 import { FaBars, FaTimes, FaSignInAlt } from "react-icons/fa";
 
 function Sidebar({ collapsed, setCollapsed }) {
@@ -91,58 +91,73 @@ function Sidebar({ collapsed, setCollapsed }) {
         <nav className={`flex-1 text-sm ${collapsed ? "px-2 py-4" : "p-4"}`}>
           <ul className="space-y-2">
             {isAuthenticated ? (
-              rolePermissions.map((menu) => (
-                <li key={menu.id}>
-                  <button
-                    onClick={() => handleMenuClick(menu.id)}
-                    className={`nav-item ${
-                      collapsed ? "justify-center px-0" : "justify-between"
-                    }
-                      ${
-                        isMenuActive(menu) ? "nav-item-active" : ""
-                      }`}
+              <>
+                <li>
+                  <Link
+                    to="/"
+                    onClick={() => setMobileOpen(false)}
+                    className={`nav-item ${collapsed ? "justify-center px-0" : ""} ${
+                      location.pathname === "/" ? "nav-item-active" : ""
+                    }`}
+                    title="Inicio"
                   >
-                    <span
-                      className={`flex items-center ${
-                        collapsed ? "justify-center" : "gap-3"
-                      }`}
-                    >
-                      <menu.icon className="h-5 w-5 shrink-0" />
-                      {!collapsed && menu.label}
-                    </span>
-                    {!collapsed && (
-                      <ChevronDown
-                        className={`w-4 h-4 transform transition-transform ${
-                          activeDropdown === menu.id ? "rotate-180" : ""
-                        }`}
-                      />
-                    )}
-                  </button>
-
-                  {/* Submenús */}
-                  {activeDropdown === menu.id && !collapsed && (
-                    <ul className="ml-6 mt-1 space-y-1 overflow-hidden transition-all">
-                      {menu.children.map((child) => (
-                        <li key={child.path}>
-                          <Link
-                            to={child.path}
-                            className={`nav-item
-                              ${
-                                isPathActive(child.path)
-                                  ? "nav-item-active"
-                                  : ""
-                              }`}
-                            onClick={() => setMobileOpen(false)}
-                          >
-                            <child.icon className="h-4 w-4" />
-                            {child.label}
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                    <Home className="h-5 w-5 shrink-0" />
+                    {!collapsed && "Inicio"}
+                  </Link>
                 </li>
-              ))
+                {rolePermissions.map((menu) => (
+                  <li key={menu.id}>
+                    <button
+                      onClick={() => handleMenuClick(menu.id)}
+                      className={`nav-item ${
+                        collapsed ? "justify-center px-0" : "justify-between"
+                      }
+                        ${
+                          isMenuActive(menu) ? "nav-item-active" : ""
+                        }`}
+                    >
+                      <span
+                        className={`flex items-center ${
+                          collapsed ? "justify-center" : "gap-3"
+                        }`}
+                      >
+                        <menu.icon className="h-5 w-5 shrink-0" />
+                        {!collapsed && menu.label}
+                      </span>
+                      {!collapsed && (
+                        <ChevronDown
+                          className={`w-4 h-4 transform transition-transform ${
+                            activeDropdown === menu.id ? "rotate-180" : ""
+                          }`}
+                        />
+                      )}
+                    </button>
+
+                    {/* Submenús */}
+                    {activeDropdown === menu.id && !collapsed && (
+                      <ul className="ml-6 mt-1 space-y-1 overflow-hidden transition-all">
+                        {menu.children.map((child) => (
+                          <li key={child.path}>
+                            <Link
+                              to={child.path}
+                              className={`nav-item
+                                ${
+                                  isPathActive(child.path)
+                                    ? "nav-item-active"
+                                    : ""
+                                }`}
+                              onClick={() => setMobileOpen(false)}
+                            >
+                              <child.icon className="h-4 w-4" />
+                              {child.label}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                ))}
+              </>
             ) : (
               <li>
                 <Link

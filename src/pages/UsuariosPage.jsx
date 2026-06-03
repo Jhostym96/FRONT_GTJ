@@ -18,6 +18,7 @@ const rolesDisponibles = [
   "Superadministrador",
   "Coordinador",
   "Almacen",
+  "Facturacion",
 ];
 
 const UsuariosPage = () => {

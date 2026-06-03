@@ -131,6 +131,8 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
   );
 
   const [form, setForm] = useState(initialForm);
+  const [subcontratadorClienteId, setSubcontratadorClienteId] = useState("");
+  const [pagadorTerceroClienteId, setPagadorTerceroClienteId] = useState("");
 
   useEffect(() => {
     if (!isOpen) return;
@@ -202,10 +204,14 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
           ? guia.conductores_secundarios
           : [],
       });
+      setSubcontratadorClienteId("");
+      setPagadorTerceroClienteId("");
     }
 
     if (!guia && mode === "create") {
       setForm(initialForm);
+      setSubcontratadorClienteId("");
+      setPagadorTerceroClienteId("");
     }
   }, [guia, mode, isOpen, isEdit, isView, initialForm]);
 
@@ -220,12 +226,65 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
     );
   }, [listaProgramaciones, form.programacionViaje]);
 
-  if (!isOpen) return null;
-
   const orden =
     programacionSeleccionada?.ordenServicio ||
     guia?.ordenServicio ||
     guia?.programacionViaje?.ordenServicio;
+
+  const clienteSolicitante = useMemo(() => {
+    const cliente = orden?.clienteSolicitante || orden?.cliente || guia?.clienteSolicitante || guia?.cliente;
+
+    const tipoDocumento =
+      cliente?.tipoDocumento ||
+      orden?.clienteSolicitanteTipoDocumento ||
+      guia?.cliente_tipo_de_documento ||
+      "6";
+    const numeroDocumento =
+      cliente?.numeroDocumento ||
+      orden?.clienteSolicitanteNumeroDocumento ||
+      guia?.cliente_numero_de_documento ||
+      "";
+    const razonSocial =
+      cliente?.razonSocial ||
+      cliente?.denominacion ||
+      cliente?.nombre ||
+      orden?.clienteSolicitanteRazonSocial ||
+      guia?.cliente_denominacion ||
+      "";
+
+    if (!numeroDocumento && !razonSocial) return null;
+
+    return {
+      id: getRecordId(cliente) || "cliente-solicitante",
+      tipoDocumento,
+      numeroDocumento,
+      razonSocial,
+    };
+  }, [orden, guia]);
+
+  const clienteSolicitanteOptions = useMemo(
+    () => [
+      {
+        value: "",
+        label: clienteSolicitante
+          ? "Seleccione el cliente solicitante"
+          : "Seleccione una programación con cliente",
+      },
+      ...(clienteSolicitante
+        ? [
+            {
+              value: clienteSolicitante.id,
+              label: `${clienteSolicitante.razonSocial || "Cliente solicitante"} - ${
+                clienteSolicitante.numeroDocumento || "Sin documento"
+              }`,
+            },
+          ]
+        : []),
+    ],
+    [clienteSolicitante]
+  );
+
+  if (!isOpen) return null;
 
   const vehiculoPrincipal =
     programacionSeleccionada?.vehiculoPrincipal ||
@@ -252,6 +311,74 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
     setForm((prev) => ({
       ...prev,
       [name]: value,
+    }));
+  };
+
+  const completarDatosDesdeCliente = (cliente) => ({
+    tipoDocumento: cliente?.tipoDocumento || "6",
+    numeroDocumento: cliente?.numeroDocumento || "",
+    razonSocial: cliente?.razonSocial || "",
+  });
+
+  const handleSubcontratadorClienteChange = (e) => {
+    if (isView) return;
+
+    const clienteId = e.target.value;
+    setSubcontratadorClienteId(clienteId);
+
+    const cliente =
+      clienteSolicitante && String(clienteSolicitante.id) === String(clienteId)
+        ? clienteSolicitante
+        : null;
+
+    if (!cliente) {
+      setForm((prev) => ({
+        ...prev,
+        subcontratador_documento_tipo: "6",
+        subcontratador_documento_numero: "",
+        subcontratador_denominacion: "",
+      }));
+      return;
+    }
+
+    const datosCliente = completarDatosDesdeCliente(cliente);
+
+    setForm((prev) => ({
+      ...prev,
+      subcontratador_documento_tipo: "6",
+      subcontratador_documento_numero: datosCliente.numeroDocumento,
+      subcontratador_denominacion: datosCliente.razonSocial,
+    }));
+  };
+
+  const handlePagadorTerceroClienteChange = (e) => {
+    if (isView) return;
+
+    const clienteId = e.target.value;
+    setPagadorTerceroClienteId(clienteId);
+
+    const cliente =
+      clienteSolicitante && String(clienteSolicitante.id) === String(clienteId)
+        ? clienteSolicitante
+        : null;
+
+    if (!cliente) {
+      setForm((prev) => ({
+        ...prev,
+        pagador_servicio_documento_tipo_identidad: "6",
+        pagador_servicio_documento_numero_identidad: "",
+        pagador_servicio_denominacion: "",
+      }));
+      return;
+    }
+
+    const datosCliente = completarDatosDesdeCliente(cliente);
+
+    setForm((prev) => ({
+      ...prev,
+      pagador_servicio_documento_tipo_identidad: datosCliente.tipoDocumento,
+      pagador_servicio_documento_numero_identidad: datosCliente.numeroDocumento,
+      pagador_servicio_denominacion: datosCliente.razonSocial,
     }));
   };
 
@@ -641,6 +768,15 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
                 </h4>
 
                 <div className="grid gap-4 md:grid-cols-3">
+                  <Select
+                    label="Cliente"
+                    name="subcontratador_cliente"
+                    value={subcontratadorClienteId}
+                    onChange={handleSubcontratadorClienteChange}
+                    disabled={isView || !clienteSolicitante}
+                    options={clienteSolicitanteOptions}
+                  />
+
                   <Input
                     label="Tipo doc."
                     name="subcontratador_documento_tipo"
@@ -676,6 +812,15 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
                 </h4>
 
                 <div className="grid gap-4 md:grid-cols-3">
+                  <Select
+                    label="Cliente"
+                    name="pagador_tercero_cliente"
+                    value={pagadorTerceroClienteId}
+                    onChange={handlePagadorTerceroClienteChange}
+                    disabled={isView || !clienteSolicitante}
+                    options={clienteSolicitanteOptions}
+                  />
+
                   <Select
                     label="Tipo doc."
                     name="pagador_servicio_documento_tipo_identidad"
@@ -753,12 +898,17 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
                   className="info-tile grid gap-3 border p-3 md:grid-cols-12"
                 >
                   <div className="md:col-span-2">
-                    <Input
+                    <Select
                       label="Unidad"
                       name="unidad_de_medida"
                       value={item.unidad_de_medida}
                       onChange={(e) => handleItemChange(index, e)}
                       disabled={isView}
+                      options={[
+                        { value: "NIU", label: "NIU" },
+                        { value: "ZZ", label: "ZZ" },
+                        { value: "KGM", label: "KGM" },
+                      ]}
                     />
                   </div>
 

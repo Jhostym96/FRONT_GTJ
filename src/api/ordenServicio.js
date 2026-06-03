@@ -24,4 +24,4 @@ export const obtenerDevolucionesPendientesRequest = (params = {}) =>
   axios.get(`/ordenes-servicio/devoluciones/pendientes`, { params });
 
 export const actualizarEstadoDevolucionRequest = (id, data) =>
-  axios.patch(`/ordenes-servicio/${id}/devolucion`, data);
+  axios.patch(`/ordenes-servicio/devoluciones/${id}`, data);

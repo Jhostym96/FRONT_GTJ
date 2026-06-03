@@ -3,10 +3,77 @@ import { notify } from "../utils/notify";
 import { CheckCircle2, LoaderCircle, Pencil } from "lucide-react";
 import { useOrdenesServicio } from "../context/OrdenServicioContext";
 import { useConductores } from "../context/ConductorContext";
+import { useUnidades } from "../context/UnidadContext";
 import TablePagination from "../components/TablePagination";
 import { getTodayInputDate } from "../utils/date";
 
-const getItemId = (item) => item?.id ?? item?._id;
+const getItemId = (item) =>
+  item?.devolucionContenedorId ?? item?.id ?? item?._id;
+
+const getOrdenServicio = (item) =>
+  item?.ordenServicio ||
+  item?.orden ||
+  item?.programacionViaje?.ordenServicio ||
+  item ||
+  {};
+
+const getProgramacionViaje = (item) =>
+  item?.programacionViaje || item?.programacion || item?.viaje || {};
+
+const getValue = (item, field, fallback = "") => {
+  const programacion = getProgramacionViaje(item);
+
+  if (field === "numeroContenedor") {
+    return programacion?.numeroContenedor || item?.[field] || fallback;
+  }
+
+  const orden = getOrdenServicio(item);
+  return item?.[field] ?? orden?.[field] ?? fallback;
+};
+
+const getClienteSolicitante = (item) => {
+  const orden = getOrdenServicio(item);
+  return (
+    item?.clienteSolicitante ||
+    item?.cliente ||
+    orden?.clienteSolicitante ||
+    orden?.cliente ||
+    null
+  );
+};
+
+const getFechaProgramada = (item) => {
+  const programacion = getProgramacionViaje(item);
+  return (
+    getValue(item, "fechaProgramada", null) ||
+    programacion?.fechaInicioTraslado ||
+    programacion?.fechaProgramada ||
+    null
+  );
+};
+
+const getOrdenViaje = (item) => {
+  const programacion = getProgramacionViaje(item);
+  const id = item?.programacionViajeId ?? programacion?.id ?? programacion?._id;
+
+  if (!id) return "-";
+
+  return `VIAJE-${String(id).padStart(6, "0")}`;
+};
+
+const getAccionPayload = (item) => ({
+  devolucionContenedorId: item?.devolucionContenedorId ?? item?.id,
+  programacionViajeId:
+    item?.programacionViajeId ?? getProgramacionViaje(item)?.id ?? undefined,
+});
+
+const normalizar = (value) =>
+  String(value || "")
+    .trim()
+    .toUpperCase();
+
+const getPlacaUnidad = (unidad) =>
+  unidad?.placa || unidad?.numeroPlaca || unidad?.placaUnidad || "";
 
 function DevolucionesPage() {
   const {
@@ -17,6 +84,7 @@ function DevolucionesPage() {
     actualizarEstadoDevolucion,
   } = useOrdenesServicio();
   const { conductores = [], obtenerConductores, getConductores } = useConductores();
+  const { unidades = [], obtenerUnidades } = useUnidades();
 
   const [actualizando, setActualizando] = useState({});
   const [ordenSeleccionada, setOrdenSeleccionada] = useState(null);
@@ -27,6 +95,7 @@ function DevolucionesPage() {
     almacenDevolucion: "",
     fechaDevolucion: getTodayInputDate(),
     conductorDevolucionId: "",
+    tractoDevolucionId: "",
   });
 
   useEffect(() => {
@@ -36,6 +105,7 @@ function DevolucionesPage() {
     } else {
       getConductores?.();
     }
+    obtenerUnidades?.({ page: 1, limit: 100 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -76,13 +146,18 @@ function DevolucionesPage() {
     setOrdenSeleccionada(orden);
     setModalMode(mode);
     setFormDevolucion({
-      numeroContenedor: orden.numeroContenedor || "",
-      fechaVencimientoDevolucion: orden.fechaVencimientoDevolucion
-        ? orden.fechaVencimientoDevolucion.slice(0, 10)
+      numeroContenedor: getValue(orden, "numeroContenedor", ""),
+      fechaVencimientoDevolucion: getValue(
+        orden,
+        "fechaVencimientoDevolucion",
+        ""
+      )
+        ? getValue(orden, "fechaVencimientoDevolucion", "").slice(0, 10)
         : "",
-      almacenDevolucion: orden.almacenDevolucion || "",
+      almacenDevolucion: getValue(orden, "almacenDevolucion", ""),
       fechaDevolucion: getTodayInputDate(),
       conductorDevolucionId: "",
+      tractoDevolucionId: "",
     });
   };
 
@@ -95,14 +170,15 @@ function DevolucionesPage() {
       almacenDevolucion: "",
       fechaDevolucion: getTodayInputDate(),
       conductorDevolucionId: "",
+      tractoDevolucionId: "",
     });
   };
 
   const tieneDatosDevolucion = (orden) => {
     return Boolean(
-      orden?.numeroContenedor &&
-        orden?.fechaVencimientoDevolucion &&
-        orden?.almacenDevolucion
+      getValue(orden, "numeroContenedor", "") &&
+        getValue(orden, "fechaVencimientoDevolucion", "") &&
+        getValue(orden, "almacenDevolucion", "")
     );
   };
 
@@ -116,11 +192,17 @@ function DevolucionesPage() {
     abrirModalDevolucion(orden, "return");
   };
 
-  const validarDatosContenedor = () => {
+  const validarNumeroContenedor = () => {
     if (!formDevolucion.numeroContenedor.trim()) {
       notify.error("Ingresa el número de contenedor");
       return false;
     }
+
+    return true;
+  };
+
+  const validarDatosContenedor = () => {
+    if (!validarNumeroContenedor()) return false;
 
     if (!formDevolucion.fechaVencimientoDevolucion) {
       notify.error("Selecciona la fecha de vencimiento");
@@ -140,11 +222,10 @@ function DevolucionesPage() {
     const id = getItemId(orden);
     if (!id) return;
 
-    if (!validarDatosContenedor()) return;
-
     try {
       setActualizando((prev) => ({ ...prev, [id]: true }));
       await actualizarEstadoDevolucion(id, {
+        ...getAccionPayload(orden),
         estadoDevolucion: "PENDIENTE",
         numeroContenedor: formDevolucion.numeroContenedor,
         fechaVencimientoDevolucion: formDevolucion.fechaVencimientoDevolucion,
@@ -180,15 +261,22 @@ function DevolucionesPage() {
       return;
     }
 
+    if (!formDevolucion.tractoDevolucionId) {
+      notify.error("Selecciona la placa de devolución");
+      return;
+    }
+
     try {
       setActualizando((prev) => ({ ...prev, [id]: true }));
       await actualizarEstadoDevolucion(id, {
+        ...getAccionPayload(orden),
         estadoDevolucion: "DEVUELTO",
         numeroContenedor: formDevolucion.numeroContenedor,
         fechaVencimientoDevolucion: formDevolucion.fechaVencimientoDevolucion,
         almacenDevolucion: formDevolucion.almacenDevolucion,
         fechaDevolucion: formDevolucion.fechaDevolucion,
         conductorDevolucionId: Number(formDevolucion.conductorDevolucionId),
+        tractoDevolucionId: Number(formDevolucion.tractoDevolucionId),
       });
       notify.success("Devolución marcada como devuelta");
       cerrarModalDevolucion();
@@ -211,6 +299,14 @@ function DevolucionesPage() {
     recargarDevoluciones(page);
   };
 
+  const tractos = Array.isArray(unidades)
+    ? unidades.filter(
+        (unidad) =>
+          normalizar(unidad.tipoUnidad) === "TRACTO" &&
+          normalizar(unidad.estado) === "ACTIVO"
+      )
+    : [];
+
   const ConductoresSelect = () => (
     <select
       name="conductorDevolucionId"
@@ -227,6 +323,28 @@ function DevolucionesPage() {
       {conductores.map((conductor) => (
         <option key={getItemId(conductor)} value={getItemId(conductor)}>
           {conductor.nombres} {conductor.apellidos}
+        </option>
+      ))}
+    </select>
+  );
+
+  const TractosSelect = () => (
+    <select
+      name="tractoDevolucionId"
+      value={formDevolucion.tractoDevolucionId}
+      onChange={(event) =>
+        setFormDevolucion((prev) => ({
+          ...prev,
+          tractoDevolucionId: event.target.value,
+        }))
+      }
+      className="input p-3"
+    >
+      <option value="">Seleccione placa</option>
+      {tractos.map((unidad) => (
+        <option key={getItemId(unidad)} value={getItemId(unidad)}>
+          {getPlacaUnidad(unidad) || "SIN PLACA"}
+          {unidad.marca ? ` - ${unidad.marca}` : ""}
         </option>
       ))}
     </select>
@@ -268,18 +386,24 @@ function DevolucionesPage() {
               {devolucionesPendientes.map((orden) => {
                 const id = getItemId(orden);
                 const diasLibres = calcularDiasLibres(
-                  orden.fechaVencimientoDevolucion
+                  getValue(orden, "fechaVencimientoDevolucion", null)
                 );
+                const cliente = getClienteSolicitante(orden);
+                const partida = getValue(orden, "partida", null);
+                const llegada = getValue(orden, "llegada", null);
 
                 return (
-                  <article key={id} className="mobile-card">
+                  <article
+                    key={`${id}-${orden.programacionViajeId || ""}`}
+                    className="mobile-card"
+                  >
                     <div className="mb-4 flex items-start justify-between gap-3">
                       <div>
                         <p className="text-faint text-xs font-medium">
-                          Orden
+                          Orden de viaje
                         </p>
                         <h2 className="text-main text-lg font-bold">
-                          {orden.numeroOrden || "-"}
+                          {getOrdenViaje(orden)}
                         </h2>
                       </div>
 
@@ -292,31 +416,33 @@ function DevolucionesPage() {
                       <div className="info-tile">
                         <p className="text-faint text-xs">Fecha programada</p>
                         <p className="text-main font-semibold">
-                          {formatearFecha(orden.fechaProgramada)}
+                          {formatearFecha(getFechaProgramada(orden))}
                         </p>
                       </div>
 
                       <div className="info-tile">
                         <p className="text-faint text-xs">Cliente</p>
                         <p className="text-main font-semibold">
-                          {orden.clienteSolicitante?.razonSocial || "-"}
+                          {cliente?.razonSocial || "-"}
                         </p>
                         <p className="text-faint text-xs">
-                          {orden.clienteSolicitante?.numeroDocumento || ""}
+                          {cliente?.numeroDocumento || ""}
                         </p>
                       </div>
 
                       <div className="info-tile">
                         <p className="text-faint text-xs">Contenedor</p>
                         <p className="text-main font-semibold">
-                          {orden.numeroContenedor || "-"}
+                          {getValue(orden, "numeroContenedor", "-")}
                         </p>
                       </div>
 
                       <div className="info-tile">
                         <p className="text-faint text-xs">Vencimiento</p>
                         <p className="text-main font-semibold">
-                          {formatearFecha(orden.fechaVencimientoDevolucion)}
+                          {formatearFecha(
+                            getValue(orden, "fechaVencimientoDevolucion", null)
+                          )}
                         </p>
                       </div>
 
@@ -340,17 +466,17 @@ function DevolucionesPage() {
                       <div className="info-tile">
                         <p className="text-faint text-xs">Almacén devolución</p>
                         <p className="text-main font-semibold">
-                          {orden.almacenDevolucion || "-"}
+                          {getValue(orden, "almacenDevolucion", "-")}
                         </p>
                       </div>
 
                       <div className="info-tile">
                         <p className="text-faint text-xs">Ruta</p>
                         <p className="text-muted mt-1">
-                          {orden.partida?.direccion || "-"}
+                          {partida?.direccion || "-"}
                         </p>
                         <p className="text-faint mt-1 text-xs">
-                          → {orden.llegada?.direccion || "-"}
+                          → {llegada?.direccion || "-"}
                         </p>
                       </div>
                     </div>
@@ -393,7 +519,7 @@ function DevolucionesPage() {
                 <table className="data-table w-full min-w-[1000px] text-sm">
                   <thead>
                     <tr>
-                      <th className="px-4 py-4 text-left">Orden</th>
+                      <th className="px-4 py-4 text-left">Orden de viaje</th>
                       <th className="px-4 py-4 text-left">Fecha</th>
                       <th className="px-4 py-4 text-left">Contenedor</th>
                       <th className="px-4 py-4 text-left">Vencimiento</th>
@@ -409,24 +535,27 @@ function DevolucionesPage() {
                     {devolucionesPendientes.map((orden) => {
                       const id = getItemId(orden);
                       const diasLibres = calcularDiasLibres(
-                        orden.fechaVencimientoDevolucion
+                        getValue(orden, "fechaVencimientoDevolucion", null)
                       );
+                      const cliente = getClienteSolicitante(orden);
 
                       return (
-                        <tr key={id}>
+                        <tr key={`${id}-${orden.programacionViajeId || ""}`}>
                           <td className="px-4 py-4">
                             <p className="text-main font-bold">
-                              {orden.numeroOrden || "-"}
+                              {getOrdenViaje(orden)}
                             </p>
                           </td>
                           <td className="text-muted whitespace-nowrap px-4 py-4">
-                            {formatearFecha(orden.fechaProgramada)}
+                            {formatearFecha(getFechaProgramada(orden))}
                           </td>
                           <td className="text-main whitespace-nowrap px-4 py-4 font-semibold">
-                            {orden.numeroContenedor || "-"}
+                            {getValue(orden, "numeroContenedor", "-")}
                           </td>
                           <td className="text-muted whitespace-nowrap px-4 py-4">
-                            {formatearFecha(orden.fechaVencimientoDevolucion)}
+                            {formatearFecha(
+                              getValue(orden, "fechaVencimientoDevolucion", null)
+                            )}
                           </td>
                           <td className="whitespace-nowrap px-4 py-4">
                             <span
@@ -444,14 +573,14 @@ function DevolucionesPage() {
                             </span>
                           </td>
                           <td className="text-muted min-w-[180px] px-4 py-4">
-                            {orden.almacenDevolucion || "-"}
+                            {getValue(orden, "almacenDevolucion", "-")}
                           </td>
                           <td className="min-w-[220px] px-4 py-4">
                             <p className="text-main max-w-[260px] truncate font-semibold">
-                              {orden.clienteSolicitante?.razonSocial || "-"}
+                              {cliente?.razonSocial || "-"}
                             </p>
                             <p className="text-faint text-xs">
-                              {orden.clienteSolicitante?.numeroDocumento || ""}
+                              {cliente?.numeroDocumento || ""}
                             </p>
                           </td>
                           <td className="px-4 py-4 text-center">
@@ -517,8 +646,9 @@ function DevolucionesPage() {
                     : "Marcar como devuelto"}
                 </h2>
                 <p className="text-muted text-sm">
-                  {ordenSeleccionada.numeroOrden} ·{" "}
-                  {ordenSeleccionada.clienteSolicitante?.razonSocial || "Cliente"}
+                  {getOrdenViaje(ordenSeleccionada)} ·{" "}
+                  {getClienteSolicitante(ordenSeleccionada)?.razonSocial ||
+                    "Cliente"}
                 </p>
               </div>
 
@@ -536,13 +666,13 @@ function DevolucionesPage() {
               <div className="info-tile">
                 <p className="text-faint text-xs">Cliente</p>
                 <p className="text-main font-semibold">
-                  {ordenSeleccionada.clienteSolicitante?.razonSocial || "-"}
+                  {getClienteSolicitante(ordenSeleccionada)?.razonSocial || "-"}
                 </p>
               </div>
               <div className="info-tile">
-                <p className="text-faint text-xs">Orden</p>
+                <p className="text-faint text-xs">Orden de viaje</p>
                 <p className="text-main font-semibold">
-                  {ordenSeleccionada.numeroOrden || "-"}
+                  {getOrdenViaje(ordenSeleccionada)}
                 </p>
               </div>
             </div>
@@ -649,6 +779,18 @@ function DevolucionesPage() {
                     Conductor que devuelve
                   </label>
                   <ConductoresSelect />
+                </div>
+
+                <div>
+                  <label className="text-muted mb-1 block text-sm">
+                    Placa de devolución (tracto)
+                  </label>
+                  <TractosSelect />
+                  {tractos.length === 0 && (
+                    <p className="text-faint mt-1 text-xs">
+                      No hay tractos activos registrados.
+                    </p>
+                  )}
                 </div>
               </div>
             )}

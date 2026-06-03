@@ -26,6 +26,7 @@ import OrdenServicioFormPage from "./components/modals/OrdenServicioModal";
 
 // 🔹 Páginas
 import LoginPage from "./pages/LoginPage";
+import HomePage from "./pages/HomePage";
 import DashboardPage from "./pages/DashboardPage";
 import AuditoriaPage from "./pages/AuditoriaPage";
 import ProfileTask from "./pages/ProfilePage";
@@ -37,6 +38,7 @@ import ProgramacionViajePage from "./pages/ProgramacionViajePage";
 import UnidadesPage from "./pages/UnidadesPage";
 import ConductoresPage from "./pages/ConductoresPage";
 import GuiaTransportistaPage from "./pages/GuiaTransportistaPage";
+import DocumentosFacturacionPage from "./pages/DocumentosFacturacionPage";
 import NubefactPruebasPage from "./pages/NubefactPruebasPage";
 import DevolucionesPage from "./pages/DevolucionesPage";
 import EmpresaConfigPage from "./pages/EmpresaConfigPage";
@@ -66,7 +68,7 @@ function Layout() {
               }`}
           >
             <Routes>
-              <Route index element={<Navigate to="/dashboard" replace />} />
+              <Route index element={<HomePage />} />
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/profile" element={<ProfileTask />} />
               <Route path="/admin/usuarios" element={<Navigate to="/usuarios" replace />} />
@@ -79,6 +81,7 @@ function Layout() {
               <Route path="/unidades" element={<UnidadesPage />} />
               <Route path="/conductores" element={<ConductoresPage />} />
               <Route path="/guia-transportista" element={<GuiaTransportistaPage />} />
+              <Route path="/documentos-facturacion" element={<DocumentosFacturacionPage />} />
               <Route path="/admin/nubefact-pruebas" element={<NubefactPruebasPage />} />
               <Route path="/admin/empresa" element={<EmpresaConfigPage />} />
               <Route path="/devoluciones" element={<DevolucionesPage />} />

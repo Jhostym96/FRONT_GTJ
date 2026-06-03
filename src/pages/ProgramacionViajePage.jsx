@@ -21,6 +21,10 @@ import { formatDateOnly } from "../utils/date";
 import ProgramacionViajeModal from "../components/modals/ProgramacionViajeModal";
 import TablePagination from "../components/TablePagination";
 
+const SELECT_OPTIONS_LIMIT = 1000;
+const APP_TIME_ZONE = "America/Lima";
+const APP_TIME_ZONE_OFFSET = "-05:00";
+
 const formatearTipoCarga = (tipoCarga) =>
   tipoCarga ? tipoCarga.replace("_", " ") : "-";
 
@@ -28,10 +32,37 @@ const formatearDimensionCarga = (dimensionCarga) =>
   dimensionCarga ? `${dimensionCarga} pies` : "";
 
 const getDateTimeLocalNow = () => {
-  const now = new Date();
-  const offsetMs = now.getTimezoneOffset() * 60000;
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: APP_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date());
 
-  return new Date(now.getTime() - offsetMs).toISOString().slice(0, 16);
+  const values = Object.fromEntries(
+    parts.map((part) => [part.type, part.value])
+  );
+
+  return `${values.year}-${values.month}-${values.day}T${values.hour}:${values.minute}`;
+};
+
+const toApiFechaHoraOperacion = (fechaHora) => {
+  if (!fechaHora) return "";
+
+  const texto = String(fechaHora).trim();
+
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(texto)) {
+    return `${texto}:00${APP_TIME_ZONE_OFFSET}`;
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(texto)) {
+    return `${texto}${APP_TIME_ZONE_OFFSET}`;
+  }
+
+  return texto;
 };
 
 const TRANSICIONES = {
@@ -98,12 +129,14 @@ const ProgramacionViajePage = () => {
         await obtenerProgramacionesViaje();
       }
 
-      await obtenerUnidades?.();
+      const selectParams = { page: 1, limit: SELECT_OPTIONS_LIMIT };
+
+      await obtenerUnidades?.(selectParams);
 
       if (obtenerConductores) {
-        await obtenerConductores();
+        await obtenerConductores(selectParams);
       } else if (getConductores) {
-        await getConductores();
+        await getConductores(selectParams);
       }
     };
 
@@ -128,6 +161,7 @@ const ProgramacionViajePage = () => {
     if (Number.isNaN(fechaObj.getTime())) return "-";
 
     return fechaObj.toLocaleString("es-PE", {
+      timeZone: APP_TIME_ZONE,
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
@@ -270,7 +304,9 @@ const ProgramacionViajePage = () => {
 
       await cambiarEstadoProgramacion(viajeId, {
         estado: nuevoEstado,
-        ...(requiereFecha ? { fechaHora } : {}),
+        ...(requiereFecha
+          ? { fechaHora: toApiFechaHoraOperacion(fechaHora) }
+          : {}),
       });
 
       await recargarProgramaciones();
@@ -361,6 +397,41 @@ const ProgramacionViajePage = () => {
     if (!conductor) return "-";
 
     return `${conductor.nombres || ""} ${conductor.apellidos || ""}`.trim();
+  };
+
+  const obtenerClienteSolicitante = (viaje) => {
+    const orden = viaje?.ordenServicio || {};
+    const cliente =
+      orden?.clienteSolicitante ||
+      orden?.cliente ||
+      viaje?.ordenServicio?.clienteSolicitante ||
+      viaje?.ordenServicio?.cliente ||
+      viaje?.clienteSolicitante ||
+      viaje?.cliente;
+
+    if (cliente?.razonSocial || cliente?.numeroDocumento) return cliente;
+
+    if (
+      orden?.clienteSolicitanteRazonSocial ||
+      orden?.clienteSolicitanteNumeroDocumento
+    ) {
+      return {
+        razonSocial: orden.clienteSolicitanteRazonSocial,
+        numeroDocumento: orden.clienteSolicitanteNumeroDocumento,
+      };
+    }
+
+    if (
+      viaje?.clienteSolicitanteRazonSocial ||
+      viaje?.clienteSolicitanteNumeroDocumento
+    ) {
+      return {
+        razonSocial: viaje.clienteSolicitanteRazonSocial,
+        numeroDocumento: viaje.clienteSolicitanteNumeroDocumento,
+      };
+    }
+
+    return null;
   };
 
   const listaProgramaciones = Array.isArray(programaciones)
@@ -499,6 +570,7 @@ const ProgramacionViajePage = () => {
             <div className="grid gap-4 lg:hidden">
               {listaProgramaciones.map((viaje) => {
                 const viajeId = getId(viaje);
+                const cliente = obtenerClienteSolicitante(viaje);
 
                 return (
                   <article key={viajeId} className="mobile-card">
@@ -515,6 +587,16 @@ const ProgramacionViajePage = () => {
 
                     <div className="grid gap-3 text-sm sm:grid-cols-2">
                       <div className="info-tile">
+                        <p className="text-faint text-xs">Cliente</p>
+                        <p className="text-main font-semibold">
+                          {cliente?.razonSocial || "-"}
+                        </p>
+                        <p className="text-faint text-xs">
+                          {cliente?.numeroDocumento || ""}
+                        </p>
+                      </div>
+
+                      <div className="info-tile">
                         <p className="text-faint text-xs">Carga</p>
                         <p className="text-main font-semibold">
                           {formatearTipoCarga(viaje.ordenServicio?.tipoCarga)}
@@ -529,6 +611,11 @@ const ProgramacionViajePage = () => {
                               )}`
                             : ""}
                         </p>
+                        {viaje.ordenServicio?.tipoCarga === "CONTENEDOR" && (
+                          <p className="text-faint text-xs">
+                            Contenedor: {viaje.numeroContenedor || "-"}
+                          </p>
+                        )}
                       </div>
 
                       <div className="info-tile">
@@ -581,10 +668,11 @@ const ProgramacionViajePage = () => {
 
             <div className="data-table-wrap">
               <div className="table-scroll">
-                <table className="data-table w-full min-w-[1100px] text-sm">
+                <table className="data-table w-full min-w-[1250px] text-sm">
                   <thead>
                     <tr>
                       <th className="px-4 py-4 text-left">Orden</th>
+                      <th className="px-4 py-4 text-left">Cliente</th>
                       <th className="px-4 py-4 text-left">Carga</th>
                       <th className="px-4 py-4 text-left">Tracto</th>
                       <th className="px-4 py-4 text-left">Carreta</th>
@@ -599,12 +687,22 @@ const ProgramacionViajePage = () => {
                   <tbody>
                     {listaProgramaciones.map((viaje) => {
                       const viajeId = getId(viaje);
+                      const cliente = obtenerClienteSolicitante(viaje);
 
                       return (
                         <tr key={viajeId}>
                           <td className="px-4 py-4">
                             <p className="text-main font-bold">
                               {viaje.ordenServicio?.numeroOrden || "-"}
+                            </p>
+                          </td>
+
+                          <td className="min-w-[220px] px-4 py-4">
+                            <p className="text-main max-w-[260px] truncate font-semibold">
+                              {cliente?.razonSocial || "-"}
+                            </p>
+                            <p className="text-faint text-xs">
+                              {cliente?.numeroDocumento || ""}
                             </p>
                           </td>
 
@@ -625,6 +723,12 @@ const ProgramacionViajePage = () => {
                                   )}`
                                 : ""}
                             </p>
+                            {viaje.ordenServicio?.tipoCarga ===
+                              "CONTENEDOR" && (
+                              <p className="text-faint text-xs">
+                                Contenedor: {viaje.numeroContenedor || "-"}
+                              </p>
+                            )}
                           </td>
 
                           <td className="text-muted px-4 py-4">

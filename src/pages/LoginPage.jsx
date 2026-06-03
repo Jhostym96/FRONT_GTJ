@@ -1,6 +1,6 @@
 import { useForm } from "react-hook-form";
 import { useAuth } from "../context/AuthContext";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import logo from "/tj.png";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
@@ -12,7 +12,6 @@ function LoginPage() {
   const { register, handleSubmit } = useForm();
   const { signin, isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
   const { isDark, toggleTheme } = useTheme();
 
   const [showPassword, setShowPassword] = useState(false);
@@ -29,9 +28,9 @@ function LoginPage() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate(location.state?.from?.pathname || "/profile", { replace: true });
+      navigate("/", { replace: true });
     }
-  }, [isAuthenticated, location.state?.from?.pathname, navigate]);
+  }, [isAuthenticated, navigate]);
 
   return (
     <div className="app-shell flex min-h-screen items-center justify-center px-4 py-8">
