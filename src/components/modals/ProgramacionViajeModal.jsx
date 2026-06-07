@@ -1,12 +1,17 @@
-import { useEffect, useRef, useState } from "react";
-import { useOrdenServicio } from "../../context/OrdenServicioContext";
+import { useEffect, useMemo, useState } from "react";
 import { useUnidades } from "../../context/UnidadContext";
 import { useConductores } from "../../context/ConductorContext";
 import { useProgramacionViaje } from "../../context/ProgramacionViajeContext";
 import { getTodayInputDate } from "../../utils/date";
 
-const SELECT_OPTIONS_LIMIT = 1000;
 const APP_TIME_ZONE = "America/Lima";
+
+const normalizar = (valor) =>
+  String(valor || "")
+    .trim()
+    .toUpperCase();
+
+const getId = (item) => item?.id ?? item?._id ?? "";
 
 const createInitialForm = () => ({
   ordenServicioId: "",
@@ -14,6 +19,7 @@ const createInitialForm = () => ({
   vehiculoSecundarioId: "",
   conductorId: "",
   fechaInicioTraslado: getTodayInputDate(),
+  horaCita: "",
   numeroContenedor: "",
   observaciones: "",
 });
@@ -27,12 +33,9 @@ function ProgramacionViajeModal({
 }) {
   const modalOpen = isOpen ?? open;
 
-  const { ordenesServicio = [], obtenerOrdenesServicio } = useOrdenServicio();
+  const { unidades = [] } = useUnidades();
 
-  const { unidades = [], obtenerUnidades } = useUnidades();
-
-  const { conductores = [], obtenerConductores, getConductores } =
-    useConductores();
+  const { conductores = [] } = useConductores();
 
   const {
     crearProgramacionViaje,
@@ -40,28 +43,9 @@ function ProgramacionViajeModal({
     actualizarProgramacionViaje,
     obtenerProgramacionesViaje,
     getProgramacionesViaje,
+    ordenesDisponibles: ordenesDisponiblesContext = [],
+    getOrdenesDisponibles,
   } = useProgramacionViaje();
-
-  const cargarDatosRef = useRef({
-    obtenerOrdenesServicio,
-    obtenerUnidades,
-    obtenerConductores,
-    getConductores,
-  });
-
-  useEffect(() => {
-    cargarDatosRef.current = {
-      obtenerOrdenesServicio,
-      obtenerUnidades,
-      obtenerConductores,
-      getConductores,
-    };
-  }, [
-    obtenerOrdenesServicio,
-    obtenerUnidades,
-    obtenerConductores,
-    getConductores,
-  ]);
 
   const [form, setForm] = useState(createInitialForm);
   const [error, setError] = useState("");
@@ -70,13 +54,6 @@ function ProgramacionViajeModal({
   const isEdit = mode === "edit";
   const isReadOnly = isView;
   const requiresRouteEditReason = isEdit && data?.estado === "EN_RUTA";
-
-  const normalizar = (valor) =>
-    String(valor || "")
-      .trim()
-      .toUpperCase();
-
-  const getId = (item) => item?.id ?? item?._id ?? "";
 
   const formatearFechaInput = (fecha) => {
     if (!fecha) return "";
@@ -113,15 +90,8 @@ function ProgramacionViajeModal({
   useEffect(() => {
     if (!modalOpen) return;
 
-    const selectParams = { page: 1, limit: SELECT_OPTIONS_LIMIT };
-
-    cargarDatosRef.current.obtenerOrdenesServicio?.(selectParams);
-    cargarDatosRef.current.obtenerUnidades?.(selectParams);
-
-    if (cargarDatosRef.current.obtenerConductores) {
-      cargarDatosRef.current.obtenerConductores(selectParams);
-    } else {
-      cargarDatosRef.current.getConductores?.(selectParams);
+    if (!isView && !isEdit) {
+      getOrdenesDisponibles?.();
     }
 
     setError("");
@@ -152,6 +122,7 @@ function ProgramacionViajeModal({
           data.conductorId || data.conductor?.id || data.conductor?._id || "",
 
         fechaInicioTraslado: formatearFechaInput(data.fechaInicioTraslado),
+        horaCita: data.horaCita || "",
 
         numeroContenedor: data.numeroContenedor || "",
         observaciones: data.observaciones || "",
@@ -160,39 +131,57 @@ function ProgramacionViajeModal({
     } else {
       setForm(createInitialForm());
     }
-  }, [modalOpen, isView, isEdit, data]);
+  }, [modalOpen, isView, isEdit, data, getOrdenesDisponibles]);
 
-  if (!modalOpen) return null;
-
-  const listaUnidades = Array.isArray(unidades) ? unidades : [];
-  const listaOrdenes = Array.isArray(ordenesServicio) ? ordenesServicio : [];
   const listaConductores = Array.isArray(conductores) ? conductores : [];
 
-  const tractos = listaUnidades.filter((unidad) => {
-    const tipo = normalizar(unidad.tipoUnidad);
-    const estado = normalizar(unidad.estado);
+  const tractos = useMemo(
+    () => {
+      if (!modalOpen) return [];
 
-    return tipo === "TRACTO" && estado === "ACTIVO";
-  });
+      return (Array.isArray(unidades) ? unidades : []).filter((unidad) => {
+        const tipo = normalizar(unidad.tipoUnidad);
+        const estado = normalizar(unidad.estado);
 
-  const carretas = listaUnidades.filter((unidad) => {
-    const tipo = normalizar(unidad.tipoUnidad);
-    const estado = normalizar(unidad.estado);
+        return tipo === "TRACTO" && estado === "ACTIVO";
+      });
+    },
+    [modalOpen, unidades]
+  );
 
-    return tipo === "CARRETA" && estado === "ACTIVO";
-  });
+  const carretas = useMemo(
+    () => {
+      if (!modalOpen) return [];
 
-  const ordenesDisponibles = listaOrdenes.filter((orden) => {
-    const estado = normalizar(orden.estado);
-    const cantidadViajes = Number(orden.cantidadViajes || 1);
-    const viajesProgramados = Number(orden.viajesProgramados || 0);
+      return (Array.isArray(unidades) ? unidades : []).filter((unidad) => {
+        const tipo = normalizar(unidad.tipoUnidad);
+        const estado = normalizar(unidad.estado);
 
-    return (
-      estado !== "ANULADA" &&
-      estado !== "FINALIZADA" &&
-      viajesProgramados < cantidadViajes
-    );
-  });
+        return tipo === "CARRETA" && estado === "ACTIVO";
+      });
+    },
+    [modalOpen, unidades]
+  );
+
+  const ordenesDisponibles = useMemo(() => {
+    if (!modalOpen) return [];
+
+    const disponibles = Array.isArray(ordenesDisponiblesContext)
+      ? ordenesDisponiblesContext
+      : [];
+    const ordenActual = data?.ordenServicio;
+
+    if (
+      !ordenActual ||
+      disponibles.some((orden) => getId(orden) === getId(ordenActual))
+    ) {
+      return disponibles;
+    }
+
+    return [ordenActual, ...disponibles];
+  }, [data?.ordenServicio, modalOpen, ordenesDisponiblesContext]);
+
+  if (!modalOpen) return null;
 
   const obtenerRazonSocialCliente = (orden) => {
     return (
@@ -209,7 +198,8 @@ function ProgramacionViajeModal({
       : "Carga sin tipo";
     const clasificacion = orden?.clasificacionCarga || "GENERAL";
     const dimension =
-      orden?.tipoCarga === "CONTENEDOR" && orden?.dimensionCarga
+      ["CONTENEDOR", "EXPORTACION"].includes(orden?.tipoCarga) &&
+      orden?.dimensionCarga
         ? ` ${orden.dimensionCarga} pies`
         : "";
 
@@ -285,6 +275,11 @@ function ProgramacionViajeModal({
         return;
       }
 
+      if (!form.horaCita) {
+        setError("Debes seleccionar la hora de cita");
+        return;
+      }
+
       if (
         requiresRouteEditReason &&
         String(form.motivoEdicionEnRuta || "").trim().length < 8
@@ -302,7 +297,7 @@ function ProgramacionViajeModal({
       const conductorSeleccionado = listaConductores.find(
         (conductor) => String(getId(conductor)) === String(form.conductorId)
       );
-      const ordenSeleccionada = listaOrdenes.find(
+      const ordenSeleccionada = ordenesDisponibles.find(
         (orden) => String(getId(orden)) === String(form.ordenServicioId)
       );
       const clasificacionCarga =
@@ -366,6 +361,7 @@ function ProgramacionViajeModal({
           : null,
         conductorId: Number(form.conductorId),
         fechaInicioTraslado: form.fechaInicioTraslado,
+        horaCita: form.horaCita,
         numeroContenedor: form.numeroContenedor,
         observaciones: form.observaciones,
         motivoEdicionEnRuta: form.motivoEdicionEnRuta || "",
@@ -409,7 +405,9 @@ function ProgramacionViajeModal({
             </h2>
 
             <p className="text-muted text-sm">
-              Asigna orden, tracto, carreta y conductor.
+              {(isView || isEdit) && data
+                ? `${data.numeroProgramacion || `PV-${String(getId(data)).padStart(6, "0")}`} · Orden ${data.ordenServicio?.numeroOrden || "-"}`
+                : "Asigna orden, tracto, carreta y conductor."}
             </p>
           </div>
 
@@ -598,6 +596,22 @@ function ProgramacionViajeModal({
               type="date"
               name="fechaInicioTraslado"
               value={form.fechaInicioTraslado}
+              onChange={handleChange}
+              disabled={isReadOnly}
+              className="input p-3"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="text-muted mb-1 block text-sm">
+              Hora de cita
+            </label>
+
+            <input
+              type="time"
+              name="horaCita"
+              value={form.horaCita}
               onChange={handleChange}
               disabled={isReadOnly}
               className="input p-3"

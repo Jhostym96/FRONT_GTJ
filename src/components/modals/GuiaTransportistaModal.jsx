@@ -74,23 +74,20 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
 
   const {
     programaciones,
-    getProgramacionesViaje,
     getProgramacionesDisponiblesParaGuia,
   } = useProgramacionViaje();
   const { config: empresaConfig, obtenerConfig: obtenerEmpresaConfig } =
     useEmpresaConfig();
 
   const cargarProgramacionesRef = useRef({
-    getProgramacionesViaje,
     getProgramacionesDisponiblesParaGuia,
   });
 
   useEffect(() => {
     cargarProgramacionesRef.current = {
-      getProgramacionesViaje,
       getProgramacionesDisponiblesParaGuia,
     };
-  }, [getProgramacionesViaje, getProgramacionesDisponiblesParaGuia]);
+  }, [getProgramacionesDisponiblesParaGuia]);
 
   const initialForm = useMemo(
     () => ({
@@ -137,14 +134,14 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
   useEffect(() => {
     if (!isOpen) return;
 
-    obtenerEmpresaConfig?.().catch(() => {});
+    if (!empresaConfig) {
+      obtenerEmpresaConfig?.().catch(() => {});
+    }
 
     if (mode === "create") {
       cargarProgramacionesRef.current.getProgramacionesDisponiblesParaGuia?.();
-    } else {
-      cargarProgramacionesRef.current.getProgramacionesViaje?.();
     }
-  }, [isOpen, mode, obtenerEmpresaConfig]);
+  }, [empresaConfig, isOpen, mode, obtenerEmpresaConfig]);
 
   useEffect(() => {
     if (guia && (isEdit || isView)) {
@@ -580,7 +577,8 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
 
               {listaProgramaciones.map((p) => (
                 <option key={getRecordId(p)} value={getRecordId(p)}>
-                  {p.ordenServicio?.numeroOrden || "Orden sin número"} -{" "}
+                  {p.numeroProgramacion || `PV-${String(getRecordId(p)).padStart(6, "0")}`} -{" "}
+                  Orden {p.ordenServicio?.numeroOrden || "sin número"} -{" "}
                   {p.vehiculoPrincipal?.placa || "Sin placa"} -{" "}
                   {p.conductor
                     ? `${p.conductor.nombres || ""} ${

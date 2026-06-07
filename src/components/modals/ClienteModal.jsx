@@ -6,6 +6,7 @@ const initialForm = {
   numeroDocumento: "",
   razonSocial: "",
   direccionFiscal: "",
+  diasCredito: "0",
   remitentes: [],
   destinatarios: [],
 };
@@ -383,7 +384,7 @@ function EntidadRelacionadaModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-3 py-4 backdrop-blur-sm sm:px-4">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-3 py-4 sm:px-4">
       <div className="panel flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden">
         <div className="flex items-start justify-between gap-4 border-b px-5 py-4 sm:px-6">
           <div>
@@ -599,6 +600,7 @@ function ClienteModal({
         numeroDocumento: clienteSeleccionado.numeroDocumento || "",
         razonSocial: clienteSeleccionado.razonSocial || "",
         direccionFiscal: clienteSeleccionado.direccionFiscal || "",
+        diasCredito: String(clienteSeleccionado.diasCredito ?? 0),
         remitentes: obtenerEntidadesPorTipo(clienteSeleccionado, "REMITENTE"),
         destinatarios: obtenerEntidadesPorTipo(clienteSeleccionado, "DESTINATARIO"),
       });
@@ -694,6 +696,7 @@ function ClienteModal({
       numeroDocumento: normalizarTexto(form.numeroDocumento),
       razonSocial: normalizarMayuscula(form.razonSocial),
       direccionFiscal: normalizarMayuscula(form.direccionFiscal),
+      diasCredito: Number(form.diasCredito || 0),
       entidadesRelacionadas: [
         ...form.remitentes.map((item) => normalizarEntidad(item, "REMITENTE")),
         ...form.destinatarios.map((item) => normalizarEntidad(item, "DESTINATARIO")),
@@ -800,6 +803,21 @@ function ClienteModal({
                       disabled={isView}
                       className={`${styles.input} uppercase`}
                       placeholder="Ingrese la dirección fiscal del cliente"
+                    />
+                  </div>
+
+                  <div className="md:col-span-3">
+                    <label className={styles.label}>Días de crédito</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      name="diasCredito"
+                      value={form.diasCredito}
+                      onChange={handleClienteChange}
+                      disabled={isView}
+                      className={styles.input}
+                      placeholder="0"
                     />
                   </div>
                 </div>

@@ -227,6 +227,7 @@ function EmpresaConfigPage() {
                     Permitir unidad con viaje activo
                   </span>
                 </label>
+
               </div>
 
               <label className="mt-4 block space-y-1">
@@ -254,6 +255,7 @@ function EmpresaConfigPage() {
             </>
           )}
         </form>
+
       </div>
     </div>
   );

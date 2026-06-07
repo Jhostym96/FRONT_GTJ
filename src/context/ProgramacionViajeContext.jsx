@@ -6,6 +6,7 @@ import {
   createProgramacionViajeRequest,
   updateProgramacionViajeRequest,
   updateEstadoProgramacionViajeRequest,
+  registrarGuiaSunatProgramacionRequest,
   getOrdenesDisponiblesParaViajeRequest,
   getProgramacionesDisponiblesParaGuiaRequest,
 } from "../api/programacionViaje";
@@ -151,6 +152,28 @@ export function ProgramacionViajeProvider({ children }) {
     }
   }, []);
 
+  const registrarGuiaSunatProgramacion = useCallback(async (id, data) => {
+    try {
+      const res = await registrarGuiaSunatProgramacionRequest(id, data);
+      const programacionActualizada = normalizeResource(res.data, ["programacion"]);
+
+      if (programacionActualizada) {
+        setProgramaciones((prev) =>
+          prev.map((item) =>
+            sameRecordId(item, id) ? programacionActualizada : item
+          )
+        );
+      }
+
+      return res.data;
+    } catch (error) {
+      setErrors([
+        error.response?.data?.message || "Error al registrar la guía SUNAT",
+      ]);
+      throw error;
+    }
+  }, []);
+
   const getOrdenesDisponibles = useCallback(async () => {
     try {
       const res = await getOrdenesDisponiblesParaViajeRequest();
@@ -178,6 +201,7 @@ export function ProgramacionViajeProvider({ children }) {
         createProgramacionViaje,
         actualizarProgramacionViaje,
         cambiarEstadoProgramacion,
+        registrarGuiaSunatProgramacion,
         getOrdenesDisponibles,
       }}
     >

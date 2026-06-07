@@ -345,6 +345,13 @@ function ClientesPage() {
 
                       <EntidadesResumen cliente={cliente} />
                     </div>
+
+                    <div className="info-tile">
+                      <p className="text-faint text-xs">Crédito</p>
+                      <p className="text-main font-semibold">
+                        {cliente.diasCredito || 0} días
+                      </p>
+                    </div>
                   </div>
 
                   <div className="mt-4 border-t pt-4">
@@ -357,7 +364,7 @@ function ClientesPage() {
             {/* Tabla en desktop */}
             <div className="data-table-wrap">
               <div className="table-scroll">
-                <table className="data-table w-full min-w-[1000px] text-sm">
+                <table className="data-table w-full min-w-[1100px] text-sm">
                   <thead>
                     <tr>
                       <th className="px-4 py-4 text-left">Cliente</th>
@@ -368,6 +375,7 @@ function ClientesPage() {
                       <th className="px-4 py-4 text-left">
                         Entidades relacionadas
                       </th>
+                      <th className="px-4 py-4 text-left">Crédito</th>
                       <th className="px-4 py-4 text-center">Estado</th>
                       <th className="px-4 py-4 text-right">Acciones</th>
                     </tr>
@@ -400,6 +408,10 @@ function ClientesPage() {
 
                         <td className="min-w-[240px] px-4 py-4">
                           <EntidadesResumen cliente={cliente} />
+                        </td>
+
+                        <td className="text-muted whitespace-nowrap px-4 py-4">
+                          {cliente.diasCredito || 0} días
                         </td>
 
                         <td className="whitespace-nowrap px-4 py-4 text-center">

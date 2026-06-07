@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { notify } from "../utils/notify";
-import { CheckCircle2, LoaderCircle, Pencil } from "lucide-react";
+import { CalendarClock, CheckCircle2, LoaderCircle, Pencil } from "lucide-react";
 import { useOrdenesServicio } from "../context/OrdenServicioContext";
 import { useConductores } from "../context/ConductorContext";
 import { useUnidades } from "../context/UnidadContext";
@@ -56,10 +56,14 @@ const getOrdenViaje = (item) => {
   const programacion = getProgramacionViaje(item);
   const id = item?.programacionViajeId ?? programacion?.id ?? programacion?._id;
 
+  if (programacion?.numeroProgramacion) return programacion.numeroProgramacion;
   if (!id) return "-";
 
-  return `VIAJE-${String(id).padStart(6, "0")}`;
+  return `PV-${String(id).padStart(6, "0")}`;
 };
+
+const getNumeroOrdenServicio = (item) =>
+  getOrdenServicio(item)?.numeroOrden || "-";
 
 const getAccionPayload = (item) => ({
   devolucionContenedorId: item?.devolucionContenedorId ?? item?.id,
@@ -74,6 +78,11 @@ const normalizar = (value) =>
 
 const getPlacaUnidad = (unidad) =>
   unidad?.placa || unidad?.numeroPlaca || unidad?.placaUnidad || "";
+
+const getNombreConductor = (conductor) =>
+  conductor
+    ? `${conductor.nombres || ""} ${conductor.apellidos || ""}`.trim() || "-"
+    : "-";
 
 function DevolucionesPage() {
   const {
@@ -93,9 +102,13 @@ function DevolucionesPage() {
     numeroContenedor: "",
     fechaVencimientoDevolucion: "",
     almacenDevolucion: "",
+    fechaProgramadaDevolucion: "",
+    horaProgramadaDevolucion: "",
     fechaDevolucion: getTodayInputDate(),
+    horaDevolucion: "",
     conductorDevolucionId: "",
     tractoDevolucionId: "",
+    observacionDevolucion: "",
   });
 
   useEffect(() => {
@@ -142,6 +155,23 @@ function DevolucionesPage() {
     return Math.ceil((vencimiento.getTime() - hoy.getTime()) / 86400000);
   };
 
+  const EstadoDevolucionBadge = ({ estado }) => {
+    const estadoNormalizado = normalizar(estado || "PENDIENTE");
+    const isProgramada = estadoNormalizado === "PROGRAMADA";
+
+    return (
+      <span
+        className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-bold tracking-wide ${
+          isProgramada
+            ? "border-blue-500/30 bg-blue-500/10 text-blue-400"
+            : "border-amber-500/30 bg-amber-500/10 text-amber-400"
+        }`}
+      >
+        {isProgramada ? "PROGRAMADA" : "PENDIENTE"}
+      </span>
+    );
+  };
+
   const abrirModalDevolucion = (orden, mode = "edit") => {
     setOrdenSeleccionada(orden);
     setModalMode(mode);
@@ -155,9 +185,17 @@ function DevolucionesPage() {
         ? getValue(orden, "fechaVencimientoDevolucion", "").slice(0, 10)
         : "",
       almacenDevolucion: getValue(orden, "almacenDevolucion", ""),
-      fechaDevolucion: getTodayInputDate(),
-      conductorDevolucionId: "",
-      tractoDevolucionId: "",
+      fechaProgramadaDevolucion: getValue(orden, "fechaProgramadaDevolucion", "")
+        ? getValue(orden, "fechaProgramadaDevolucion", "").slice(0, 10)
+        : "",
+      horaProgramadaDevolucion: getValue(orden, "horaProgramadaDevolucion", ""),
+      fechaDevolucion: getValue(orden, "fechaDevolucion", "")
+        ? getValue(orden, "fechaDevolucion", "").slice(0, 10)
+        : getTodayInputDate(),
+      horaDevolucion: getValue(orden, "horaDevolucion", ""),
+      conductorDevolucionId: getValue(orden, "conductorDevolucionId", "") || "",
+      tractoDevolucionId: getValue(orden, "tractoDevolucionId", "") || "",
+      observacionDevolucion: getValue(orden, "observacionDevolucion", ""),
     });
   };
 
@@ -168,9 +206,13 @@ function DevolucionesPage() {
       numeroContenedor: "",
       fechaVencimientoDevolucion: "",
       almacenDevolucion: "",
+      fechaProgramadaDevolucion: "",
+      horaProgramadaDevolucion: "",
       fechaDevolucion: getTodayInputDate(),
+      horaDevolucion: "",
       conductorDevolucionId: "",
       tractoDevolucionId: "",
+      observacionDevolucion: "",
     });
   };
 
@@ -186,6 +228,12 @@ function DevolucionesPage() {
     if (!tieneDatosDevolucion(orden)) {
       notify.error("Primero completa los datos de devolución");
       abrirModalDevolucion(orden, "edit");
+      return;
+    }
+
+    if (getValue(orden, "estadoDevolucion", "") !== "PROGRAMADA") {
+      notify.error("Primero programa la devolución");
+      abrirModalDevolucion(orden, "schedule");
       return;
     }
 
@@ -217,6 +265,32 @@ function DevolucionesPage() {
     return true;
   };
 
+  const validarProgramacionDevolucion = () => {
+    if (!validarDatosContenedor()) return false;
+
+    if (!formDevolucion.fechaProgramadaDevolucion) {
+      notify.error("Selecciona la fecha programada de devolución");
+      return false;
+    }
+
+    if (!formDevolucion.horaProgramadaDevolucion) {
+      notify.error("Selecciona la hora programada de devolución");
+      return false;
+    }
+
+    if (!formDevolucion.conductorDevolucionId) {
+      notify.error("Selecciona el conductor asignado");
+      return false;
+    }
+
+    if (!formDevolucion.tractoDevolucionId) {
+      notify.error("Selecciona la unidad asignada");
+      return false;
+    }
+
+    return true;
+  };
+
   const guardarDatosDevolucion = async () => {
     const orden = ordenSeleccionada;
     const id = getItemId(orden);
@@ -230,6 +304,7 @@ function DevolucionesPage() {
         numeroContenedor: formDevolucion.numeroContenedor,
         fechaVencimientoDevolucion: formDevolucion.fechaVencimientoDevolucion,
         almacenDevolucion: formDevolucion.almacenDevolucion,
+        observacionDevolucion: formDevolucion.observacionDevolucion,
       });
       notify.success("Datos de devolución guardados");
       cerrarModalDevolucion();
@@ -244,25 +319,53 @@ function DevolucionesPage() {
     }
   };
 
+  const programarDevolucion = async () => {
+    const orden = ordenSeleccionada;
+    const id = getItemId(orden);
+    if (!id) return;
+
+    if (!validarProgramacionDevolucion()) return;
+
+    try {
+      setActualizando((prev) => ({ ...prev, [id]: true }));
+      await actualizarEstadoDevolucion(id, {
+        ...getAccionPayload(orden),
+        estadoDevolucion: "PROGRAMADA",
+        numeroContenedor: formDevolucion.numeroContenedor,
+        fechaVencimientoDevolucion: formDevolucion.fechaVencimientoDevolucion,
+        almacenDevolucion: formDevolucion.almacenDevolucion,
+        fechaProgramadaDevolucion: formDevolucion.fechaProgramadaDevolucion,
+        horaProgramadaDevolucion: formDevolucion.horaProgramadaDevolucion,
+        conductorDevolucionId: Number(formDevolucion.conductorDevolucionId),
+        tractoDevolucionId: Number(formDevolucion.tractoDevolucionId),
+        observacionDevolucion: formDevolucion.observacionDevolucion,
+      });
+      notify.success("Devolución programada correctamente");
+      cerrarModalDevolucion();
+      await recargarDevoluciones();
+    } catch (error) {
+      notify.error(
+        error.response?.data?.message || "No se pudo programar la devolución"
+      );
+    } finally {
+      setActualizando((prev) => ({ ...prev, [id]: false }));
+    }
+  };
+
   const marcarDevuelto = async () => {
     const orden = ordenSeleccionada;
     const id = getItemId(orden);
     if (!id) return;
 
-    if (!validarDatosContenedor()) return;
+    if (!validarProgramacionDevolucion()) return;
 
     if (!formDevolucion.fechaDevolucion) {
       notify.error("Selecciona la fecha de devolución");
       return;
     }
 
-    if (!formDevolucion.conductorDevolucionId) {
-      notify.error("Selecciona el conductor que devuelve");
-      return;
-    }
-
-    if (!formDevolucion.tractoDevolucionId) {
-      notify.error("Selecciona la placa de devolución");
+    if (!formDevolucion.horaDevolucion) {
+      notify.error("Selecciona la hora de devolución");
       return;
     }
 
@@ -274,9 +377,13 @@ function DevolucionesPage() {
         numeroContenedor: formDevolucion.numeroContenedor,
         fechaVencimientoDevolucion: formDevolucion.fechaVencimientoDevolucion,
         almacenDevolucion: formDevolucion.almacenDevolucion,
+        fechaProgramadaDevolucion: formDevolucion.fechaProgramadaDevolucion,
+        horaProgramadaDevolucion: formDevolucion.horaProgramadaDevolucion,
         fechaDevolucion: formDevolucion.fechaDevolucion,
+        horaDevolucion: formDevolucion.horaDevolucion,
         conductorDevolucionId: Number(formDevolucion.conductorDevolucionId),
         tractoDevolucionId: Number(formDevolucion.tractoDevolucionId),
+        observacionDevolucion: formDevolucion.observacionDevolucion,
       });
       notify.success("Devolución marcada como devuelta");
       cerrarModalDevolucion();
@@ -400,16 +507,19 @@ function DevolucionesPage() {
                     <div className="mb-4 flex items-start justify-between gap-3">
                       <div>
                         <p className="text-faint text-xs font-medium">
-                          Orden de viaje
+                          Programación de viaje
                         </p>
                         <h2 className="text-main text-lg font-bold">
                           {getOrdenViaje(orden)}
                         </h2>
+                        <p className="text-faint text-xs">
+                          Orden: {getNumeroOrdenServicio(orden)}
+                        </p>
                       </div>
 
-                      <span className="inline-flex rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-[11px] font-bold tracking-wide text-amber-400">
-                        PENDIENTE
-                      </span>
+                      <EstadoDevolucionBadge
+                        estado={getValue(orden, "estadoDevolucion", "PENDIENTE")}
+                      />
                     </div>
 
                     <div className="grid gap-3 text-sm">
@@ -471,6 +581,36 @@ function DevolucionesPage() {
                       </div>
 
                       <div className="info-tile">
+                        <p className="text-faint text-xs">Programada</p>
+                        <p className="text-main font-semibold">
+                          {formatearFecha(
+                            getValue(orden, "fechaProgramadaDevolucion", null)
+                          )}
+                          {getValue(orden, "horaProgramadaDevolucion", "")
+                            ? ` ${getValue(
+                                orden,
+                                "horaProgramadaDevolucion",
+                                ""
+                              )}`
+                            : ""}
+                        </p>
+                      </div>
+
+                      <div className="info-tile">
+                        <p className="text-faint text-xs">Conductor asignado</p>
+                        <p className="text-main font-semibold">
+                          {getNombreConductor(
+                            getValue(orden, "conductorDevolucion", null)
+                          )}
+                        </p>
+                        <p className="text-faint text-xs">
+                          {getPlacaUnidad(
+                            getValue(orden, "tractoDevolucion", null)
+                          ) || ""}
+                        </p>
+                      </div>
+
+                      <div className="info-tile">
                         <p className="text-faint text-xs">Ruta</p>
                         <p className="text-muted mt-1">
                           {partida?.direccion || "-"}
@@ -482,7 +622,7 @@ function DevolucionesPage() {
                     </div>
 
                     <div className="mt-4 border-t pt-4">
-                      <div className="grid gap-2 sm:grid-cols-2">
+                      <div className="grid gap-2 sm:grid-cols-3">
                         <button
                           type="button"
                           onClick={() => abrirModalDevolucion(orden, "edit")}
@@ -492,6 +632,16 @@ function DevolucionesPage() {
                           aria-label="Editar datos de devolución"
                         >
                           <Pencil />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => abrirModalDevolucion(orden, "schedule")}
+                          disabled={actualizando[id]}
+                          className="btn-primary btn-icon"
+                          title="Programar devolución"
+                          aria-label="Programar devolución"
+                        >
+                          <CalendarClock />
                         </button>
                         <button
                           type="button"
@@ -516,16 +666,20 @@ function DevolucionesPage() {
 
             <div className="data-table-wrap">
               <div className="table-scroll">
-                <table className="data-table w-full min-w-[1000px] text-sm">
+                <table className="data-table w-full min-w-[1300px] text-sm">
                   <thead>
                     <tr>
-                      <th className="px-4 py-4 text-left">Orden de viaje</th>
+                      <th className="px-4 py-4 text-left">
+                        Programación de viaje
+                      </th>
                       <th className="px-4 py-4 text-left">Fecha</th>
+                      <th className="px-4 py-4 text-left">Cliente</th>
                       <th className="px-4 py-4 text-left">Contenedor</th>
                       <th className="px-4 py-4 text-left">Vencimiento</th>
                       <th className="px-4 py-4 text-left">Días libres</th>
                       <th className="px-4 py-4 text-left">Almacén</th>
-                      <th className="px-4 py-4 text-left">Cliente</th>
+                      <th className="px-4 py-4 text-left">Programada</th>
+                      <th className="px-4 py-4 text-left">Conductor</th>
                       <th className="px-4 py-4 text-center">Estado devolución</th>
                       <th className="px-4 py-4 text-right">Acción</th>
                     </tr>
@@ -545,9 +699,20 @@ function DevolucionesPage() {
                             <p className="text-main font-bold">
                               {getOrdenViaje(orden)}
                             </p>
+                            <p className="text-faint text-xs">
+                              Orden: {getNumeroOrdenServicio(orden)}
+                            </p>
                           </td>
                           <td className="text-muted whitespace-nowrap px-4 py-4">
                             {formatearFecha(getFechaProgramada(orden))}
+                          </td>
+                          <td className="min-w-[220px] px-4 py-4">
+                            <p className="text-main max-w-[260px] truncate font-semibold">
+                              {cliente?.razonSocial || "-"}
+                            </p>
+                            <p className="text-faint text-xs">
+                              {cliente?.numeroDocumento || ""}
+                            </p>
                           </td>
                           <td className="text-main whitespace-nowrap px-4 py-4 font-semibold">
                             {getValue(orden, "numeroContenedor", "-")}
@@ -575,18 +740,41 @@ function DevolucionesPage() {
                           <td className="text-muted min-w-[180px] px-4 py-4">
                             {getValue(orden, "almacenDevolucion", "-")}
                           </td>
-                          <td className="min-w-[220px] px-4 py-4">
-                            <p className="text-main max-w-[260px] truncate font-semibold">
-                              {cliente?.razonSocial || "-"}
+                          <td className="text-muted whitespace-nowrap px-4 py-4">
+                            <p className="text-main font-semibold">
+                              {formatearFecha(
+                                getValue(
+                                  orden,
+                                  "fechaProgramadaDevolucion",
+                                  null
+                                )
+                              )}
                             </p>
                             <p className="text-faint text-xs">
-                              {cliente?.numeroDocumento || ""}
+                              {getValue(orden, "horaProgramadaDevolucion", "") ||
+                                ""}
+                            </p>
+                          </td>
+                          <td className="min-w-[180px] px-4 py-4">
+                            <p className="text-main font-semibold">
+                              {getNombreConductor(
+                                getValue(orden, "conductorDevolucion", null)
+                              )}
+                            </p>
+                            <p className="text-faint text-xs">
+                              {getPlacaUnidad(
+                                getValue(orden, "tractoDevolucion", null)
+                              ) || ""}
                             </p>
                           </td>
                           <td className="px-4 py-4 text-center">
-                            <span className="inline-flex rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-[11px] font-bold tracking-wide text-amber-400">
-                              PENDIENTE
-                            </span>
+                            <EstadoDevolucionBadge
+                              estado={getValue(
+                                orden,
+                                "estadoDevolucion",
+                                "PENDIENTE"
+                              )}
+                            />
                           </td>
                           <td className="px-4 py-4">
                             <div className="flex justify-end gap-2">
@@ -599,6 +787,18 @@ function DevolucionesPage() {
                                 aria-label="Editar datos de devolución"
                               >
                                 <Pencil />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  abrirModalDevolucion(orden, "schedule")
+                                }
+                                disabled={actualizando[id]}
+                                className="btn-primary btn-icon"
+                                title="Programar devolución"
+                                aria-label="Programar devolución"
+                              >
+                                <CalendarClock />
                               </button>
                               <button
                                 type="button"
@@ -643,6 +843,8 @@ function DevolucionesPage() {
                 <h2 className="text-main text-xl font-bold">
                   {modalMode === "edit"
                     ? "Editar datos de devolución"
+                    : modalMode === "schedule"
+                    ? "Programar devolución"
                     : "Marcar como devuelto"}
                 </h2>
                 <p className="text-muted text-sm">
@@ -670,9 +872,12 @@ function DevolucionesPage() {
                 </p>
               </div>
               <div className="info-tile">
-                <p className="text-faint text-xs">Orden de viaje</p>
+                <p className="text-faint text-xs">Programación de viaje</p>
                 <p className="text-main font-semibold">
                   {getOrdenViaje(ordenSeleccionada)}
+                </p>
+                <p className="text-faint text-xs">
+                  Orden: {getNumeroOrdenServicio(ordenSeleccionada)}
                 </p>
               </div>
             </div>
@@ -734,6 +939,96 @@ function DevolucionesPage() {
                   </div>
                 </div>
               </div>
+            ) : modalMode === "schedule" ? (
+              <div className="grid gap-4">
+                <div className="grid gap-3 text-sm sm:grid-cols-3">
+                  <div className="info-tile">
+                    <p className="text-faint text-xs">Contenedor</p>
+                    <p className="text-main font-semibold">
+                      {formDevolucion.numeroContenedor || "-"}
+                    </p>
+                  </div>
+                  <div className="info-tile">
+                    <p className="text-faint text-xs">Vencimiento</p>
+                    <p className="text-main font-semibold">
+                      {formatearFecha(formDevolucion.fechaVencimientoDevolucion)}
+                    </p>
+                  </div>
+                  <div className="info-tile">
+                    <p className="text-faint text-xs">Almacén</p>
+                    <p className="text-main font-semibold">
+                      {formDevolucion.almacenDevolucion || "-"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="text-muted mb-1 block text-sm">
+                      Fecha programada
+                    </label>
+                    <input
+                      type="date"
+                      value={formDevolucion.fechaProgramadaDevolucion}
+                      onChange={(event) =>
+                        setFormDevolucion((prev) => ({
+                          ...prev,
+                          fechaProgramadaDevolucion: event.target.value,
+                        }))
+                      }
+                      className="input p-3"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-muted mb-1 block text-sm">
+                      Hora programada
+                    </label>
+                    <input
+                      type="time"
+                      value={formDevolucion.horaProgramadaDevolucion}
+                      onChange={(event) =>
+                        setFormDevolucion((prev) => ({
+                          ...prev,
+                          horaProgramadaDevolucion: event.target.value,
+                        }))
+                      }
+                      className="input p-3"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-muted mb-1 block text-sm">
+                    Conductor asignado
+                  </label>
+                  <ConductoresSelect />
+                </div>
+
+                <div>
+                  <label className="text-muted mb-1 block text-sm">
+                    Unidad asignada
+                  </label>
+                  <TractosSelect />
+                </div>
+
+                <div>
+                  <label className="text-muted mb-1 block text-sm">
+                    Observación
+                  </label>
+                  <textarea
+                    value={formDevolucion.observacionDevolucion}
+                    onChange={(event) =>
+                      setFormDevolucion((prev) => ({
+                        ...prev,
+                        observacionDevolucion: event.target.value,
+                      }))
+                    }
+                    className="input min-h-[90px] p-3"
+                    placeholder="Observación de programación"
+                  />
+                </div>
+              </div>
             ) : (
               <div className="grid gap-4">
                 <div className="grid gap-3 text-sm sm:grid-cols-3">
@@ -757,33 +1052,52 @@ function DevolucionesPage() {
                   </div>
                 </div>
 
-                <div>
-                  <label className="text-muted mb-1 block text-sm">
-                    Fecha de devolución
-                  </label>
-                  <input
-                    type="date"
-                    value={formDevolucion.fechaDevolucion}
-                    onChange={(event) =>
-                      setFormDevolucion((prev) => ({
-                        ...prev,
-                        fechaDevolucion: event.target.value,
-                      }))
-                    }
-                    className="input p-3"
-                  />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="text-muted mb-1 block text-sm">
+                      Fecha real de devolución
+                    </label>
+                    <input
+                      type="date"
+                      value={formDevolucion.fechaDevolucion}
+                      onChange={(event) =>
+                        setFormDevolucion((prev) => ({
+                          ...prev,
+                          fechaDevolucion: event.target.value,
+                        }))
+                      }
+                      className="input p-3"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-muted mb-1 block text-sm">
+                      Hora real
+                    </label>
+                    <input
+                      type="time"
+                      value={formDevolucion.horaDevolucion}
+                      onChange={(event) =>
+                        setFormDevolucion((prev) => ({
+                          ...prev,
+                          horaDevolucion: event.target.value,
+                        }))
+                      }
+                      className="input p-3"
+                    />
+                  </div>
                 </div>
 
                 <div>
                   <label className="text-muted mb-1 block text-sm">
-                    Conductor que devuelve
+                    Conductor asignado
                   </label>
                   <ConductoresSelect />
                 </div>
 
                 <div>
                   <label className="text-muted mb-1 block text-sm">
-                    Placa de devolución (tracto)
+                    Unidad asignada
                   </label>
                   <TractosSelect />
                   {tractos.length === 0 && (
@@ -791,6 +1105,23 @@ function DevolucionesPage() {
                       No hay tractos activos registrados.
                     </p>
                   )}
+                </div>
+
+                <div>
+                  <label className="text-muted mb-1 block text-sm">
+                    Observación final
+                  </label>
+                  <textarea
+                    value={formDevolucion.observacionDevolucion}
+                    onChange={(event) =>
+                      setFormDevolucion((prev) => ({
+                        ...prev,
+                        observacionDevolucion: event.target.value,
+                      }))
+                    }
+                    className="input min-h-[90px] p-3"
+                    placeholder="Observación de devolución"
+                  />
                 </div>
               </div>
             )}
@@ -813,6 +1144,17 @@ function DevolucionesPage() {
                   {actualizando[getItemId(ordenSeleccionada)]
                     ? "Guardando..."
                     : "Guardar datos"}
+                </button>
+              ) : modalMode === "schedule" ? (
+                <button
+                  type="button"
+                  onClick={programarDevolucion}
+                  disabled={actualizando[getItemId(ordenSeleccionada)]}
+                  className="btn-primary px-3 py-1.5"
+                >
+                  {actualizando[getItemId(ordenSeleccionada)]
+                    ? "Programando..."
+                    : "Programar devolución"}
                 </button>
               ) : (
                 <button

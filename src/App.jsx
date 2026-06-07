@@ -42,6 +42,9 @@ import DocumentosFacturacionPage from "./pages/DocumentosFacturacionPage";
 import NubefactPruebasPage from "./pages/NubefactPruebasPage";
 import DevolucionesPage from "./pages/DevolucionesPage";
 import EmpresaConfigPage from "./pages/EmpresaConfigPage";
+import WhatsappBotConfigPage from "./pages/WhatsappBotConfigPage";
+import ReportesPage from "./pages/ReportesPage";
+import FacturacionPage from "./pages/FacturacionPage";
 
 
 
@@ -84,7 +87,10 @@ function Layout() {
               <Route path="/documentos-facturacion" element={<DocumentosFacturacionPage />} />
               <Route path="/admin/nubefact-pruebas" element={<NubefactPruebasPage />} />
               <Route path="/admin/empresa" element={<EmpresaConfigPage />} />
+              <Route path="/admin/whatsapp-bot" element={<WhatsappBotConfigPage />} />
               <Route path="/devoluciones" element={<DevolucionesPage />} />
+              <Route path="/reportes" element={<ReportesPage />} />
+              <Route path="/facturacion" element={<FacturacionPage />} />
 
             </Routes>
           </main>

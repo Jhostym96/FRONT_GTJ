@@ -16,6 +16,7 @@ const TIPOS_CARGA = [
   { value: "CONTENEDOR", label: "CONTENEDOR" },
   { value: "CARGA_SUELTA", label: "CARGA SUELTA" },
   { value: "TOLVA", label: "TOLVA" },
+  { value: "EXPORTACION", label: "EXPORTACION" },
 ];
 
 const CLASIFICACIONES_CARGA = [
@@ -28,6 +29,9 @@ const DIMENSIONES_CARGA = [
   { value: "20", label: "20 pies" },
   { value: "40", label: "40 pies" },
 ];
+
+const requiereDimensionContenedor = (tipoCarga) =>
+  ["CONTENEDOR", "EXPORTACION"].includes(tipoCarga);
 
 const createInitialForm = () => ({
   fechaProgramada: getTodayInputDate(),
@@ -60,6 +64,54 @@ const createInitialForm = () => ({
 const getItemId = (item) => item?.id ?? item?._id;
 
 const compararId = (a, b) => String(a) === String(b);
+
+const normalizarComparacion = (valor) =>
+  valor?.toString().trim().toUpperCase() || "";
+
+const obtenerEntidadesPorTipo = (cliente) => {
+  const entidades = cliente?.entidadesRelacionadas || [];
+
+  return {
+    remitentes: entidades.filter(
+      (entidad) => normalizarComparacion(entidad.tipo) === "REMITENTE"
+    ),
+    destinatarios: entidades.filter(
+      (entidad) => normalizarComparacion(entidad.tipo) === "DESTINATARIO"
+    ),
+  };
+};
+
+const buscarPorNumeroDocumento = (items = [], numeroDocumento = "") => {
+  const documento = normalizarComparacion(numeroDocumento);
+
+  if (!documento) return null;
+
+  return (
+    items.find(
+      (item) => normalizarComparacion(item?.numeroDocumento) === documento
+    ) || null
+  );
+};
+
+const buscarDireccion = (direcciones = [], punto = {}) => {
+  const ubigeo = normalizarComparacion(punto?.ubigeo);
+  const direccion = normalizarComparacion(punto?.direccion);
+
+  if (!ubigeo && !direccion) return null;
+
+  return (
+    direcciones.find((item) => {
+      const mismoUbigeo = ubigeo
+        ? normalizarComparacion(item?.ubigeo) === ubigeo
+        : true;
+      const mismaDireccion = direccion
+        ? normalizarComparacion(item?.direccion) === direccion
+        : true;
+
+      return mismoUbigeo && mismaDireccion;
+    }) || null
+  );
+};
 
 const OrdenServicioModal = ({
   isOpen,
@@ -106,8 +158,10 @@ const OrdenServicioModal = ({
   useEffect(() => {
     if (!isOpen) return;
 
-    clientesActionsRef.current.getClientes?.();
-  }, [isOpen]);
+    if (!isViewMode && clientes.length === 0) {
+      clientesActionsRef.current.getClientes?.();
+    }
+  }, [clientes.length, isOpen, isViewMode]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -177,6 +231,53 @@ const OrdenServicioModal = ({
     }
   }, [isOpen, mode, orden, isCreateMode, isEditMode, isViewMode]);
 
+  useEffect(() => {
+    if (!isOpen || !(isEditMode || isViewMode) || !orden || clientes.length === 0) {
+      return;
+    }
+
+    const cliente = buscarPorNumeroDocumento(
+      clientes,
+      orden.clienteSolicitante?.numeroDocumento
+    );
+
+    if (!cliente) return;
+
+    const { remitentes, destinatarios } = obtenerEntidadesPorTipo(cliente);
+    const remitente = buscarPorNumeroDocumento(
+      remitentes,
+      orden.remitente?.numeroDocumento
+    );
+    const destinatario = buscarPorNumeroDocumento(
+      destinatarios,
+      orden.destinatario?.numeroDocumento
+    );
+    const direccionPartida = buscarDireccion(
+      remitente?.direcciones,
+      orden.partida
+    );
+    const direccionLlegada = buscarDireccion(
+      destinatario?.direcciones,
+      orden.llegada
+    );
+
+    setClienteIdSeleccionado(String(getItemId(cliente) || ""));
+    setRemitentesDisponibles(remitentes);
+    setDestinatariosDisponibles(destinatarios);
+    setRemitenteIdSeleccionado(
+      remitente ? String(getItemId(remitente) || "") : ""
+    );
+    setDestinatarioIdSeleccionado(
+      destinatario ? String(getItemId(destinatario) || "") : ""
+    );
+    setDireccionPartidaIdSeleccionada(
+      direccionPartida ? String(getItemId(direccionPartida) || "") : ""
+    );
+    setDireccionLlegadaIdSeleccionada(
+      direccionLlegada ? String(getItemId(direccionLlegada) || "") : ""
+    );
+  }, [clientes, isEditMode, isOpen, isViewMode, orden]);
+
   if (!isOpen) return null;
 
   const inputClass = "input px-3 py-2.5 placeholder:text-gray-500";
@@ -237,20 +338,7 @@ const OrdenServicioModal = ({
   });
 
   const obtenerEntidadesRelacionadas = (cliente) => {
-    const entidades = cliente?.entidadesRelacionadas || [];
-
-    const remitentes = entidades.filter(
-      (entidad) => String(entidad.tipo).toUpperCase() === "REMITENTE"
-    );
-
-    const destinatarios = entidades.filter(
-      (entidad) => String(entidad.tipo).toUpperCase() === "DESTINATARIO"
-    );
-
-    return {
-      remitentes,
-      destinatarios,
-    };
+    return obtenerEntidadesPorTipo(cliente);
   };
 
   const handleClientePrecargadoChange = (e) => {
@@ -504,7 +592,9 @@ const OrdenServicioModal = ({
       setForm((prev) => ({
         ...prev,
         tipoCarga: value,
-        dimensionCarga: value === "CONTENEDOR" ? prev.dimensionCarga : "",
+        dimensionCarga: requiereDimensionContenedor(value)
+          ? prev.dimensionCarga
+          : "",
       }));
 
       return;
@@ -612,7 +702,7 @@ const OrdenServicioModal = ({
       return false;
     }
 
-    if (form.tipoCarga === "CONTENEDOR" && !form.dimensionCarga) {
+    if (requiereDimensionContenedor(form.tipoCarga) && !form.dimensionCarga) {
       notify.error("Selecciona la dimensión del contenedor");
       return false;
     }
@@ -627,7 +717,7 @@ const OrdenServicioModal = ({
       tipoCarga: form.tipoCarga,
       clasificacionCarga: form.clasificacionCarga,
       dimensionCarga:
-        form.tipoCarga === "CONTENEDOR" ? form.dimensionCarga : "",
+        requiereDimensionContenedor(form.tipoCarga) ? form.dimensionCarga : "",
 
       clienteSolicitante: {
         tipoDocumento: form.clienteSolicitante.tipoDocumento,
@@ -640,14 +730,18 @@ const OrdenServicioModal = ({
         tipoDocumento: form.remitente.tipoDocumento,
         numeroDocumento: form.remitente.numeroDocumento.trim(),
         razonSocial: form.remitente.razonSocial.trim().toUpperCase(),
-        direccion: form.remitente.direccion.trim().toUpperCase(),
+        direccion: (
+          form.remitente.direccion.trim() || form.partida.direccion.trim()
+        ).toUpperCase(),
       },
 
       destinatario: {
         tipoDocumento: form.destinatario.tipoDocumento,
         numeroDocumento: form.destinatario.numeroDocumento.trim(),
         razonSocial: form.destinatario.razonSocial.trim().toUpperCase(),
-        direccion: form.destinatario.direccion.trim().toUpperCase(),
+        direccion: (
+          form.destinatario.direccion.trim() || form.llegada.direccion.trim()
+        ).toUpperCase(),
       },
 
       partida: {
@@ -665,6 +759,10 @@ const OrdenServicioModal = ({
     };
 
     delete data.detalleCarga;
+
+    if (isEditMode) {
+      delete data.estado;
+    }
 
     return data;
   };
@@ -701,8 +799,13 @@ const OrdenServicioModal = ({
     resetForm();
       onClose();
     } catch (error) {
+      const erroresBackend = error.response?.data?.errors;
+      const mensajeBackend = Array.isArray(erroresBackend)
+        ? erroresBackend.join(". ")
+        : error.response?.data?.message;
+
       notify.error(
-        error.response?.data?.message || "Error al guardar la orden de servicio"
+        mensajeBackend || "Error al guardar la orden de servicio"
       );
     } finally {
       setLoading(false);
@@ -900,7 +1003,7 @@ const OrdenServicioModal = ({
                   </select>
                 </div>
 
-                {form.tipoCarga === "CONTENEDOR" && (
+                {requiereDimensionContenedor(form.tipoCarga) && (
                   <div className="md:col-span-3">
                     <label className={labelClass}>Dimensión</label>
                     <select

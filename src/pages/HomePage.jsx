@@ -9,6 +9,7 @@ import {
   History,
   LayoutDashboard,
   MapPinned,
+  MessageCircle,
   RotateCcw,
   ShieldCheck,
   Truck,
@@ -31,6 +32,7 @@ const iconByPath = {
   "/unidades": Truck,
   "/usuarios": ShieldCheck,
   "/admin/empresa": Building2,
+  "/admin/whatsapp-bot": MessageCircle,
   "/admin/nubefact-pruebas": Activity,
   "/auditoria": History,
 };
@@ -48,6 +50,7 @@ const moduleDescriptions = {
   "/unidades": "Inventario y estado de unidades.",
   "/usuarios": "Usuarios, roles y accesos del sistema.",
   "/admin/empresa": "Datos tributarios y parámetros de empresa.",
+  "/admin/whatsapp-bot": "Configuración del bot y grupo operativo de WhatsApp.",
   "/admin/nubefact-pruebas": "Validación de comprobantes y conexión Nubefact.",
   "/auditoria": "Historial de acciones y trazabilidad.",
 };

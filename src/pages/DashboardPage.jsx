@@ -1,44 +1,24 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   AlertTriangle,
+  ArrowRight,
+  Banknote,
+  CheckCircle2,
   ClipboardList,
+  Clock3,
   FileWarning,
+  ReceiptText,
   Route,
   Truck,
   Users,
 } from "lucide-react";
-import { useOrdenesServicio } from "../context/OrdenServicioContext";
-import { useProgramacionViaje } from "../context/ProgramacionViajeContext";
-import { useGuiaTransportista } from "../context/GuiaTransportistaContext";
-import { useUnidades } from "../context/UnidadContext";
-import { useConductores } from "../context/ConductorContext";
+import { obtenerResumenDashboardRequest } from "../api/dashboard";
 
 const toArray = (value) => (Array.isArray(value) ? value : []);
 
-const countBy = (items, key) =>
-  toArray(items).reduce((acc, item) => {
-    const value = item?.[key] || "SIN_ESTADO";
-    acc[value] = (acc[value] || 0) + 1;
-    return acc;
-  }, {});
-
-const daysUntil = (dateValue) => {
-  if (!dateValue) return null;
-
-  const date = new Date(dateValue);
-  if (Number.isNaN(date.getTime())) return null;
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  date.setHours(0, 0, 0, 0);
-
-  return Math.ceil((date.getTime() - today.getTime()) / 86400000);
-};
-
 const formatDate = (dateValue) => {
   if (!dateValue) return "-";
-
   const date = new Date(dateValue);
   if (Number.isNaN(date.getTime())) return "-";
 
@@ -49,11 +29,25 @@ const formatDate = (dateValue) => {
   });
 };
 
-const MetricCard = ({ icon: Icon, label, value, detail, to }) => {
+const formatMoney = (value) =>
+  Number(value || 0).toLocaleString("es-PE", {
+    style: "currency",
+    currency: "PEN",
+  });
+
+const MetricCard = ({ icon: Icon, label, value, detail, to, tone = "primary" }) => {
+  const toneClass = {
+    primary: "text-[var(--app-primary)]",
+    amber: "text-amber-400",
+    green: "text-green-400",
+    red: "text-red-400",
+    blue: "text-blue-300",
+  }[tone];
+
   const content = (
-    <div className="panel flex min-h-[112px] items-center gap-4 p-4 transition hover:border-[var(--app-primary)]">
+    <div className="panel flex min-h-[118px] items-center gap-4 p-4 transition hover:border-[var(--app-primary)]">
       <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border bg-[var(--app-surface-muted)]">
-        <Icon className="h-5 w-5 text-[var(--app-primary)]" />
+        <Icon className={`h-5 w-5 ${toneClass}`} />
       </div>
       <div className="min-w-0">
         <p className="text-faint text-xs font-semibold uppercase">{label}</p>
@@ -66,76 +60,94 @@ const MetricCard = ({ icon: Icon, label, value, detail, to }) => {
   return to ? <Link to={to}>{content}</Link> : content;
 };
 
+const StatusPill = ({ label, value, tone = "primary" }) => {
+  const toneClass = {
+    primary: "border-blue-500/20 bg-blue-500/10 text-blue-300",
+    amber: "border-amber-500/20 bg-amber-500/10 text-amber-300",
+    green: "border-green-500/20 bg-green-500/10 text-green-300",
+    red: "border-red-500/20 bg-red-500/10 text-red-300",
+    purple: "border-purple-500/20 bg-purple-500/10 text-purple-300",
+  }[tone];
+
+  return (
+    <div className={`rounded-md border px-3 py-2 ${toneClass}`}>
+      <p className="text-[11px] font-bold uppercase">{label}</p>
+      <p className="mt-1 text-lg font-extrabold">{value}</p>
+    </div>
+  );
+};
+
 const DashboardPage = () => {
-  const {
-    ordenes = [],
-    devolucionesPendientes = [],
-    cargarOrdenesServicio,
-    cargarDevolucionesPendientes,
-  } = useOrdenesServicio();
-  const { programaciones = [], getProgramacionesViaje } =
-    useProgramacionViaje();
-  const { guiasTransportista = [], obtenerGuiasTransportista } =
-    useGuiaTransportista();
-  const { unidades = [], obtenerUnidades } = useUnidades();
-  const { conductores = [], obtenerConductores } = useConductores();
+  const [loading, setLoading] = useState(true);
+  const [dashboard, setDashboard] = useState(null);
 
   useEffect(() => {
-    cargarOrdenesServicio?.({ page: 1, limit: 10 });
-    cargarDevolucionesPendientes?.({ page: 1, limit: 10 });
-    getProgramacionesViaje?.({ page: 1, limit: 10 });
-    obtenerGuiasTransportista?.({ page: 1, limit: 10 });
-    obtenerUnidades?.({ page: 1, limit: 100 });
-    obtenerConductores?.({ page: 1, limit: 100 });
-  }, [
-    cargarDevolucionesPendientes,
-    cargarOrdenesServicio,
-    getProgramacionesViaje,
-    obtenerConductores,
-    obtenerGuiasTransportista,
-    obtenerUnidades,
-  ]);
+    const cargarResumen = async () => {
+      try {
+        setLoading(true);
+        const res = await obtenerResumenDashboardRequest();
+        setDashboard(res.data || null);
+      } catch (error) {
+        console.error("Error al cargar dashboard:", error);
+        setDashboard(null);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const ordenesPorEstado = useMemo(() => countBy(ordenes, "estado"), [ordenes]);
-  const viajesPorEstado = useMemo(
-    () => countBy(programaciones, "estado"),
-    [programaciones]
-  );
-  const guiasPorEstado = useMemo(
-    () => countBy(guiasTransportista, "estado"),
-    [guiasTransportista]
-  );
+    cargarResumen();
+  }, []);
 
-  const devolucionesCriticas = useMemo(() => {
-    return toArray(devolucionesPendientes)
-      .map((orden) => ({
-        ...orden,
-        diasRestantes: daysUntil(orden.fechaVencimientoDevolucion),
-      }))
-      .filter(
-        (orden) =>
-          orden.diasRestantes !== null &&
-          orden.diasRestantes <= 3 &&
-          orden.estadoDevolucion !== "DEVUELTO"
-      )
-      .sort((a, b) => a.diasRestantes - b.diasRestantes)
-      .slice(0, 5);
-  }, [devolucionesPendientes]);
+  const ordenesPorEstado = dashboard?.ordenes?.porEstado || {};
+  const viajesPorEstado = dashboard?.programaciones?.porEstado || {};
+  const guiasPorEstado = dashboard?.guias?.porEstado || {};
+  const facturacionResumen = dashboard?.facturacion || {
+    pendientesFacturar: 0,
+    facturadas: 0,
+    saldoPendiente: 0,
+    vencidas: [],
+    parciales: [],
+  };
+  const devolucionesResumen = dashboard?.devoluciones || {
+    pendientes: 0,
+    criticas: [],
+  };
+  const recursosResumen = dashboard?.recursos || {
+    unidadesActivas: 0,
+    conductoresActivos: 0,
+  };
 
-  const guiasConError = useMemo(
-    () =>
-      toArray(guiasTransportista)
-        .filter((guia) => guia.estado === "ERROR")
-        .slice(0, 5),
-    [guiasTransportista]
-  );
+  const viajesActivos =
+    (viajesPorEstado.ASIGNADO || 0) +
+    (viajesPorEstado.EN_RUTA || 0) +
+    (viajesPorEstado.EN_ALMACEN || 0) +
+    (viajesPorEstado.EN_CLIENTE || 0);
 
-  const unidadesActivas = toArray(unidades).filter(
-    (unidad) => unidad.estado === "ACTIVO"
-  ).length;
-  const conductoresActivos = toArray(conductores).filter(
-    (conductor) => conductor.estado === "ACTIVO"
-  ).length;
+  const devolucionesCriticas = toArray(devolucionesResumen.criticas);
+  const guiasConError = toArray(dashboard?.guias?.conError);
+  const unidadesActivas = recursosResumen.unidadesActivas || 0;
+  const conductoresActivos = recursosResumen.conductoresActivos || 0;
+
+  const saludOperacion = [
+    {
+      label: "Órdenes",
+      value: dashboard?.ordenes?.total || 0,
+      detail: `${ordenesPorEstado.PENDIENTE || 0} pendientes`,
+      to: "/ordenes-servicio",
+    },
+    {
+      label: "Viajes",
+      value: dashboard?.programaciones?.total || 0,
+      detail: `${viajesActivos} activos`,
+      to: "/programacion-viaje",
+    },
+    {
+      label: "Guías",
+      value: dashboard?.guias?.total || 0,
+      detail: `${guiasPorEstado.ERROR || 0} con error`,
+      to: "/guia-transportista",
+    },
+  ];
 
   return (
     <div className="w-full py-4">
@@ -143,12 +155,21 @@ const DashboardPage = () => {
         <header className="page-hero">
           <div className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <div className="eyebrow">Panel operativo</div>
+              <div className="eyebrow">Panel ejecutivo</div>
               <h1 className="page-title">Dashboard</h1>
               <p className="page-description">
-                Vista rápida de órdenes, viajes, guías, devoluciones y recursos
-                disponibles.
+                Indicadores calculados desde el backend con datos completos de la operación.
               </p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 lg:min-w-[360px]">
+              {saludOperacion.map((item) => (
+                <Link key={item.label} to={item.to} className="info-tile text-center">
+                  <p className="text-faint text-[11px] font-bold uppercase">{item.label}</p>
+                  <p className="text-main text-xl font-extrabold">{item.value}</p>
+                  <p className="text-muted truncate text-xs">{item.detail}</p>
+                </Link>
+              ))}
             </div>
           </div>
         </header>
@@ -164,69 +185,123 @@ const DashboardPage = () => {
           <MetricCard
             icon={Route}
             label="Viajes activos"
-            value={
-              (viajesPorEstado.ASIGNADO || 0) +
-              (viajesPorEstado.EN_RUTA || 0) +
-              (viajesPorEstado.EN_ALMACEN || 0) +
-              (viajesPorEstado.EN_CLIENTE || 0)
-            }
+            value={viajesActivos}
             detail={`${viajesPorEstado.ENTREGADO || 0} entregados`}
             to="/programacion-viaje"
+            tone="blue"
           />
           <MetricCard
-            icon={FileWarning}
-            label="Guías con error"
-            value={guiasPorEstado.ERROR || 0}
-            detail={`${guiasPorEstado.PENDIENTE || 0} pendientes`}
-            to="/guia-transportista"
+            icon={ReceiptText}
+            label="Por facturar"
+            value={loading ? "-" : facturacionResumen.pendientesFacturar || 0}
+            detail="Órdenes sin factura registrada"
+            to="/facturacion"
+            tone="amber"
           />
           <MetricCard
-            icon={AlertTriangle}
-            label="Devoluciones críticas"
-            value={devolucionesCriticas.length}
-            detail="Vencidas o por vencer en 3 días"
-            to="/devoluciones"
+            icon={Banknote}
+            label="Saldo por cobrar"
+            value={loading ? "-" : formatMoney(facturacionResumen.saldoPendiente)}
+            detail={`${facturacionResumen.vencidas.length} vencidas detectadas`}
+            to="/facturacion"
+            tone={facturacionResumen.vencidas.length > 0 ? "red" : "green"}
           />
         </section>
 
-        <section className="grid gap-4 lg:grid-cols-3">
+        <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
           <div className="panel p-4">
-            <div className="mb-3 flex items-center gap-2">
-              <Truck className="h-4 w-4 text-[var(--app-primary)]" />
-              <h2 className="text-main text-sm font-bold">Recursos activos</h2>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-              <div className="info-tile">
-                <p className="text-faint text-xs">Unidades activas</p>
-                <p className="text-main text-xl font-bold">
-                  {unidadesActivas}
+            <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <h2 className="text-main text-base font-extrabold">Estado operativo</h2>
+                <p className="text-muted text-sm">
+                  Distribución rápida de órdenes, viajes y guías.
                 </p>
               </div>
-              <div className="info-tile">
-                <p className="text-faint text-xs">Conductores activos</p>
-                <p className="text-main text-xl font-bold">
-                  {conductoresActivos}
-                </p>
+              <Link to="/programacion-viaje" className="btn-secondary px-3 py-1.5">
+                Ver viajes
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-3">
+              <div className="grid gap-2">
+                <p className="text-faint text-xs font-bold uppercase">Órdenes</p>
+                <StatusPill label="Pendiente" value={ordenesPorEstado.PENDIENTE || 0} tone="amber" />
+                <StatusPill label="Programada" value={ordenesPorEstado.PROGRAMADA || 0} tone="primary" />
+                <StatusPill label="Finalizada" value={ordenesPorEstado.FINALIZADA || 0} tone="green" />
+              </div>
+
+              <div className="grid gap-2">
+                <p className="text-faint text-xs font-bold uppercase">Viajes</p>
+                <StatusPill label="Asignado" value={viajesPorEstado.ASIGNADO || 0} tone="primary" />
+                <StatusPill label="En ruta" value={viajesPorEstado.EN_RUTA || 0} tone="purple" />
+                <StatusPill label="En cliente" value={viajesPorEstado.EN_CLIENTE || 0} tone="amber" />
+              </div>
+
+              <div className="grid gap-2">
+                <p className="text-faint text-xs font-bold uppercase">Guías</p>
+                <StatusPill label="Aceptadas" value={guiasPorEstado.ACEPTADA || 0} tone="green" />
+                <StatusPill label="Pendientes" value={guiasPorEstado.PENDIENTE || 0} tone="amber" />
+                <StatusPill label="Error" value={guiasPorEstado.ERROR || 0} tone="red" />
               </div>
             </div>
           </div>
 
-          <div className="panel p-4 lg:col-span-2">
-            <div className="mb-3 flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-amber-400" />
-              <h2 className="text-main text-sm font-bold">
-                Devoluciones por atender
-              </h2>
+          <div className="panel p-4">
+            <div className="mb-4 flex items-center gap-2">
+              <Truck className="h-4 w-4 text-[var(--app-primary)]" />
+              <h2 className="text-main text-base font-extrabold">Recursos</h2>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+              <Link to="/unidades" className="info-tile flex items-center justify-between">
+                <div>
+                  <p className="text-faint text-xs">Unidades activas</p>
+                  <p className="text-main text-2xl font-bold">{unidadesActivas}</p>
+                </div>
+                <Truck className="h-5 w-5 text-[var(--app-primary)]" />
+              </Link>
+              <Link to="/conductores" className="info-tile flex items-center justify-between">
+                <div>
+                  <p className="text-faint text-xs">Conductores activos</p>
+                  <p className="text-main text-2xl font-bold">{conductoresActivos}</p>
+                </div>
+                <Users className="h-5 w-5 text-[var(--app-primary)]" />
+              </Link>
+              <Link to="/devoluciones" className="info-tile flex items-center justify-between">
+                <div>
+                  <p className="text-faint text-xs">Devoluciones pendientes</p>
+                  <p className="text-main text-2xl font-bold">
+                    {devolucionesResumen.pendientes || 0}
+                  </p>
+                </div>
+                <Clock3 className="h-5 w-5 text-amber-400" />
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        <section className="grid gap-4 xl:grid-cols-2">
+          <div className="panel p-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-400" />
+                <h2 className="text-main text-sm font-bold">Alertas de devolución</h2>
+              </div>
+              <Link to="/devoluciones" className="text-faint text-xs font-bold hover:text-[var(--app-primary)]">
+                Ver módulo
+              </Link>
             </div>
             {devolucionesCriticas.length === 0 ? (
-              <p className="text-muted text-sm">
-                No hay devoluciones críticas en este momento.
-              </p>
+              <div className="info-tile flex items-center gap-3">
+                <CheckCircle2 className="h-5 w-5 text-green-400" />
+                <p className="text-muted text-sm">No hay devoluciones críticas.</p>
+              </div>
             ) : (
               <div className="grid gap-2">
                 {devolucionesCriticas.map((orden) => (
                   <Link
-                    key={orden.id || orden._id}
+                    key={`${orden.id || orden._id}-${orden.programacionViajeId || ""}`}
                     to="/devoluciones"
                     className="info-tile flex items-center justify-between gap-3"
                   >
@@ -253,38 +328,94 @@ const DashboardPage = () => {
               </div>
             )}
           </div>
+
+          <div className="panel p-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <FileWarning className="h-4 w-4 text-red-400" />
+                <h2 className="text-main text-sm font-bold">Guías con observación</h2>
+              </div>
+              <Link to="/guia-transportista" className="text-faint text-xs font-bold hover:text-[var(--app-primary)]">
+                Ver guías
+              </Link>
+            </div>
+            {guiasConError.length === 0 ? (
+              <div className="info-tile flex items-center gap-3">
+                <CheckCircle2 className="h-5 w-5 text-green-400" />
+                <p className="text-muted text-sm">No hay guías con error.</p>
+              </div>
+            ) : (
+              <div className="grid gap-2">
+                {guiasConError.map((guia) => (
+                  <Link key={guia.id || guia._id} to="/guia-transportista" className="info-tile">
+                    <p className="text-main text-sm font-semibold">
+                      {guia.serie}-{guia.numero}
+                    </p>
+                    <p className="text-muted mt-1 line-clamp-2 text-xs">
+                      {guia.sunat_description ||
+                        guia.sunat_note ||
+                        "Revisar respuesta Nubefact/SUNAT"}
+                    </p>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
         </section>
 
-        <section className="panel p-4">
-          <div className="mb-3 flex items-center gap-2">
-            <Users className="h-4 w-4 text-[var(--app-primary)]" />
-            <h2 className="text-main text-sm font-bold">
-              Guías con observación
-            </h2>
-          </div>
-          {guiasConError.length === 0 ? (
-            <p className="text-muted text-sm">No hay guías con error.</p>
-          ) : (
-            <div className="grid gap-2 md:grid-cols-2">
-              {guiasConError.map((guia) => (
-                <Link
-                  key={guia.id || guia._id}
-                  to="/guia-transportista"
-                  className="info-tile"
-                >
-                  <p className="text-main text-sm font-semibold">
-                    {guia.serie}-{guia.numero}
-                  </p>
-                  <p className="text-muted mt-1 line-clamp-2 text-xs">
-                    {guia.sunat_description ||
-                      guia.sunat_note ||
-                      "Revisar respuesta Nubefact/SUNAT"}
-                  </p>
-                </Link>
-              ))}
+        {dashboard?.facturacion && (
+          <section className="panel p-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Banknote className="h-4 w-4 text-green-400" />
+                <h2 className="text-main text-sm font-bold">Cobranza</h2>
+              </div>
+              <Link to="/facturacion" className="text-faint text-xs font-bold hover:text-[var(--app-primary)]">
+                Ver facturación
+              </Link>
             </div>
-          )}
-        </section>
+
+            <div className="grid gap-3 lg:grid-cols-2">
+              <div>
+                <p className="text-faint mb-2 text-xs font-bold uppercase">Facturas vencidas</p>
+                {facturacionResumen.vencidas.length === 0 ? (
+                  <p className="text-muted text-sm">No hay facturas vencidas en la muestra reciente.</p>
+                ) : (
+                  <div className="grid gap-2">
+                    {facturacionResumen.vencidas.map((orden) => (
+                      <Link key={orden.id} to="/facturacion" className="info-tile flex justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-main truncate text-sm font-semibold">{orden.numeroFactura}</p>
+                          <p className="text-muted truncate text-xs">{orden.clienteSolicitante?.razonSocial}</p>
+                        </div>
+                        <p className="text-main text-sm font-bold">{formatMoney(orden.saldoPendiente)}</p>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <p className="text-faint mb-2 text-xs font-bold uppercase">Pagos parciales</p>
+                {facturacionResumen.parciales.length === 0 ? (
+                  <p className="text-muted text-sm">No hay pagos parciales pendientes en la muestra reciente.</p>
+                ) : (
+                  <div className="grid gap-2">
+                    {facturacionResumen.parciales.map((orden) => (
+                      <Link key={orden.id} to="/facturacion" className="info-tile flex justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-main truncate text-sm font-semibold">{orden.numeroFactura}</p>
+                          <p className="text-muted truncate text-xs">{orden.numeroOrden}</p>
+                        </div>
+                        <p className="text-main text-sm font-bold">{formatMoney(orden.saldoPendiente)}</p>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
       </div>
     </div>
   );

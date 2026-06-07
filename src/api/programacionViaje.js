@@ -18,6 +18,9 @@ export const updateEstadoProgramacionViajeRequest = (id, data) =>
     typeof data === "string" ? { estado: data } : data
   );
 
+export const registrarGuiaSunatProgramacionRequest = (id, data) =>
+  axios.patch(`/programacion-viaje/${id}/guia-sunat`, data);
+
 export const getOrdenesDisponiblesParaViajeRequest = () =>
   axios.get("/programacion-viaje/ordenes-disponibles");
 

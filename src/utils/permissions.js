@@ -12,6 +12,8 @@ import {
   FaUndoAlt,
   FaHistory,
   FaFlask,
+  FaWhatsapp,
+  FaChartBar,
 } from "react-icons/fa";
 
 export const dashboardMenu = {
@@ -75,6 +77,34 @@ export const facturacionOperacionesMenu = {
   ),
 };
 
+export const reportesMenu = {
+  id: "reportes",
+  label: "Reportes",
+  icon: FaChartBar,
+  basePath: "/reportes",
+  children: [
+    {
+      path: "/reportes",
+      label: "Detalle de Servicios",
+      icon: FaChartBar,
+    },
+  ],
+};
+
+export const facturacionMenu = {
+  id: "facturacion",
+  label: "Facturación",
+  icon: FaFileInvoice,
+  basePath: "/facturacion",
+  children: [
+    {
+      path: "/facturacion",
+      label: "Control de Facturas",
+      icon: FaFileInvoice,
+    },
+  ],
+};
+
 export const datosMaestrosMenu = {
   id: "datos-maestros",
   label: "Datos Maestros",
@@ -107,6 +137,7 @@ export const adminMenu = {
   children: [
     { path: "/usuarios", label: "Gestionar Usuarios", icon: FaUsers },
     { path: "/admin/empresa", label: "Datos de Empresa", icon: FaBuilding },
+    { path: "/admin/whatsapp-bot", label: "Bot WhatsApp", icon: FaWhatsapp },
     { path: "/admin/nubefact-pruebas", label: "Prueba Nubefact", icon: FaFlask },
     { path: "/auditoria", label: "Auditoría", icon: FaHistory },
   ],
@@ -114,22 +145,51 @@ export const adminMenu = {
 
 export const permissions = {
   Superadministrador: {
-    routes: [dashboardMenu, profileMenu, operacionesMenu, datosMaestrosMenu, adminMenu],
+    routes: [
+      dashboardMenu,
+      profileMenu,
+      operacionesMenu,
+      facturacionMenu,
+      reportesMenu,
+      datosMaestrosMenu,
+      adminMenu,
+    ],
     actions: ["view", "edit", "delete", "create"],
   },
 
   Administrador: {
-    routes: [dashboardMenu, profileMenu, operacionesMenu, datosMaestrosMenu, adminMenu],
+    routes: [
+      dashboardMenu,
+      profileMenu,
+      operacionesMenu,
+      facturacionMenu,
+      reportesMenu,
+      datosMaestrosMenu,
+      adminMenu,
+    ],
     actions: ["view", "edit", "delete", "create"],
   },
 
   Coordinador: {
-    routes: [dashboardMenu, profileMenu, operacionesMenu, datosMaestrosMenu],
+    routes: [
+      dashboardMenu,
+      profileMenu,
+      operacionesMenu,
+      facturacionMenu,
+      reportesMenu,
+      datosMaestrosMenu,
+    ],
     actions: ["view", "edit", "create"],
   },
 
   User: {
-    routes: [dashboardMenu, profileMenu, operacionesMenu, datosMaestrosMenu],
+    routes: [
+      dashboardMenu,
+      profileMenu,
+      operacionesMenu,
+      reportesMenu,
+      datosMaestrosMenu,
+    ],
     actions: ["view"],
   },
 
@@ -139,7 +199,7 @@ export const permissions = {
   },
 
   Facturacion: {
-    routes: [dashboardMenu, profileMenu, facturacionOperacionesMenu],
+    routes: [dashboardMenu, profileMenu, facturacionMenu, facturacionOperacionesMenu],
     actions: ["view", "edit"],
   },
 };
@@ -148,6 +208,8 @@ export const allMenus = [
   dashboardMenu,
   profileMenu,
   operacionesMenu,
+  facturacionMenu,
+  reportesMenu,
   datosMaestrosMenu,
   adminMenu,
 ];

@@ -4,6 +4,7 @@ import {
   CalendarClock,
   CheckCircle2,
   Eye,
+  FileCheck2,
   Flag,
   LoaderCircle,
   MapPin,
@@ -19,6 +20,7 @@ import { useConfirm } from "../context/ConfirmContext";
 import { formatDateOnly } from "../utils/date";
 
 import ProgramacionViajeModal from "../components/modals/ProgramacionViajeModal";
+import ProgramacionGuiaSunatModal from "../components/modals/ProgramacionGuiaSunatModal";
 import TablePagination from "../components/TablePagination";
 
 const SELECT_OPTIONS_LIMIT = 1000;
@@ -30,6 +32,9 @@ const formatearTipoCarga = (tipoCarga) =>
 
 const formatearDimensionCarga = (dimensionCarga) =>
   dimensionCarga ? `${dimensionCarga} pies` : "";
+
+const requiereDimensionContenedor = (tipoCarga) =>
+  ["CONTENEDOR", "EXPORTACION"].includes(tipoCarga);
 
 const getDateTimeLocalNow = () => {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -115,6 +120,7 @@ const ProgramacionViajePage = () => {
   const [modalMode, setModalMode] = useState("create");
   const [cambiandoEstado, setCambiandoEstado] = useState({});
   const [estadoConFecha, setEstadoConFecha] = useState(null);
+  const [viajeGuiaSunat, setViajeGuiaSunat] = useState(null);
   const [fechaHoraOperacion, setFechaHoraOperacion] = useState(
     getDateTimeLocalNow()
   );
@@ -371,11 +377,14 @@ const ProgramacionViajePage = () => {
     );
   };
 
+  const tieneGuiaRegistrada = (viaje) =>
+    Boolean(viaje?.guiaSunatNumero) || tieneGuiaAsociada(viaje);
+
   const puedeAnular = (viaje) => {
     return (
       viaje &&
       !["FINALIZADO", "ANULADO"].includes(viaje.estado) &&
-      !tieneGuiaAsociada(viaje)
+      !tieneGuiaRegistrada(viaje)
     );
   };
 
@@ -501,6 +510,19 @@ const ProgramacionViajePage = () => {
           </button>
         ))}
 
+        {!tieneGuiaRegistrada(viaje) &&
+          !["FINALIZADO", "ANULADO"].includes(viaje.estado) && (
+            <button
+              type="button"
+              onClick={() => setViajeGuiaSunat(viaje)}
+              className="btn-secondary btn-icon"
+              title="Registrar guía emitida en SUNAT"
+              aria-label="Registrar guía emitida en SUNAT"
+            >
+              <FileCheck2 />
+            </button>
+          )}
+
         {puedeAnular(viaje) && (
           <button
             type="button"
@@ -576,10 +598,16 @@ const ProgramacionViajePage = () => {
                   <article key={viajeId} className="mobile-card">
                     <div className="mb-4 flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-faint text-xs font-medium">Orden</p>
+                        <p className="text-faint text-xs font-medium">
+                          Programación
+                        </p>
                         <h2 className="text-main text-lg font-bold">
-                          {viaje.ordenServicio?.numeroOrden || "-"}
+                          {viaje.numeroProgramacion ||
+                            `PV-${String(viajeId).padStart(6, "0")}`}
                         </h2>
+                        <p className="text-faint text-xs">
+                          Orden: {viaje.ordenServicio?.numeroOrden || "-"}
+                        </p>
                       </div>
 
                       <EstadoBadge estado={viaje.estado} />
@@ -604,7 +632,9 @@ const ProgramacionViajePage = () => {
                         <p className="text-faint text-xs">
                           {viaje.ordenServicio?.clasificacionCarga ||
                             "GENERAL"}
-                          {viaje.ordenServicio?.tipoCarga === "CONTENEDOR" &&
+                          {requiereDimensionContenedor(
+                            viaje.ordenServicio?.tipoCarga
+                          ) &&
                           viaje.ordenServicio?.dimensionCarga
                             ? ` · ${formatearDimensionCarga(
                                 viaje.ordenServicio.dimensionCarga
@@ -644,6 +674,9 @@ const ProgramacionViajePage = () => {
                         <p className="text-main font-semibold">
                           {formatearFecha(viaje.fechaInicioTraslado)}
                         </p>
+                        <p className="text-faint text-xs">
+                          Cita: {viaje.horaCita || "-"}
+                        </p>
                       </div>
 
                       <div className="info-tile">
@@ -655,6 +688,11 @@ const ProgramacionViajePage = () => {
                           Cliente:{" "}
                           {formatearFechaHora(viaje.fechaHoraLlegadaCliente)}
                         </p>
+                        {viaje.guiaSunatNumero && (
+                          <p className="mt-1 text-xs font-semibold text-amber-300">
+                            Guía SUNAT: {viaje.guiaSunatNumero}
+                          </p>
+                        )}
                       </div>
                     </div>
 
@@ -671,7 +709,7 @@ const ProgramacionViajePage = () => {
                 <table className="data-table w-full min-w-[1250px] text-sm">
                   <thead>
                     <tr>
-                      <th className="px-4 py-4 text-left">Orden</th>
+                      <th className="px-4 py-4 text-left">Programación</th>
                       <th className="px-4 py-4 text-left">Cliente</th>
                       <th className="px-4 py-4 text-left">Carga</th>
                       <th className="px-4 py-4 text-left">Tracto</th>
@@ -693,7 +731,11 @@ const ProgramacionViajePage = () => {
                         <tr key={viajeId}>
                           <td className="px-4 py-4">
                             <p className="text-main font-bold">
-                              {viaje.ordenServicio?.numeroOrden || "-"}
+                              {viaje.numeroProgramacion ||
+                                `PV-${String(viajeId).padStart(6, "0")}`}
+                            </p>
+                            <p className="text-faint text-xs">
+                              Orden: {viaje.ordenServicio?.numeroOrden || "-"}
                             </p>
                           </td>
 
@@ -715,8 +757,9 @@ const ProgramacionViajePage = () => {
                             <p className="text-faint text-xs">
                               {viaje.ordenServicio?.clasificacionCarga ||
                                 "GENERAL"}
-                              {viaje.ordenServicio?.tipoCarga ===
-                                "CONTENEDOR" &&
+                              {requiereDimensionContenedor(
+                                viaje.ordenServicio?.tipoCarga
+                              ) &&
                               viaje.ordenServicio?.dimensionCarga
                                 ? ` · ${formatearDimensionCarga(
                                     viaje.ordenServicio.dimensionCarga
@@ -744,7 +787,10 @@ const ProgramacionViajePage = () => {
                           </td>
 
                           <td className="text-muted whitespace-nowrap px-4 py-4">
-                            {formatearFecha(viaje.fechaInicioTraslado)}
+                            <p>{formatearFecha(viaje.fechaInicioTraslado)}</p>
+                            <p className="text-faint text-xs">
+                              Cita: {viaje.horaCita || "-"}
+                            </p>
                           </td>
 
                           <td className="text-muted min-w-[220px] px-4 py-4">
@@ -761,6 +807,11 @@ const ProgramacionViajePage = () => {
                             <p className="text-main text-xs font-semibold">
                               Standby: {formatearStandby(viaje.standbyMinutos)}
                             </p>
+                            {viaje.guiaSunatNumero && (
+                              <p className="mt-1 text-xs font-semibold text-amber-300">
+                                Guía SUNAT: {viaje.guiaSunatNumero}
+                              </p>
+                            )}
                           </td>
 
                           <td className="whitespace-nowrap px-4 py-4 text-center">
@@ -794,6 +845,17 @@ const ProgramacionViajePage = () => {
           onClose={cerrarModal}
           mode={modalMode}
           data={viajeSeleccionado}
+        />
+
+        <ProgramacionGuiaSunatModal
+          isOpen={Boolean(viajeGuiaSunat)}
+          programacion={viajeGuiaSunat}
+          onClose={async (actualizado) => {
+            setViajeGuiaSunat(null);
+            if (actualizado) {
+              await recargarProgramaciones();
+            }
+          }}
         />
 
         {estadoConFecha && (

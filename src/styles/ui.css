@@ -297,7 +297,7 @@
   }
 
   .modal-backdrop {
-    @apply fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/60 px-3 py-6 backdrop-blur-sm sm:px-4;
+    @apply fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/60 px-3 py-6 sm:px-4;
   }
 
   .modal-panel {

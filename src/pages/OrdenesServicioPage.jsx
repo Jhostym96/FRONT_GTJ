@@ -16,6 +16,9 @@ const formatearTipoCarga = (tipoCarga) =>
 const formatearDimensionCarga = (dimensionCarga) =>
   dimensionCarga ? `${dimensionCarga} pies` : "-";
 
+const requiereDimensionContenedor = (tipoCarga) =>
+  ["CONTENEDOR", "EXPORTACION"].includes(tipoCarga);
+
 const estadosNoAnulables = ["ANULADA", "FINALIZADA", "FINALIZADO"];
 
 const OrdenesServicioPage = () => {
@@ -335,23 +338,32 @@ const OrdenesServicioPage = () => {
                         </p>
                       </div>
 
-                      {orden.tipoCarga === "CONTENEDOR" && (
+                      {requiereDimensionContenedor(orden.tipoCarga) && (
                         <div className="info-tile">
                           <p className="text-faint text-xs">Contenedor</p>
                           <p className="text-main font-semibold">
                             {formatearDimensionCarga(orden.dimensionCarga)}
                           </p>
-                          {orden.numeroContenedor && (
+                          {orden.tipoCarga === "CONTENEDOR" && (
+                            <>
+                              {orden.numeroContenedor && (
+                                <p className="text-faint text-xs">
+                                  N° {orden.numeroContenedor}
+                                </p>
+                              )}
+                              <p className="text-faint text-xs">
+                                Vence:{" "}
+                                {formatearFecha(
+                                  orden.fechaVencimientoDevolucion
+                                )}
+                              </p>
+                            </>
+                          )}
+                          {orden.tipoCarga === "EXPORTACION" && (
                             <p className="text-faint text-xs">
-                              N° {orden.numeroContenedor}
+                              Sin devolución
                             </p>
                           )}
-                          <p className="text-faint text-xs">
-                            Vence:{" "}
-                            {formatearFecha(
-                              orden.fechaVencimientoDevolucion
-                            )}
-                          </p>
                         </div>
                       )}
 
@@ -440,7 +452,7 @@ const OrdenesServicioPage = () => {
                             <p className="text-faint text-xs">
                               {orden.clasificacionCarga || "GENERAL"}
                             </p>
-                            {orden.tipoCarga === "CONTENEDOR" && (
+                            {requiereDimensionContenedor(orden.tipoCarga) && (
                               <p className="text-faint text-xs">
                                 {formatearDimensionCarga(orden.dimensionCarga)}
                               </p>
@@ -463,6 +475,10 @@ const OrdenesServicioPage = () => {
                                   )}
                                 </p>
                               </>
+                            ) : orden.tipoCarga === "EXPORTACION" ? (
+                              <p className="text-main font-semibold">
+                                {formatearDimensionCarga(orden.dimensionCarga)}
+                              </p>
                             ) : (
                               "-"
                             )}
