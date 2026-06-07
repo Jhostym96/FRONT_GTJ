@@ -458,10 +458,10 @@ function DevolucionesPage() {
   );
 
   return (
-    <div className="w-full py-4">
+    <div className="page">
       <div className="page-wrap">
         <header className="page-hero">
-          <div className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="page-hero-content">
             <div>
               <div className="eyebrow">Control operativo</div>
               <h1 className="page-title">Devoluciones</h1>
@@ -474,8 +474,8 @@ function DevolucionesPage() {
         </header>
 
         {loading ? (
-          <div className="panel p-8 text-center">
-            <div className="mx-auto mb-3 h-9 w-9 animate-spin rounded-full border-2 border-[var(--app-border)] border-t-blue-500" />
+          <div className="loading-panel">
+            <div className="loading-spinner" />
             <p className="text-muted text-sm">Cargando devoluciones...</p>
           </div>
         ) : devolucionesPendientes.length === 0 ? (
@@ -489,7 +489,7 @@ function DevolucionesPage() {
           </div>
         ) : (
           <>
-            <div className="grid gap-4 lg:hidden">
+            <div className="mobile-list">
               {devolucionesPendientes.map((orden) => {
                 const id = getItemId(orden);
                 const diasLibres = calcularDiasLibres(
@@ -504,15 +504,15 @@ function DevolucionesPage() {
                     key={`${id}-${orden.programacionViajeId || ""}`}
                     className="mobile-card"
                   >
-                    <div className="mb-4 flex items-start justify-between gap-3">
+                    <div className="mobile-card-header">
                       <div>
                         <p className="text-faint text-xs font-medium">
                           Programación de viaje
                         </p>
-                        <h2 className="text-main text-lg font-bold">
+                        <h2 className="mobile-card-title">
                           {getOrdenViaje(orden)}
                         </h2>
-                        <p className="text-faint text-xs">
+                        <p className="mobile-card-subtitle">
                           Orden: {getNumeroOrdenServicio(orden)}
                         </p>
                       </div>
@@ -522,33 +522,33 @@ function DevolucionesPage() {
                       />
                     </div>
 
-                    <div className="grid gap-3 text-sm">
+                    <div className="mobile-detail-grid">
                       <div className="info-tile">
-                        <p className="text-faint text-xs">Fecha programada</p>
+                        <p className="mobile-card-subtitle">Fecha programada</p>
                         <p className="text-main font-semibold">
                           {formatearFecha(getFechaProgramada(orden))}
                         </p>
                       </div>
 
                       <div className="info-tile">
-                        <p className="text-faint text-xs">Cliente</p>
+                        <p className="mobile-card-subtitle">Cliente</p>
                         <p className="text-main font-semibold">
                           {cliente?.razonSocial || "-"}
                         </p>
-                        <p className="text-faint text-xs">
+                        <p className="mobile-card-subtitle">
                           {cliente?.numeroDocumento || ""}
                         </p>
                       </div>
 
                       <div className="info-tile">
-                        <p className="text-faint text-xs">Contenedor</p>
+                        <p className="mobile-card-subtitle">Contenedor</p>
                         <p className="text-main font-semibold">
                           {getValue(orden, "numeroContenedor", "-")}
                         </p>
                       </div>
 
                       <div className="info-tile">
-                        <p className="text-faint text-xs">Vencimiento</p>
+                        <p className="mobile-card-subtitle">Vencimiento</p>
                         <p className="text-main font-semibold">
                           {formatearFecha(
                             getValue(orden, "fechaVencimientoDevolucion", null)
@@ -557,7 +557,7 @@ function DevolucionesPage() {
                       </div>
 
                       <div className="info-tile">
-                        <p className="text-faint text-xs">Días libres</p>
+                        <p className="mobile-card-subtitle">Días libres</p>
                         <p
                           className={`font-semibold ${
                             diasLibres !== null && diasLibres < 0
@@ -574,14 +574,14 @@ function DevolucionesPage() {
                       </div>
 
                       <div className="info-tile">
-                        <p className="text-faint text-xs">Almacén devolución</p>
+                        <p className="mobile-card-subtitle">Almacén devolución</p>
                         <p className="text-main font-semibold">
                           {getValue(orden, "almacenDevolucion", "-")}
                         </p>
                       </div>
 
                       <div className="info-tile">
-                        <p className="text-faint text-xs">Programada</p>
+                        <p className="mobile-card-subtitle">Programada</p>
                         <p className="text-main font-semibold">
                           {formatearFecha(
                             getValue(orden, "fechaProgramadaDevolucion", null)
@@ -597,13 +597,13 @@ function DevolucionesPage() {
                       </div>
 
                       <div className="info-tile">
-                        <p className="text-faint text-xs">Conductor asignado</p>
+                        <p className="mobile-card-subtitle">Conductor asignado</p>
                         <p className="text-main font-semibold">
                           {getNombreConductor(
                             getValue(orden, "conductorDevolucion", null)
                           )}
                         </p>
-                        <p className="text-faint text-xs">
+                        <p className="mobile-card-subtitle">
                           {getPlacaUnidad(
                             getValue(orden, "tractoDevolucion", null)
                           ) || ""}
@@ -611,7 +611,7 @@ function DevolucionesPage() {
                       </div>
 
                       <div className="info-tile">
-                        <p className="text-faint text-xs">Ruta</p>
+                        <p className="mobile-card-subtitle">Ruta</p>
                         <p className="text-muted mt-1">
                           {partida?.direccion || "-"}
                         </p>
@@ -621,7 +621,7 @@ function DevolucionesPage() {
                       </div>
                     </div>
 
-                    <div className="mt-4 border-t pt-4">
+                    <div className="mobile-card-actions">
                       <div className="grid gap-2 sm:grid-cols-3">
                         <button
                           type="button"
@@ -666,7 +666,7 @@ function DevolucionesPage() {
 
             <div className="data-table-wrap">
               <div className="table-scroll">
-                <table className="data-table w-full min-w-[1300px] text-sm">
+                <table className="data-table dense-table w-full min-w-[1300px] text-sm">
                   <thead>
                     <tr>
                       <th className="px-4 py-4 text-left">
@@ -699,7 +699,7 @@ function DevolucionesPage() {
                             <p className="text-main font-bold">
                               {getOrdenViaje(orden)}
                             </p>
-                            <p className="text-faint text-xs">
+                            <p className="mobile-card-subtitle">
                               Orden: {getNumeroOrdenServicio(orden)}
                             </p>
                           </td>
@@ -710,7 +710,7 @@ function DevolucionesPage() {
                             <p className="text-main max-w-[260px] truncate font-semibold">
                               {cliente?.razonSocial || "-"}
                             </p>
-                            <p className="text-faint text-xs">
+                            <p className="mobile-card-subtitle">
                               {cliente?.numeroDocumento || ""}
                             </p>
                           </td>
@@ -750,7 +750,7 @@ function DevolucionesPage() {
                                 )
                               )}
                             </p>
-                            <p className="text-faint text-xs">
+                            <p className="mobile-card-subtitle">
                               {getValue(orden, "horaProgramadaDevolucion", "") ||
                                 ""}
                             </p>
@@ -761,7 +761,7 @@ function DevolucionesPage() {
                                 getValue(orden, "conductorDevolucion", null)
                               )}
                             </p>
-                            <p className="text-faint text-xs">
+                            <p className="mobile-card-subtitle">
                               {getPlacaUnidad(
                                 getValue(orden, "tractoDevolucion", null)
                               ) || ""}
@@ -866,17 +866,17 @@ function DevolucionesPage() {
 
             <div className="mb-5 grid gap-3 text-sm sm:grid-cols-2">
               <div className="info-tile">
-                <p className="text-faint text-xs">Cliente</p>
+                <p className="mobile-card-subtitle">Cliente</p>
                 <p className="text-main font-semibold">
                   {getClienteSolicitante(ordenSeleccionada)?.razonSocial || "-"}
                 </p>
               </div>
               <div className="info-tile">
-                <p className="text-faint text-xs">Programación de viaje</p>
+                <p className="mobile-card-subtitle">Programación de viaje</p>
                 <p className="text-main font-semibold">
                   {getOrdenViaje(ordenSeleccionada)}
                 </p>
-                <p className="text-faint text-xs">
+                <p className="mobile-card-subtitle">
                   Orden: {getNumeroOrdenServicio(ordenSeleccionada)}
                 </p>
               </div>
@@ -943,19 +943,19 @@ function DevolucionesPage() {
               <div className="grid gap-4">
                 <div className="grid gap-3 text-sm sm:grid-cols-3">
                   <div className="info-tile">
-                    <p className="text-faint text-xs">Contenedor</p>
+                    <p className="mobile-card-subtitle">Contenedor</p>
                     <p className="text-main font-semibold">
                       {formDevolucion.numeroContenedor || "-"}
                     </p>
                   </div>
                   <div className="info-tile">
-                    <p className="text-faint text-xs">Vencimiento</p>
+                    <p className="mobile-card-subtitle">Vencimiento</p>
                     <p className="text-main font-semibold">
                       {formatearFecha(formDevolucion.fechaVencimientoDevolucion)}
                     </p>
                   </div>
                   <div className="info-tile">
-                    <p className="text-faint text-xs">Almacén</p>
+                    <p className="mobile-card-subtitle">Almacén</p>
                     <p className="text-main font-semibold">
                       {formDevolucion.almacenDevolucion || "-"}
                     </p>
@@ -1033,19 +1033,19 @@ function DevolucionesPage() {
               <div className="grid gap-4">
                 <div className="grid gap-3 text-sm sm:grid-cols-3">
                   <div className="info-tile">
-                    <p className="text-faint text-xs">Contenedor</p>
+                    <p className="mobile-card-subtitle">Contenedor</p>
                     <p className="text-main font-semibold">
                       {formDevolucion.numeroContenedor || "-"}
                     </p>
                   </div>
                   <div className="info-tile">
-                    <p className="text-faint text-xs">Vencimiento</p>
+                    <p className="mobile-card-subtitle">Vencimiento</p>
                     <p className="text-main font-semibold">
                       {formatearFecha(formDevolucion.fechaVencimientoDevolucion)}
                     </p>
                   </div>
                   <div className="info-tile">
-                    <p className="text-faint text-xs">Almacén</p>
+                    <p className="mobile-card-subtitle">Almacén</p>
                     <p className="text-main font-semibold">
                       {formDevolucion.almacenDevolucion || "-"}
                     </p>

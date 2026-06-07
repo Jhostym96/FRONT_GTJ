@@ -34,6 +34,7 @@ const iconByPath = {
   "/admin/empresa": Building2,
   "/admin/whatsapp-bot": MessageCircle,
   "/admin/nubefact-pruebas": Activity,
+  "/admin/mantenimiento": ShieldCheck,
   "/auditoria": History,
 };
 
@@ -52,6 +53,7 @@ const moduleDescriptions = {
   "/admin/empresa": "Datos tributarios y parámetros de empresa.",
   "/admin/whatsapp-bot": "Configuración del bot y grupo operativo de WhatsApp.",
   "/admin/nubefact-pruebas": "Validación de comprobantes y conexión Nubefact.",
+  "/admin/mantenimiento": "Bloqueo temporal para usuarios no administradores.",
   "/auditoria": "Historial de acciones y trazabilidad.",
 };
 
@@ -115,10 +117,10 @@ const HomePage = () => {
   }).format(new Date());
 
   return (
-    <div className="w-full py-4">
+    <div className="page">
       <div className="page-wrap">
         <header className="page-hero">
-          <div className="flex flex-col gap-6 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="page-hero-content">
             <div className="max-w-3xl">
               <div className="eyebrow">Inicio</div>
               <h1 className="page-title">
@@ -129,15 +131,19 @@ const HomePage = () => {
                 abrir las acciones operativas más usadas de Transportes J.
               </p>
             </div>
-            <div className="panel w-full p-4 lg:max-w-xs">
-              <p className="text-faint text-xs font-bold uppercase">
-                Sesión activa
-              </p>
-              <p className="text-main mt-1 text-lg font-extrabold">
-                {user?.role || "Usuario"}
-              </p>
-              <p className="text-muted mt-1 text-sm capitalize">{today}</p>
-              <Link to={primaryPath} className="btn-primary mt-4 w-full">
+            <div className="w-full border-t pt-4 lg:max-w-xs lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0">
+              <div className="flex items-center justify-between gap-3 lg:block">
+                <div className="min-w-0">
+                  <p className="text-faint text-xs font-bold uppercase">
+                    Sesión activa
+                  </p>
+                  <p className="text-main mt-1 truncate text-base font-extrabold">
+                    {user?.role || "Usuario"}
+                  </p>
+                  <p className="text-muted mt-1 text-sm capitalize">{today}</p>
+                </div>
+              </div>
+              <Link to={primaryPath} className="btn-primary mt-3 w-full">
                 Abrir primer módulo
                 <ArrowRight className="h-4 w-4" />
               </Link>
@@ -146,12 +152,12 @@ const HomePage = () => {
         </header>
 
         {visibleActions.length > 0 && (
-          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             {visibleActions.map(({ path, label, detail, icon: Icon }) => (
               <Link
                 key={path}
                 to={path}
-                className="panel flex min-h-[132px] flex-col justify-between p-4 transition hover:border-[var(--app-primary)]"
+                className="panel flex min-h-[120px] flex-col justify-between p-4 transition hover:border-[var(--app-primary)]"
               >
                 <div className="flex items-start gap-3">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border bg-[var(--app-surface-muted)]">
@@ -175,7 +181,7 @@ const HomePage = () => {
           </section>
         )}
 
-        <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <section className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-4">
           <div className="panel p-4 sm:p-5">
             <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
               <div>

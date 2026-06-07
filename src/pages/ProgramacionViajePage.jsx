@@ -459,28 +459,26 @@ const ProgramacionViajePage = () => {
 
   const AccionesViaje = ({ viaje, mobile = false }) => {
     const viajeId = getId(viaje);
+    const actionClass = (variant) => (mobile ? variant : `${variant} btn-icon`);
 
     return (
-      <div
-        className={`flex ${
-          mobile ? "flex-wrap" : "justify-start"
-        } flex-wrap gap-2`}
-      >
+      <div className={mobile ? "mobile-actions" : "table-actions"}>
         <button
           type="button"
           onClick={() => abrirVer(viaje)}
-          className="btn-secondary btn-icon"
+          className={actionClass("btn-secondary")}
           title="Ver programación"
           aria-label="Ver programación"
         >
           <Eye />
+          {mobile && "Ver"}
         </button>
 
         {puedeEditar(viaje) && (
           <button
             type="button"
             onClick={() => abrirEditar(viaje)}
-            className="btn-secondary btn-icon"
+            className={actionClass("btn-secondary")}
             title={
               viaje.estado === "EN_RUTA"
                 ? "Editar con motivo operativo"
@@ -489,6 +487,7 @@ const ProgramacionViajePage = () => {
             aria-label="Editar programación"
           >
             <Pencil />
+            {mobile && "Editar"}
           </button>
         )}
 
@@ -498,7 +497,7 @@ const ProgramacionViajePage = () => {
             type="button"
             disabled={cambiandoEstado[viajeId]}
             onClick={() => handleCambiarEstado(viaje, accion.estado)}
-            className="btn-primary btn-icon"
+            className={actionClass("btn-primary")}
             title={accion.label}
             aria-label={accion.label}
           >
@@ -507,6 +506,7 @@ const ProgramacionViajePage = () => {
             ) : (
               getAccionIcon(accion.estado)
             )}
+            {mobile && accion.label}
           </button>
         ))}
 
@@ -515,11 +515,12 @@ const ProgramacionViajePage = () => {
             <button
               type="button"
               onClick={() => setViajeGuiaSunat(viaje)}
-              className="btn-secondary btn-icon"
+              className={actionClass("btn-secondary")}
               title="Registrar guía emitida en SUNAT"
               aria-label="Registrar guía emitida en SUNAT"
             >
               <FileCheck2 />
+              {mobile && "Guía SUNAT"}
             </button>
           )}
 
@@ -528,7 +529,7 @@ const ProgramacionViajePage = () => {
             type="button"
             disabled={cambiandoEstado[viajeId]}
             onClick={() => handleCambiarEstado(viaje, "ANULADO")}
-            className="btn-danger btn-icon"
+            className={actionClass("btn-danger")}
             title="Anular programación"
             aria-label="Anular programación"
           >
@@ -537,6 +538,7 @@ const ProgramacionViajePage = () => {
             ) : (
               <Ban />
             )}
+            {mobile && "Anular"}
           </button>
         )}
       </div>
@@ -544,10 +546,10 @@ const ProgramacionViajePage = () => {
   };
 
   return (
-    <div className="w-full py-4">
+    <div className="page">
       <div className="page-wrap">
         <header className="page-hero">
-          <div className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="page-hero-content">
             <div>
               <div className="eyebrow">Gestión de viajes</div>
 
@@ -589,23 +591,23 @@ const ProgramacionViajePage = () => {
           </div>
         ) : (
           <>
-            <div className="grid gap-4 lg:hidden">
+            <div className="mobile-list">
               {listaProgramaciones.map((viaje) => {
                 const viajeId = getId(viaje);
                 const cliente = obtenerClienteSolicitante(viaje);
 
                 return (
                   <article key={viajeId} className="mobile-card">
-                    <div className="mb-4 flex items-start justify-between gap-3">
+                    <div className="mobile-card-header">
                       <div>
                         <p className="text-faint text-xs font-medium">
                           Programación
                         </p>
-                        <h2 className="text-main text-lg font-bold">
+                        <h2 className="mobile-card-title">
                           {viaje.numeroProgramacion ||
                             `PV-${String(viajeId).padStart(6, "0")}`}
                         </h2>
-                        <p className="text-faint text-xs">
+                        <p className="mobile-card-subtitle">
                           Orden: {viaje.ordenServicio?.numeroOrden || "-"}
                         </p>
                       </div>
@@ -613,7 +615,7 @@ const ProgramacionViajePage = () => {
                       <EstadoBadge estado={viaje.estado} />
                     </div>
 
-                    <div className="grid gap-3 text-sm sm:grid-cols-2">
+                    <div className="mobile-detail-grid-2">
                       <div className="info-tile">
                         <p className="text-faint text-xs">Cliente</p>
                         <p className="text-main font-semibold">
@@ -696,7 +698,7 @@ const ProgramacionViajePage = () => {
                       </div>
                     </div>
 
-                    <div className="mt-4 border-t pt-4">
+                    <div className="mobile-card-actions">
                       <AccionesViaje viaje={viaje} mobile />
                     </div>
                   </article>
@@ -706,7 +708,7 @@ const ProgramacionViajePage = () => {
 
             <div className="data-table-wrap">
               <div className="table-scroll">
-                <table className="data-table w-full min-w-[1250px] text-sm">
+                <table className="data-table dense-table w-full min-w-[1250px] text-sm">
                   <thead>
                     <tr>
                       <th className="px-4 py-4 text-left">Programación</th>

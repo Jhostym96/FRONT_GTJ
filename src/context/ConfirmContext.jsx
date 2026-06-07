@@ -1,4 +1,10 @@
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+} from "react";
 import { AlertTriangle, CheckCircle2, X } from "lucide-react";
 
 const ConfirmContext = createContext(null);
@@ -9,11 +15,17 @@ const defaultOptions = {
   confirmText: "Confirmar",
   cancelText: "Cancelar",
   variant: "danger",
+  confirmationText: "",
+  confirmationLabel: "Comprobación",
 };
 
 function ConfirmDialog({ options, onCancel, onConfirm }) {
   const isDanger = options.variant === "danger";
   const Icon = isDanger ? AlertTriangle : CheckCircle2;
+  const requiresText = Boolean(options.confirmationText);
+  const [confirmationValue, setConfirmationValue] = useState("");
+  const matchesConfirmation =
+    !requiresText || confirmationValue.trim() === options.confirmationText;
 
   return (
     <div className="modal-backdrop z-[70]" role="presentation">
@@ -56,6 +68,29 @@ function ConfirmDialog({ options, onCancel, onConfirm }) {
           </button>
         </div>
 
+        {requiresText && (
+          <div className="mb-5">
+            <label className="form-label" htmlFor="confirm-dialog-check">
+              {options.confirmationLabel}
+            </label>
+            <input
+              id="confirm-dialog-check"
+              type="text"
+              value={confirmationValue}
+              onChange={(e) => setConfirmationValue(e.target.value)}
+              className="input"
+              autoComplete="off"
+              placeholder={options.confirmationText}
+            />
+            <p className="text-faint mt-2 text-xs">
+              Escribe exactamente:{" "}
+              <span className="text-main font-bold">
+                {options.confirmationText}
+              </span>
+            </p>
+          </div>
+        )}
+
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <button type="button" onClick={onCancel} className="btn-secondary">
             {options.cancelText}
@@ -63,6 +98,7 @@ function ConfirmDialog({ options, onCancel, onConfirm }) {
           <button
             type="button"
             onClick={onConfirm}
+            disabled={!matchesConfirmation}
             className={isDanger ? "btn-danger" : "btn-primary"}
           >
             {options.confirmText}

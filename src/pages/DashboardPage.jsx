@@ -150,10 +150,10 @@ const DashboardPage = () => {
   ];
 
   return (
-    <div className="w-full py-4">
+    <div className="page">
       <div className="page-wrap">
         <header className="page-hero">
-          <div className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="page-hero-content">
             <div>
               <div className="eyebrow">Panel ejecutivo</div>
               <h1 className="page-title">Dashboard</h1>
@@ -162,9 +162,9 @@ const DashboardPage = () => {
               </p>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 lg:min-w-[360px]">
+            <div className="grid grid-cols-3 gap-2 border-t pt-4 lg:min-w-[340px] lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0">
               {saludOperacion.map((item) => (
-                <Link key={item.label} to={item.to} className="info-tile text-center">
+                <Link key={item.label} to={item.to} className="rounded-md px-2 py-2 text-center transition hover:bg-[var(--app-surface-muted)]">
                   <p className="text-faint text-[11px] font-bold uppercase">{item.label}</p>
                   <p className="text-main text-xl font-extrabold">{item.value}</p>
                   <p className="text-muted truncate text-xs">{item.detail}</p>

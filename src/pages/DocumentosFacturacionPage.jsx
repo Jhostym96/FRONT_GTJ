@@ -243,10 +243,10 @@ const DocumentosFacturacionPage = () => {
   }[modal?.tipo];
 
   return (
-    <div className="w-full py-4">
+    <div className="page">
       <div className="page-wrap">
         <header className="page-hero">
-          <div className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="page-hero-content">
             <div>
               <div className="eyebrow">Facturación</div>
               <h1 className="page-title">Recepción de documentos</h1>
@@ -255,21 +255,21 @@ const DocumentosFacturacionPage = () => {
                 habilitar el proceso de facturación.
               </p>
             </div>
-            <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[420px]">
+            <div className="summary-grid lg:min-w-[420px]">
               <div className="info-tile">
-                <p className="text-faint text-xs">Entregados</p>
+                <p className="mobile-card-subtitle">Entregados</p>
                 <p className="text-main text-xl font-bold">
                   {counts.ENTREGADO || 0}
                 </p>
               </div>
               <div className="info-tile">
-                <p className="text-faint text-xs">Pendientes</p>
+                <p className="mobile-card-subtitle">Pendientes</p>
                 <p className="text-main text-xl font-bold">
                   {counts.PENDIENTE || 0}
                 </p>
               </div>
               <div className="info-tile">
-                <p className="text-faint text-xs">Recepcionados</p>
+                <p className="mobile-card-subtitle">Recepcionados</p>
                 <p className="text-main text-xl font-bold">
                   {counts.RECEPCIONADO || 0}
                 </p>
@@ -338,8 +338,8 @@ const DocumentosFacturacionPage = () => {
         </section>
 
         {loading ? (
-          <div className="panel p-8 text-center">
-            <div className="mx-auto mb-3 h-9 w-9 animate-spin rounded-full border-2 border-[var(--app-border)] border-t-blue-500" />
+          <div className="loading-panel">
+            <div className="loading-spinner" />
             <p className="text-muted text-sm">Cargando documentos...</p>
           </div>
         ) : documentos.length === 0 ? (
@@ -355,63 +355,63 @@ const DocumentosFacturacionPage = () => {
           </div>
         ) : (
           <>
-            <div className="grid gap-4 lg:hidden">
+            <div className="mobile-list">
               {documentos.map((documento) => (
                 <article key={getDocumentoKey(documento)} className="mobile-card">
-                  <div className="mb-4 flex items-start justify-between gap-3">
+                  <div className="mobile-card-header">
                     <div>
                       <p className="text-faint text-xs font-medium">Guía</p>
-                      <h2 className="text-main text-lg font-bold">
+                      <h2 className="mobile-card-title">
                         {documento.numeroGuia}
                       </h2>
                     </div>
                     <EstadoBadge estado={documento.estado} />
                   </div>
 
-                  <div className="grid gap-3 text-sm">
+                  <div className="mobile-detail-grid">
                     <div className="info-tile">
-                      <p className="text-faint text-xs">Cliente</p>
+                      <p className="mobile-card-subtitle">Cliente</p>
                       <p className="text-main font-semibold">
                         {documento.cliente || "-"}
                       </p>
-                      <p className="text-faint text-xs">
+                      <p className="mobile-card-subtitle">
                         {documento.numeroDocumentoCliente || ""}
                       </p>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div className="info-tile">
-                        <p className="text-faint text-xs">Placa</p>
+                        <p className="mobile-card-subtitle">Placa</p>
                         <p className="text-main font-semibold">
                           {documento.placa || "-"}
                         </p>
                       </div>
                       <div className="info-tile">
-                        <p className="text-faint text-xs">Fecha traslado</p>
+                        <p className="mobile-card-subtitle">Fecha traslado</p>
                         <p className="text-main font-semibold">
                           {formatDate(documento.fechaInicioTraslado)}
                         </p>
                       </div>
                     </div>
                     <div className="info-tile">
-                      <p className="text-faint text-xs">Entrega / recepción</p>
+                      <p className="mobile-card-subtitle">Entrega / recepción</p>
                       <p className="text-main font-semibold">
                         {formatDateTime(documento.fechaEntregaOperaciones)}
                       </p>
-                      <p className="text-faint text-xs">
+                      <p className="mobile-card-subtitle">
                         Recepción:{" "}
                         {formatDateTime(documento.fechaRecepcionFacturacion)}
                       </p>
                     </div>
                   </div>
 
-                  <div className="mt-4 border-t pt-4">{acciones(documento)}</div>
+                  <div className="mobile-card-actions">{acciones(documento)}</div>
                 </article>
               ))}
             </div>
 
             <div className="data-table-wrap">
               <div className="table-scroll">
-                <table className="data-table w-full min-w-[1120px] text-sm">
+                <table className="data-table dense-table w-full min-w-[1120px] text-sm">
                   <thead>
                     <tr>
                       <th className="px-4 py-4 text-left">Guía</th>
@@ -431,7 +431,7 @@ const DocumentosFacturacionPage = () => {
                           <p className="text-main font-bold">
                             {documento.numeroGuia}
                           </p>
-                          <p className="text-faint text-xs">
+                          <p className="mobile-card-subtitle">
                             Viaje #{documento.programacionViajeId || "-"}
                           </p>
                         </td>
@@ -439,7 +439,7 @@ const DocumentosFacturacionPage = () => {
                           <p className="text-main max-w-[260px] truncate font-semibold">
                             {documento.cliente || "-"}
                           </p>
-                          <p className="text-faint text-xs">
+                          <p className="mobile-card-subtitle">
                             {documento.numeroDocumentoCliente || ""}
                           </p>
                         </td>
@@ -501,15 +501,15 @@ const DocumentosFacturacionPage = () => {
               </button>
             </div>
 
-            <div className="grid gap-3 text-sm sm:grid-cols-2">
+            <div className="mobile-detail-grid-2">
               <div className="info-tile">
-                <p className="text-faint text-xs">Estado actual</p>
+                <p className="mobile-card-subtitle">Estado actual</p>
                 <p className="text-main font-semibold">
                   {estadoConfig[modal.documento.estado]?.label || modal.documento.estado}
                 </p>
               </div>
               <div className="info-tile">
-                <p className="text-faint text-xs">Placa</p>
+                <p className="mobile-card-subtitle">Placa</p>
                 <p className="text-main font-semibold">
                   {modal.documento.placa || "-"}
                 </p>

@@ -209,6 +209,8 @@ const GuiaTransportistaPage = () => {
 
   const handleAnular = async (guia) => {
     const id = getGuiaId(guia);
+    const numeroGuia =
+      [guia?.serie, guia?.numero].filter(Boolean).join("-") || "ANULAR";
 
     if (!id) {
       notify.error("No se encontró el ID de la guía");
@@ -218,9 +220,11 @@ const GuiaTransportistaPage = () => {
     const confirmar = await confirm({
       title: "Anular guía",
       message:
-        "Esta anulación es interna del sistema. No se enviará a Nubefact y la programación quedará disponible para generar otra guía.",
+        `Esta anulación es interna del sistema. No se enviará a Nubefact y la programación quedará disponible para generar otra guía. Para continuar, confirma la guía ${numeroGuia}.`,
       confirmText: "Anular",
       variant: "danger",
+      confirmationText: numeroGuia,
+      confirmationLabel: "Número de guía",
     });
 
     if (!confirmar) return;
@@ -303,31 +307,31 @@ const GuiaTransportistaPage = () => {
 
   const AccionesGuia = ({ guia, mobile = false }) => {
     const id = getGuiaId(guia);
+    const actionClass = (variant) => (mobile ? variant : `${variant} btn-icon`);
 
     return (
-      <div
-        className={`flex ${mobile ? "flex-wrap" : "justify-center"
-          } flex-wrap gap-2`}
-      >
+      <div className={mobile ? "mobile-actions" : "table-actions"}>
         <button
           type="button"
           onClick={() => abrirVer(guia)}
-          className="btn-secondary btn-icon"
+          className={actionClass("btn-secondary")}
           title="Ver guía"
           aria-label="Ver guía"
         >
           <Eye />
+          {mobile && "Ver"}
         </button>
 
         <button
           type="button"
           onClick={() => abrirEditar(guia)}
           disabled={["ANULADA", "ENVIADA", "GENERADA", "ACEPTADA"].includes(guia.estado)}
-          className="btn-primary btn-icon"
+          className={actionClass("btn-primary")}
           title="Editar guía"
           aria-label="Editar guía"
         >
           <Pencil />
+          {mobile && "Editar"}
         </button>
 
         {["PENDIENTE", "ERROR"].includes(guia.estado) && (
@@ -335,7 +339,7 @@ const GuiaTransportistaPage = () => {
             type="button"
             onClick={() => handleEnviarNubefact(guia)}
             disabled={consultandoSunat[id] || guia.estado === "ANULADA"}
-            className="btn-success btn-icon"
+            className={actionClass("btn-success")}
             title="Enviar a Nubefact"
             aria-label="Enviar a Nubefact"
           >
@@ -344,6 +348,7 @@ const GuiaTransportistaPage = () => {
             ) : (
               <Send />
             )}
+            {mobile && "Enviar"}
           </button>
         )}
 
@@ -352,7 +357,7 @@ const GuiaTransportistaPage = () => {
               type="button"
               onClick={() => handleConsultarSunat(guia)}
               disabled={consultandoSunat[id] || guia.estado === "ANULADA"}
-              className="btn-success btn-icon"
+              className={actionClass("btn-success")}
               title="Consultar SUNAT"
               aria-label="Consultar SUNAT"
             >
@@ -361,6 +366,7 @@ const GuiaTransportistaPage = () => {
               ) : (
                 <SearchCheck />
               )}
+              {mobile && "SUNAT"}
             </button>
           )}
 
@@ -370,13 +376,14 @@ const GuiaTransportistaPage = () => {
           disabled={abriendoTicket[id] || guia.estado === "ANULADA"}
           title="Abrir PDF oficial de Nubefact"
           aria-label="Abrir PDF oficial de Nubefact"
-          className="btn btn-icon bg-amber-600 text-white hover:bg-amber-500"
+          className={mobile ? "btn bg-amber-600 text-white hover:bg-amber-500" : "btn btn-icon bg-amber-600 text-white hover:bg-amber-500"}
         >
           {abriendoTicket[id] ? (
             <LoaderCircle className="animate-spin" />
           ) : (
             <FileText />
           )}
+          {mobile && "PDF"}
         </button>
 
         {guia.estado !== "ANULADA" && (
@@ -384,11 +391,12 @@ const GuiaTransportistaPage = () => {
             type="button"
             onClick={() => handleAnular(guia)}
             disabled={anulando[id]}
-            className="btn-danger btn-icon"
+            className={actionClass("btn-danger")}
             title="Anular guía"
             aria-label="Anular guía"
           >
             {anulando[id] ? <LoaderCircle className="animate-spin" /> : <Ban />}
+            {mobile && "Anular"}
           </button>
         )}
       </div>
@@ -396,10 +404,10 @@ const GuiaTransportistaPage = () => {
   };
 
   return (
-    <div className="w-full py-4">
+    <div className="page">
       <div className="page-wrap">
         <header className="page-hero">
-          <div className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="page-hero-content">
             <div>
               <div className="eyebrow">
                 Emisión de guías
@@ -426,8 +434,8 @@ const GuiaTransportistaPage = () => {
         </header>
 
         {loadingGuia ? (
-          <div className="panel p-8 text-center">
-            <div className="mx-auto mb-3 h-9 w-9 animate-spin rounded-full border-2 border-[var(--app-border)] border-t-blue-500" />
+          <div className="loading-panel">
+            <div className="loading-spinner" />
 
             <p className="text-muted text-sm">
               Cargando guías de transportista...
@@ -453,7 +461,7 @@ const GuiaTransportistaPage = () => {
           </div>
         ) : (
           <>
-            <div className="grid gap-4 lg:hidden">
+            <div className="mobile-list">
               {guiasTransportista.map((guia) => {
                 const datos = obtenerDatosProgramacion(guia);
                 const id = getGuiaId(guia);
@@ -463,13 +471,13 @@ const GuiaTransportistaPage = () => {
                     key={id}
                     className="mobile-card"
                   >
-                    <div className="mb-4 flex items-start justify-between gap-3">
+                    <div className="mobile-card-header">
                       <div>
                         <p className="text-faint text-xs font-medium">
                           Guía
                         </p>
 
-                        <h2 className="text-main text-lg font-bold">
+                        <h2 className="mobile-card-title">
                           {guia.serie || "-"}-{guia.numero || "-"}
                         </h2>
                       </div>
@@ -477,7 +485,7 @@ const GuiaTransportistaPage = () => {
                       <EstadoBadge estado={guia.estado} />
                     </div>
 
-                    <div className="grid gap-3 text-sm">
+                    <div className="mobile-detail-grid">
                       <div className="info-tile">
                         <p className="text-faint text-xs">Emisión</p>
 
@@ -506,7 +514,7 @@ const GuiaTransportistaPage = () => {
                         </p>
                       </div>
 
-                      <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="mobile-detail-grid-2">
                         <div className="info-tile">
                           <p className="text-faint text-xs">Unidad</p>
 
@@ -555,7 +563,7 @@ const GuiaTransportistaPage = () => {
                       </div>
                     </div>
 
-                    <div className="mt-4 border-t pt-4">
+                    <div className="mobile-card-actions">
                       <AccionesGuia guia={guia} mobile />
                     </div>
                   </article>
@@ -565,7 +573,7 @@ const GuiaTransportistaPage = () => {
 
             <div className="data-table-wrap">
               <div className="table-scroll">
-                <table className="data-table w-full min-w-[1300px] text-sm">
+                <table className="data-table dense-table w-full min-w-[1300px] text-sm">
                   <thead>
                     <tr>
                       <th className="px-4 py-4 text-left">Guía</th>

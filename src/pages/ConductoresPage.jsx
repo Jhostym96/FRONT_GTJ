@@ -171,10 +171,10 @@ function ConductoresPage() {
   };
 
   return (
-    <div className="w-full py-4">
+    <div className="page">
       <div className="page-wrap">
         <header className="page-hero">
-          <div className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="page-hero-content">
             <div>
               <div className="eyebrow">
                 Gestión de transporte
@@ -201,7 +201,7 @@ function ConductoresPage() {
         </header>
 
         {errors?.length > 0 && (
-          <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300 shadow-lg">
+          <div className="alert-panel">
             {errors.map((error, index) => (
               <p key={index}>{error}</p>
             ))}
@@ -209,8 +209,8 @@ function ConductoresPage() {
         )}
 
         {loading ? (
-          <div className="panel p-8 text-center">
-            <div className="mx-auto mb-3 h-9 w-9 animate-spin rounded-full border-2 border-neutral-700 border-t-blue-500" />
+          <div className="loading-panel">
+            <div className="loading-spinner" />
             <p className="text-muted text-sm">
               Cargando conductores...
             </p>
@@ -237,19 +237,19 @@ function ConductoresPage() {
         ) : (
           <>
             {/* Cards en móvil */}
-            <div className="grid gap-4 lg:hidden">
+            <div className="mobile-list">
               {conductores.map((conductor) => (
                 <article
                   key={getRecordId(conductor)}
                   className="mobile-card"
                 >
-                  <div className="mb-4 flex items-start justify-between gap-3">
+                  <div className="mobile-card-header">
                     <div>
                       <p className="text-faint text-xs font-medium">
                         Conductor
                       </p>
 
-                      <h2 className="text-main text-lg font-bold">
+                      <h2 className="mobile-card-title">
                         {conductor.nombres || "-"} {conductor.apellidos || ""}
                       </h2>
                     </div>
@@ -257,22 +257,22 @@ function ConductoresPage() {
                     <EstadoBadge estado={conductor.estado} />
                   </div>
 
-                  <div className="grid gap-3 text-sm">
+                  <div className="mobile-detail-grid">
                     <div className="info-tile">
-                      <p className="text-faint text-xs">Documento</p>
+                      <p className="mobile-card-subtitle">Documento</p>
 
                       <p className="text-main font-semibold">
                         {conductor.numeroDocumento || "-"}
                       </p>
 
-                      <p className="text-faint text-xs">
+                      <p className="mobile-card-subtitle">
                         Tipo:{" "}
                         {obtenerTipoDocumentoTexto(conductor.tipoDocumento)}
                       </p>
                     </div>
 
                     <div className="info-tile">
-                      <p className="text-faint text-xs">Licencia</p>
+                      <p className="mobile-card-subtitle">Licencia</p>
 
                       <p className="text-main font-semibold">
                         {conductor.numeroLicencia || "-"}
@@ -280,7 +280,7 @@ function ConductoresPage() {
                     </div>
 
                     <div className="info-tile">
-                      <p className="text-faint text-xs">Permisos</p>
+                      <p className="mobile-card-subtitle">Permisos</p>
                       <p className="text-main font-semibold">
                         {[
                           conductor.permisoIMO ? "IMO" : null,
@@ -292,7 +292,7 @@ function ConductoresPage() {
                     </div>
 
                     <div className="info-tile">
-                      <p className="text-faint text-xs">Teléfono</p>
+                      <p className="mobile-card-subtitle">Teléfono</p>
 
                       <p className="text-main font-semibold">
                         {conductor.telefono || "-"}
@@ -301,7 +301,7 @@ function ConductoresPage() {
 
                     {conductor.observaciones && (
                       <div className="info-tile">
-                        <p className="text-faint text-xs">
+                        <p className="mobile-card-subtitle">
                           Observaciones
                         </p>
 
@@ -312,7 +312,7 @@ function ConductoresPage() {
                     )}
                   </div>
 
-                  <div className="mt-4 border-t pt-4">
+                  <div className="mobile-card-actions">
                     <AccionesConductor conductor={conductor} mobile />
                   </div>
                 </article>
@@ -322,7 +322,7 @@ function ConductoresPage() {
             {/* Tabla en desktop */}
             <div className="data-table-wrap">
               <div className="table-scroll">
-                <table className="data-table w-full min-w-[1000px] text-sm">
+                <table className="data-table dense-table w-full min-w-[1000px] text-sm">
                   <thead>
                     <tr>
                       <th className="px-4 py-4 text-left">Conductor</th>
@@ -353,7 +353,7 @@ function ConductoresPage() {
                             {conductor.numeroDocumento || "-"}
                           </p>
 
-                          <p className="text-faint text-xs">
+                          <p className="mobile-card-subtitle">
                             Tipo:{" "}
                             {obtenerTipoDocumentoTexto(
                               conductor.tipoDocumento

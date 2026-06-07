@@ -14,6 +14,10 @@ import {
   FaFlask,
   FaWhatsapp,
   FaChartBar,
+  FaHeartbeat,
+  FaTools,
+  FaSave,
+  FaSortNumericUp,
 } from "react-icons/fa";
 
 export const dashboardMenu = {
@@ -138,7 +142,11 @@ export const adminMenu = {
     { path: "/usuarios", label: "Gestionar Usuarios", icon: FaUsers },
     { path: "/admin/empresa", label: "Datos de Empresa", icon: FaBuilding },
     { path: "/admin/whatsapp-bot", label: "Bot WhatsApp", icon: FaWhatsapp },
+    { path: "/admin/backups", label: "Copias de Seguridad", icon: FaSave },
+    { path: "/admin/correlativos", label: "Correlativos", icon: FaSortNumericUp },
+    { path: "/admin/mantenimiento", label: "Modo Mantenimiento", icon: FaTools },
     { path: "/admin/nubefact-pruebas", label: "Prueba Nubefact", icon: FaFlask },
+    { path: "/admin/salud-sistema", label: "Salud del Sistema", icon: FaHeartbeat },
     { path: "/auditoria", label: "Auditoría", icon: FaHistory },
   ],
 };
@@ -243,6 +251,10 @@ export function canAccess(user, path) {
       );
     })
   );
+}
+
+export function isAdminUser(user) {
+  return ["Administrador", "Superadministrador"].includes(user?.role);
 }
 
 export function getDefaultUserPermissions(role = "User") {

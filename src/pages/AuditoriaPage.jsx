@@ -60,10 +60,10 @@ const AuditoriaPage = () => {
   };
 
   return (
-    <div className="w-full py-4">
+    <div className="page">
       <div className="page-wrap">
         <header className="page-hero">
-          <div className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="page-hero-content">
             <div>
               <div className="eyebrow">Control interno</div>
               <h1 className="page-title">Auditoría del sistema</h1>
@@ -131,8 +131,8 @@ const AuditoriaPage = () => {
         )}
 
         {loadingAuditoria ? (
-          <div className="panel p-8 text-center">
-            <div className="mx-auto mb-3 h-9 w-9 animate-spin rounded-full border-2 border-[var(--app-border)] border-t-blue-500" />
+          <div className="loading-panel">
+            <div className="loading-spinner" />
             <p className="text-muted text-sm">Cargando auditoría...</p>
           </div>
         ) : auditoria.length === 0 ? (

@@ -199,29 +199,28 @@ const OrdenesServicioPage = () => {
     const motivoBloqueoAnulacion = getMotivoBloqueoAnulacion(orden);
 
     return (
-      <div
-        className={`flex ${mobile ? "flex-wrap" : "justify-center"
-          } gap-2`}
-      >
+      <div className={mobile ? "mobile-actions" : "table-actions"}>
         <button
           type="button"
           onClick={() => abrirVer(orden)}
-          className="btn-secondary btn-icon"
+          className={mobile ? "btn-secondary" : "btn-secondary btn-icon"}
           title="Ver orden"
           aria-label="Ver orden"
         >
           <Eye />
+          {mobile && "Ver"}
         </button>
 
         <button
           type="button"
           onClick={() => abrirEditar(orden)}
           disabled={orden.estado === "ANULADA"}
-          className="btn-primary btn-icon"
+          className={mobile ? "btn-primary" : "btn-primary btn-icon"}
           title="Editar orden"
           aria-label="Editar orden"
         >
           <Pencil />
+          {mobile && "Editar"}
         </button>
 
         {!motivoBloqueoAnulacion && (
@@ -229,11 +228,12 @@ const OrdenesServicioPage = () => {
             type="button"
             onClick={() => handleAnular(orden)}
             disabled={anulando[ordenId]}
-            className="btn-danger btn-icon"
+            className={mobile ? "btn-danger" : "btn-danger btn-icon"}
             title="Anular orden"
             aria-label="Anular orden"
           >
             {anulando[ordenId] ? <LoaderCircle className="animate-spin" /> : <Ban />}
+            {mobile && "Anular"}
           </button>
         )}
       </div>
@@ -241,10 +241,10 @@ const OrdenesServicioPage = () => {
   };
 
   return (
-    <div className="w-full py-4">
+    <div className="page">
       <div className="page-wrap">
         <header className="page-hero">
-          <div className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="page-hero-content">
             <div>
               <div className="eyebrow">Gestión de transporte</div>
 
@@ -267,8 +267,8 @@ const OrdenesServicioPage = () => {
         </header>
 
         {loading ? (
-          <div className="panel p-8 text-center">
-            <div className="mx-auto mb-3 h-9 w-9 animate-spin rounded-full border-2 border-[var(--app-border)] border-t-blue-500" />
+          <div className="loading-panel">
+            <div className="loading-spinner" />
             <p className="text-muted text-sm">
               Cargando órdenes de servicio...
             </p>
@@ -293,18 +293,18 @@ const OrdenesServicioPage = () => {
           </div>
         ) : (
           <>
-            <div className="grid gap-4 lg:hidden">
+            <div className="mobile-list">
               {ordenes.map((orden) => {
                 const ordenId = getItemId(orden);
 
                 return (
                   <article key={ordenId} className="mobile-card">
-                    <div className="mb-4 flex items-start justify-between gap-3">
+                    <div className="mobile-card-header">
                       <div>
                         <p className="text-faint text-xs font-medium">
                           N° Orden
                         </p>
-                        <h2 className="text-main text-lg font-bold">
+                        <h2 className="mobile-card-title">
                           {orden.numeroOrden || "-"}
                         </h2>
                       </div>
@@ -312,7 +312,7 @@ const OrdenesServicioPage = () => {
                       <EstadoBadge estado={orden.estado} />
                     </div>
 
-                    <div className="grid gap-3 text-sm">
+                    <div className="mobile-detail-grid">
                       <div className="info-tile">
                         <p className="text-faint text-xs">Fecha</p>
                         <p className="text-main font-semibold">
@@ -393,7 +393,7 @@ const OrdenesServicioPage = () => {
                       </div>
                     </div>
 
-                    <div className="mt-4 border-t pt-4">
+                    <div className="mobile-card-actions">
                       <AccionesOrden orden={orden} mobile />
                     </div>
                   </article>
@@ -403,7 +403,7 @@ const OrdenesServicioPage = () => {
 
             <div className="data-table-wrap">
               <div className="table-scroll">
-                <table className="data-table w-full min-w-[1200px] text-sm">
+                <table className="data-table dense-table w-full min-w-[1200px] text-sm">
                   <thead>
                     <tr>
                       <th className="px-4 py-4 text-left">N° Orden</th>
@@ -432,16 +432,6 @@ const OrdenesServicioPage = () => {
                           </td>
 
                           <td className="text-muted whitespace-nowrap px-4 py-4">
-                            <p className="text-main font-semibold">
-                              {orden.viajesProgramados || 0}/
-                              {orden.cantidadViajes || 1}
-                            </p>
-                            <p className="text-faint text-xs">
-                              Pendientes: {orden.viajesPendientes ?? "-"}
-                            </p>
-                          </td>
-
-                          <td className="text-muted whitespace-nowrap px-4 py-4">
                             {formatearFecha(orden.fechaProgramada)}
                           </td>
 
@@ -457,6 +447,16 @@ const OrdenesServicioPage = () => {
                                 {formatearDimensionCarga(orden.dimensionCarga)}
                               </p>
                             )}
+                          </td>
+
+                          <td className="text-muted whitespace-nowrap px-4 py-4">
+                            <p className="text-main font-semibold">
+                              {orden.viajesProgramados || 0}/
+                              {orden.cantidadViajes || 1}
+                            </p>
+                            <p className="text-faint text-xs">
+                              Pendientes: {orden.viajesPendientes ?? "-"}
+                            </p>
                           </td>
 
                           <td className="text-muted whitespace-nowrap px-4 py-4">

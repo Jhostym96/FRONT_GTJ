@@ -411,10 +411,10 @@ const ReportesPage = () => {
   };
 
   return (
-    <div className="w-full py-4">
+    <div className="page">
       <div className="page-wrap">
         <header className="page-hero">
-          <div className="flex flex-col gap-5 p-5 sm:p-6">
+          <div className="page-hero-content">
             <div>
               <div className="eyebrow">Análisis operativo</div>
               <h1 className="page-title">Reportes</h1>

@@ -12,9 +12,9 @@ function Navbar({ collapsed }) {
     <header
       className={`fixed top-0 right-0 left-0
         ${collapsed ? "md:left-20" : "md:left-64"}
-        app-navbar h-14 flex items-center justify-between px-4 shadow-sm z-30 sm:px-6`}
+        app-navbar h-14 flex items-center justify-between px-3 pl-16 shadow-sm z-30 sm:px-6 sm:pl-6`}
     >
-      <h2 className="text-main hidden text-sm font-semibold tracking-wide sm:block">
+      <h2 className="text-main hidden text-sm font-extrabold sm:block">
         TRANSPORTES J EIRL
       </h2>
 
@@ -30,13 +30,13 @@ function Navbar({ collapsed }) {
           {isDark ? <Sun size={17} /> : <Moon size={17} />}
         </button>
 
-        <div className="flex min-w-0 items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2 rounded-md border px-2 py-1.5">
           <FaUserCircle className="text-main text-xl" />
-          <div className="hidden min-w-0 flex-col items-center sm:flex">
-            <span className="text-main max-w-[180px] truncate text-center text-sm font-semibold leading-4 lg:max-w-[260px]">
+          <div className="hidden min-w-0 flex-col sm:flex">
+            <span className="text-main max-w-[180px] truncate text-sm font-semibold leading-4 lg:max-w-[260px]">
               {displayName}
             </span>
-            <span className="text-faint max-w-[180px] truncate text-center text-[11px] leading-4 lg:max-w-[260px]">
+            <span className="text-faint max-w-[180px] truncate text-[11px] leading-4 lg:max-w-[260px]">
               {user?.role || "Invitado"}
             </span>
           </div>

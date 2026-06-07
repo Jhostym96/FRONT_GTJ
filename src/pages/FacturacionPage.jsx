@@ -250,11 +250,11 @@ const FacturacionPage = () => {
   );
 
   const Acciones = ({ orden, mobile = false }) => (
-    <div className={`flex ${mobile ? "flex-wrap" : "justify-center"} gap-2`}>
+    <div className={mobile ? "mobile-actions" : "table-actions"}>
       <button
         type="button"
         onClick={() => abrirFactura(orden)}
-        className={mobile ? "btn-secondary px-3 py-2" : "btn-secondary btn-icon"}
+        className={mobile ? "btn-secondary" : "btn-secondary btn-icon"}
         title="Registrar factura"
         aria-label="Registrar factura"
       >
@@ -266,7 +266,7 @@ const FacturacionPage = () => {
         <button
           type="button"
           onClick={() => abrirPago(orden)}
-          className={mobile ? "btn-primary px-3 py-2" : "btn-primary btn-icon"}
+          className={mobile ? "btn-primary" : "btn-primary btn-icon"}
           title="Registrar pago"
           aria-label="Registrar pago"
         >
@@ -283,10 +283,10 @@ const FacturacionPage = () => {
   );
 
   return (
-    <div className="w-full py-4">
+    <div className="page">
       <div className="page-wrap">
         <header className="page-hero">
-          <div className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="page-hero-content">
             <div>
               <div className="eyebrow">Control administrativo</div>
               <h1 className="page-title">Facturación</h1>
@@ -297,7 +297,7 @@ const FacturacionPage = () => {
           </div>
         </header>
 
-        <div className="mb-4 grid gap-3 sm:grid-cols-3">
+        <div className="summary-grid mb-4">
           <div className="info-tile">
             <p className="text-faint text-xs">Pendientes</p>
             <p className="text-main text-2xl font-bold">{resumen.pendientes}</p>
@@ -312,8 +312,8 @@ const FacturacionPage = () => {
           </div>
         </div>
 
-        <form onSubmit={handleBuscar} className="panel mb-4 p-4">
-          <div className="grid gap-3 lg:grid-cols-[1fr_180px_180px_auto] lg:items-end">
+        <form onSubmit={handleBuscar} className="filter-panel mb-4">
+          <div className="grid gap-3 lg:grid-cols-[minmax(260px,1fr)_180px_180px_auto] lg:items-end">
             <label>
               <span className="text-faint mb-2 block text-xs font-semibold uppercase">Buscar</span>
               <input
@@ -359,8 +359,8 @@ const FacturacionPage = () => {
         </form>
 
         {loading ? (
-          <div className="panel p-8 text-center">
-            <div className="mx-auto mb-3 h-9 w-9 animate-spin rounded-full border-2 border-[var(--app-border)] border-t-blue-500" />
+          <div className="loading-panel">
+            <div className="loading-spinner" />
             <p className="text-muted text-sm">Cargando órdenes...</p>
           </div>
         ) : ordenes.length === 0 ? (
@@ -373,19 +373,19 @@ const FacturacionPage = () => {
           </div>
         ) : (
           <>
-            <div className="grid gap-4 lg:hidden">
+            <div className="mobile-list">
               {ordenes.map((orden) => (
                 <article key={getItemId(orden)} className="mobile-card">
-                  <div className="mb-4 flex items-start justify-between gap-3">
+                  <div className="mobile-card-header">
                     <div>
                       <p className="text-faint text-xs">Orden</p>
-                      <h2 className="text-main text-lg font-bold">{orden.numeroOrden}</h2>
-                      <p className="text-faint text-xs">{formatDateOnly(orden.fechaProgramada)}</p>
+                      <h2 className="mobile-card-title">{orden.numeroOrden}</h2>
+                      <p className="mobile-card-subtitle">{formatDateOnly(orden.fechaProgramada)}</p>
                     </div>
                     <EstadoBadge estado={orden.estadoFacturacion} />
                   </div>
 
-                  <div className="grid gap-3 text-sm">
+                  <div className="mobile-detail-grid">
                     <div className="info-tile">
                       <p className="text-faint text-xs">Cliente</p>
                       <p className="text-main font-semibold">{getClienteNombre(orden)}</p>
@@ -405,7 +405,7 @@ const FacturacionPage = () => {
                     </div>
                   </div>
 
-                  <div className="mt-4 border-t pt-4">
+                  <div className="mobile-card-actions">
                     <Acciones orden={orden} mobile />
                   </div>
                 </article>
@@ -414,7 +414,7 @@ const FacturacionPage = () => {
 
             <div className="data-table-wrap">
               <div className="table-scroll">
-                <table className="data-table w-full min-w-[1450px] text-sm">
+                <table className="data-table dense-table w-full min-w-[1450px] text-sm">
                   <thead>
                     <tr>
                       <th className="px-4 py-4 text-left">Orden</th>

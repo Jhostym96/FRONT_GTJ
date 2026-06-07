@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import { useState } from "react";
+import { Suspense, lazy, useState } from "react";
 
 // 🔹 Contextos y Providers
 import { AuthProvider } from "./context/AuthContext";
@@ -14,6 +14,7 @@ import { ThemeProvider } from "./context/ThemeContext";
 import { ConfirmProvider } from "./context/ConfirmContext";
 import { AuditoriaProvider } from "./context/AuditoriaContext";
 import { EmpresaConfigProvider } from "./context/EmpresaConfigContext";
+import { MaintenanceProvider } from "./context/MaintenanceContext";
 
 // 🔹 Componentes
 import Sidebar from "./components/Sidebar";
@@ -21,30 +22,34 @@ import Navbar from "./components/NavBar";
 import Footer from "./components/Footer"; // 👈 Footer agregado
 import ProtectedRoute from "./ProtectedRoute";
 import RouteChangeLoader from "./components/RouteChangeLoader";
-import OrdenServicioFormPage from "./components/modals/OrdenServicioModal";
 
 
 // 🔹 Páginas
-import LoginPage from "./pages/LoginPage";
-import HomePage from "./pages/HomePage";
-import DashboardPage from "./pages/DashboardPage";
-import AuditoriaPage from "./pages/AuditoriaPage";
-import ProfileTask from "./pages/ProfilePage";
-import UsuariosPage from "./pages/UsuariosPage";
-import UnauthorizedPage from "./pages/UnauthorizedPage";
-import OrdenesServicioPage from "./pages/OrdenesServicioPage";
-import ClientesPage from "./pages/ClientesPage";
-import ProgramacionViajePage from "./pages/ProgramacionViajePage";
-import UnidadesPage from "./pages/UnidadesPage";
-import ConductoresPage from "./pages/ConductoresPage";
-import GuiaTransportistaPage from "./pages/GuiaTransportistaPage";
-import DocumentosFacturacionPage from "./pages/DocumentosFacturacionPage";
-import NubefactPruebasPage from "./pages/NubefactPruebasPage";
-import DevolucionesPage from "./pages/DevolucionesPage";
-import EmpresaConfigPage from "./pages/EmpresaConfigPage";
-import WhatsappBotConfigPage from "./pages/WhatsappBotConfigPage";
-import ReportesPage from "./pages/ReportesPage";
-import FacturacionPage from "./pages/FacturacionPage";
+const LoginPage = lazy(() => import("./pages/LoginPage"));
+const HomePage = lazy(() => import("./pages/HomePage"));
+const DashboardPage = lazy(() => import("./pages/DashboardPage"));
+const AuditoriaPage = lazy(() => import("./pages/AuditoriaPage"));
+const ProfileTask = lazy(() => import("./pages/ProfilePage"));
+const UsuariosPage = lazy(() => import("./pages/UsuariosPage"));
+const UnauthorizedPage = lazy(() => import("./pages/UnauthorizedPage"));
+const OrdenesServicioPage = lazy(() => import("./pages/OrdenesServicioPage"));
+const OrdenServicioFormPage = lazy(() => import("./components/modals/OrdenServicioModal"));
+const ClientesPage = lazy(() => import("./pages/ClientesPage"));
+const ProgramacionViajePage = lazy(() => import("./pages/ProgramacionViajePage"));
+const UnidadesPage = lazy(() => import("./pages/UnidadesPage"));
+const ConductoresPage = lazy(() => import("./pages/ConductoresPage"));
+const GuiaTransportistaPage = lazy(() => import("./pages/GuiaTransportistaPage"));
+const DocumentosFacturacionPage = lazy(() => import("./pages/DocumentosFacturacionPage"));
+const NubefactPruebasPage = lazy(() => import("./pages/NubefactPruebasPage"));
+const DevolucionesPage = lazy(() => import("./pages/DevolucionesPage"));
+const EmpresaConfigPage = lazy(() => import("./pages/EmpresaConfigPage"));
+const WhatsappBotConfigPage = lazy(() => import("./pages/WhatsappBotConfigPage"));
+const ReportesPage = lazy(() => import("./pages/ReportesPage"));
+const FacturacionPage = lazy(() => import("./pages/FacturacionPage"));
+const SistemaSaludPage = lazy(() => import("./pages/SistemaSaludPage"));
+const BackupsPage = lazy(() => import("./pages/BackupsPage"));
+const CorrelativosPage = lazy(() => import("./pages/CorrelativosPage"));
+const MantenimientoPage = lazy(() => import("./pages/MantenimientoPage"));
 
 
 
@@ -70,33 +75,53 @@ function Layout() {
             className={`app-main ${collapsed ? "md:ml-20" : "md:ml-64"
               }`}
           >
-            <Routes>
-              <Route index element={<HomePage />} />
-              <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/profile" element={<ProfileTask />} />
-              <Route path="/admin/usuarios" element={<Navigate to="/usuarios" replace />} />
-              <Route path="/auditoria" element={<AuditoriaPage />} />
-              <Route path="/usuarios" element={<UsuariosPage />} />
-              <Route path="/ordenes-servicio" element={<OrdenesServicioPage />} />
-              <Route path="/ordenes-servicio/nueva" element={<OrdenServicioFormPage />} />
-              <Route path="/clientes" element={<ClientesPage />} />
-              <Route path="/programacion-viaje" element={<ProgramacionViajePage />} />
-              <Route path="/unidades" element={<UnidadesPage />} />
-              <Route path="/conductores" element={<ConductoresPage />} />
-              <Route path="/guia-transportista" element={<GuiaTransportistaPage />} />
-              <Route path="/documentos-facturacion" element={<DocumentosFacturacionPage />} />
-              <Route path="/admin/nubefact-pruebas" element={<NubefactPruebasPage />} />
-              <Route path="/admin/empresa" element={<EmpresaConfigPage />} />
-              <Route path="/admin/whatsapp-bot" element={<WhatsappBotConfigPage />} />
-              <Route path="/devoluciones" element={<DevolucionesPage />} />
-              <Route path="/reportes" element={<ReportesPage />} />
-              <Route path="/facturacion" element={<FacturacionPage />} />
-
-            </Routes>
+            <Suspense fallback={<RouteFallback />}>
+              <Routes>
+                <Route index element={<HomePage />} />
+                <Route path="/dashboard" element={<DashboardPage />} />
+                <Route path="/profile" element={<ProfileTask />} />
+                <Route path="/admin/usuarios" element={<Navigate to="/usuarios" replace />} />
+                <Route path="/auditoria" element={<AuditoriaPage />} />
+                <Route path="/usuarios" element={<UsuariosPage />} />
+                <Route path="/ordenes-servicio" element={<OrdenesServicioPage />} />
+                <Route path="/ordenes-servicio/nueva" element={<OrdenServicioFormPage />} />
+                <Route path="/clientes" element={<ClientesPage />} />
+                <Route path="/programacion-viaje" element={<ProgramacionViajePage />} />
+                <Route path="/unidades" element={<UnidadesPage />} />
+                <Route path="/conductores" element={<ConductoresPage />} />
+                <Route path="/guia-transportista" element={<GuiaTransportistaPage />} />
+                <Route path="/documentos-facturacion" element={<DocumentosFacturacionPage />} />
+                <Route path="/admin/nubefact-pruebas" element={<NubefactPruebasPage />} />
+                <Route path="/admin/empresa" element={<EmpresaConfigPage />} />
+                <Route path="/admin/whatsapp-bot" element={<WhatsappBotConfigPage />} />
+                <Route path="/admin/backups" element={<BackupsPage />} />
+                <Route path="/admin/correlativos" element={<CorrelativosPage />} />
+                <Route path="/admin/mantenimiento" element={<MantenimientoPage />} />
+                <Route path="/admin/salud-sistema" element={<SistemaSaludPage />} />
+                <Route path="/devoluciones" element={<DevolucionesPage />} />
+                <Route path="/reportes" element={<ReportesPage />} />
+                <Route path="/facturacion" element={<FacturacionPage />} />
+              </Routes>
+            </Suspense>
           </main>
 
           {/* Footer fijo en la parte inferior */}
-          <Footer />
+          <Footer collapsed={collapsed} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RouteFallback() {
+  return (
+    <div className="page-wrap py-4">
+      <div className="panel p-4 sm:p-5">
+        <div className="h-4 w-32 rounded bg-[var(--app-surface-muted)]" />
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[0, 1, 2, 3].map((item) => (
+            <div key={item} className="info-tile h-24 animate-pulse" />
+          ))}
         </div>
       </div>
     </div>
@@ -117,23 +142,27 @@ function App() {
                     <EmpresaConfigProvider>
                       <AuditoriaProvider>
                         <ConfirmProvider>
-                          <Router>
-                            <RouteChangeLoader />
-                            <GuiaTransportistaProvider>
-                              <Routes>
-                                {/* Rutas públicas */}
-                                <Route
-                                  path="/unauthorized"
-                                  element={<UnauthorizedPage />}
-                                />
-                                <Route path="/login" element={<LoginPage />} />
-                                {/* Rutas protegidas */}
-                                <Route element={<ProtectedRoute />}>
-                                  <Route path="/*" element={<Layout />} />
-                                </Route>
-                              </Routes>
-                            </GuiaTransportistaProvider>
-                          </Router>
+                          <MaintenanceProvider>
+                            <Router>
+                              <RouteChangeLoader />
+                              <GuiaTransportistaProvider>
+                                <Suspense fallback={<RouteFallback />}>
+                                  <Routes>
+                                    {/* Rutas públicas */}
+                                    <Route
+                                      path="/unauthorized"
+                                      element={<UnauthorizedPage />}
+                                    />
+                                    <Route path="/login" element={<LoginPage />} />
+                                    {/* Rutas protegidas */}
+                                    <Route element={<ProtectedRoute />}>
+                                      <Route path="/*" element={<Layout />} />
+                                    </Route>
+                                  </Routes>
+                                </Suspense>
+                              </GuiaTransportistaProvider>
+                            </Router>
+                          </MaintenanceProvider>
                         </ConfirmProvider>
                       </AuditoriaProvider>
                     </EmpresaConfigProvider>

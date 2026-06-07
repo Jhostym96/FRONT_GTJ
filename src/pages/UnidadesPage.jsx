@@ -188,10 +188,10 @@ function UnidadesPage() {
   };
 
   return (
-    <div className="w-full py-4">
+    <div className="page">
       <div className="page-wrap">
         <header className="page-hero">
-          <div className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="page-hero-content">
             <div>
               <div className="eyebrow">
                 Gestión de transporte
@@ -218,8 +218,8 @@ function UnidadesPage() {
         </header>
 
         {loading ? (
-          <div className="panel p-8 text-center">
-            <div className="mx-auto mb-3 h-9 w-9 animate-spin rounded-full border-2 border-neutral-700 border-t-blue-500" />
+          <div className="loading-panel">
+            <div className="loading-spinner" />
             <p className="text-muted text-sm">Cargando unidades...</p>
           </div>
         ) : unidades.length === 0 ? (
@@ -244,13 +244,13 @@ function UnidadesPage() {
         ) : (
           <>
             {/* Cards en móvil */}
-            <div className="grid gap-4 lg:hidden">
+            <div className="mobile-list">
               {unidades.map((unidad) => (
                 <article
                   key={getRecordId(unidad)}
                   className="mobile-card"
                 >
-                  <div className="mb-4 flex items-start justify-between gap-3">
+                  <div className="mobile-card-header">
                     <div>
                       <p className="text-faint text-xs font-medium">
                         Placa
@@ -264,9 +264,9 @@ function UnidadesPage() {
                     <EstadoBadge estado={unidad.estado} />
                   </div>
 
-                  <div className="grid gap-3 text-sm">
+                  <div className="mobile-detail-grid">
                     <div className="info-tile">
-                      <p className="text-faint text-xs">Tipo de unidad</p>
+                      <p className="mobile-card-subtitle">Tipo de unidad</p>
 
                       <div className="mt-1">
                         <TipoUnidadBadge tipo={unidad.tipoUnidad} />
@@ -274,7 +274,7 @@ function UnidadesPage() {
                     </div>
 
                     <div className="info-tile">
-                      <p className="text-faint text-xs">Marca</p>
+                      <p className="mobile-card-subtitle">Marca</p>
 
                       <p className="text-main font-semibold">
                         {unidad.marca || "-"}
@@ -282,7 +282,7 @@ function UnidadesPage() {
                     </div>
 
                     <div className="info-tile">
-                      <p className="text-faint text-xs">Modelo</p>
+                      <p className="mobile-card-subtitle">Modelo</p>
 
                       <p className="text-main font-semibold">
                         {[unidad.modelo, unidad.anio].filter(Boolean).join(" / ") || "-"}
@@ -290,7 +290,7 @@ function UnidadesPage() {
                     </div>
 
                     <div className="info-tile">
-                      <p className="text-faint text-xs">Permisos</p>
+                      <p className="mobile-card-subtitle">Permisos</p>
                       <p className="text-main font-semibold">
                         {[
                           unidad.permisoIMO ? "IMO" : null,
@@ -303,7 +303,7 @@ function UnidadesPage() {
 
                     {unidad.numeroTUCE_CHV && (
                       <div className="info-tile">
-                        <p className="text-faint text-xs">TUCE / CHV</p>
+                        <p className="mobile-card-subtitle">TUCE / CHV</p>
 
                         <p className="text-main font-semibold">
                           {unidad.numeroTUCE_CHV}
@@ -313,7 +313,7 @@ function UnidadesPage() {
 
                     {unidad.observaciones && (
                       <div className="info-tile">
-                        <p className="text-faint text-xs">
+                        <p className="mobile-card-subtitle">
                           Observaciones
                         </p>
 
@@ -324,7 +324,7 @@ function UnidadesPage() {
                     )}
                   </div>
 
-                  <div className="mt-4 border-t pt-4">
+                  <div className="mobile-card-actions">
                     <AccionesUnidad unidad={unidad} mobile />
                   </div>
                 </article>
@@ -334,7 +334,7 @@ function UnidadesPage() {
             {/* Tabla en desktop */}
             <div className="data-table-wrap">
               <div className="table-scroll">
-                <table className="data-table w-full min-w-[980px] text-sm">
+                <table className="data-table dense-table w-full min-w-[980px] text-sm">
                   <thead>
                     <tr>
                       <th className="px-4 py-4 text-left">Placa</th>

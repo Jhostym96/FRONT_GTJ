@@ -168,7 +168,7 @@ function ClientesPage() {
     const destinatarios = getTotalDestinatarios(cliente);
 
     if (remitentes === 0 && destinatarios === 0) {
-      return <span className="text-faint text-xs">Sin entidades registradas</span>;
+      return <span className="mobile-card-subtitle">Sin entidades registradas</span>;
     }
 
     return (
@@ -231,10 +231,10 @@ function ClientesPage() {
   };
 
   return (
-    <div className="w-full py-4">
+    <div className="page">
       <div className="page-wrap">
         <header className="page-hero">
-          <div className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="page-hero-content">
             <div>
               <div className="eyebrow">
                 Gestión de transporte
@@ -261,7 +261,7 @@ function ClientesPage() {
         </header>
 
         {errorsCliente?.length > 0 && (
-          <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300 shadow-lg">
+          <div className="alert-panel">
             {errorsCliente.map((error, index) => (
               <p key={index}>{error}</p>
             ))}
@@ -269,8 +269,8 @@ function ClientesPage() {
         )}
 
         {loadingClientes ? (
-          <div className="panel p-8 text-center">
-            <div className="mx-auto mb-3 h-9 w-9 animate-spin rounded-full border-2 border-neutral-700 border-t-blue-500" />
+          <div className="loading-panel">
+            <div className="loading-spinner" />
             <p className="text-muted text-sm">Cargando clientes...</p>
           </div>
         ) : clientes.length === 0 ? (
@@ -295,19 +295,19 @@ function ClientesPage() {
         ) : (
           <>
             {/* Cards en móvil */}
-            <div className="grid gap-4 lg:hidden">
+            <div className="mobile-list">
               {clientes.map((cliente) => (
                 <article
                   key={getClienteId(cliente)}
                   className="mobile-card"
                 >
-                  <div className="mb-4 flex items-start justify-between gap-3">
+                  <div className="mobile-card-header">
                     <div>
                       <p className="text-faint text-xs font-medium">
                         Cliente
                       </p>
 
-                      <h2 className="text-main text-lg font-bold">
+                      <h2 className="mobile-card-title">
                         {cliente.razonSocial || "-"}
                       </h2>
                     </div>
@@ -315,21 +315,21 @@ function ClientesPage() {
                     <EstadoBadge activo={cliente.activo} />
                   </div>
 
-                  <div className="grid gap-3 text-sm">
+                  <div className="mobile-detail-grid">
                     <div className="info-tile">
-                      <p className="text-faint text-xs">Documento</p>
+                      <p className="mobile-card-subtitle">Documento</p>
 
                       <p className="text-main font-semibold">
                         {cliente.numeroDocumento || "-"}
                       </p>
 
-                      <p className="text-faint text-xs">
+                      <p className="mobile-card-subtitle">
                         Tipo: {cliente.tipoDocumento || "-"}
                       </p>
                     </div>
 
                     <div className="info-tile">
-                      <p className="text-faint text-xs">
+                      <p className="mobile-card-subtitle">
                         Dirección fiscal
                       </p>
 
@@ -347,14 +347,14 @@ function ClientesPage() {
                     </div>
 
                     <div className="info-tile">
-                      <p className="text-faint text-xs">Crédito</p>
+                      <p className="mobile-card-subtitle">Crédito</p>
                       <p className="text-main font-semibold">
                         {cliente.diasCredito || 0} días
                       </p>
                     </div>
                   </div>
 
-                  <div className="mt-4 border-t pt-4">
+                  <div className="mobile-card-actions">
                     <AccionesCliente cliente={cliente} mobile />
                   </div>
                 </article>
@@ -364,7 +364,7 @@ function ClientesPage() {
             {/* Tabla en desktop */}
             <div className="data-table-wrap">
               <div className="table-scroll">
-                <table className="data-table w-full min-w-[1100px] text-sm">
+                <table className="data-table dense-table w-full min-w-[1100px] text-sm">
                   <thead>
                     <tr>
                       <th className="px-4 py-4 text-left">Cliente</th>
@@ -395,7 +395,7 @@ function ClientesPage() {
                             {cliente.numeroDocumento || "-"}
                           </p>
 
-                          <p className="text-faint text-xs">
+                          <p className="mobile-card-subtitle">
                             Tipo: {cliente.tipoDocumento || "-"}
                           </p>
                         </td>
