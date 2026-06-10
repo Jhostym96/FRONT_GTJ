@@ -157,11 +157,10 @@ const OrdenServicioModal = ({
 
   useEffect(() => {
     if (!isOpen) return;
-
-    if (!isViewMode && clientes.length === 0) {
-      clientesActionsRef.current.getClientes?.();
+    if (!isViewMode) {
+      clientesActionsRef.current.getClientes?.({ page: 1, limit: 100 });
     }
-  }, [clientes.length, isOpen, isViewMode]);
+  }, [isOpen, isViewMode]);
 
   useEffect(() => {
     if (!isOpen) return;

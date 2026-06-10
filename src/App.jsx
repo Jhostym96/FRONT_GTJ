@@ -40,6 +40,7 @@ const UnidadesPage = lazy(() => import("./pages/UnidadesPage"));
 const ConductoresPage = lazy(() => import("./pages/ConductoresPage"));
 const GuiaTransportistaPage = lazy(() => import("./pages/GuiaTransportistaPage"));
 const DocumentosFacturacionPage = lazy(() => import("./pages/DocumentosFacturacionPage"));
+const DocumentacionPage = lazy(() => import("./pages/DocumentacionPage"));
 const NubefactPruebasPage = lazy(() => import("./pages/NubefactPruebasPage"));
 const DevolucionesPage = lazy(() => import("./pages/DevolucionesPage"));
 const EmpresaConfigPage = lazy(() => import("./pages/EmpresaConfigPage"));
@@ -91,6 +92,7 @@ function Layout() {
                 <Route path="/conductores" element={<ConductoresPage />} />
                 <Route path="/guia-transportista" element={<GuiaTransportistaPage />} />
                 <Route path="/documentos-facturacion" element={<DocumentosFacturacionPage />} />
+                <Route path="/documentacion" element={<DocumentacionPage />} />
                 <Route path="/admin/nubefact-pruebas" element={<NubefactPruebasPage />} />
                 <Route path="/admin/empresa" element={<EmpresaConfigPage />} />
                 <Route path="/admin/whatsapp-bot" element={<WhatsappBotConfigPage />} />

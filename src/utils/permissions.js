@@ -9,6 +9,7 @@ import {
   FaIdCard,
   FaFileInvoice,
   FaFileSignature,
+  FaFolderOpen,
   FaUndoAlt,
   FaHistory,
   FaFlask,
@@ -18,6 +19,7 @@ import {
   FaTools,
   FaSave,
   FaSortNumericUp,
+  FaVideo,
 } from "react-icons/fa";
 
 export const dashboardMenu = {
@@ -109,6 +111,20 @@ export const facturacionMenu = {
   ],
 };
 
+export const documentacionMenu = {
+  id: "documentacion",
+  label: "Documentación",
+  icon: FaFolderOpen,
+  basePath: "/documentacion",
+  children: [
+    {
+      path: "/documentacion",
+      label: "Control documental",
+      icon: FaFolderOpen,
+    },
+  ],
+};
+
 export const datosMaestrosMenu = {
   id: "datos-maestros",
   label: "Datos Maestros",
@@ -158,6 +174,7 @@ export const permissions = {
       profileMenu,
       operacionesMenu,
       facturacionMenu,
+      documentacionMenu,
       reportesMenu,
       datosMaestrosMenu,
       adminMenu,
@@ -171,6 +188,7 @@ export const permissions = {
       profileMenu,
       operacionesMenu,
       facturacionMenu,
+      documentacionMenu,
       reportesMenu,
       datosMaestrosMenu,
       adminMenu,
@@ -184,6 +202,7 @@ export const permissions = {
       profileMenu,
       operacionesMenu,
       facturacionMenu,
+      documentacionMenu,
       reportesMenu,
       datosMaestrosMenu,
     ],
@@ -195,6 +214,7 @@ export const permissions = {
       dashboardMenu,
       profileMenu,
       operacionesMenu,
+      documentacionMenu,
       reportesMenu,
       datosMaestrosMenu,
     ],
@@ -202,7 +222,7 @@ export const permissions = {
   },
 
   Almacen: {
-    routes: [dashboardMenu, profileMenu, datosMaestrosMenu],
+    routes: [dashboardMenu, profileMenu, documentacionMenu, datosMaestrosMenu],
     actions: ["view", "edit", "create"],
   },
 
@@ -217,6 +237,7 @@ export const allMenus = [
   profileMenu,
   operacionesMenu,
   facturacionMenu,
+  documentacionMenu,
   reportesMenu,
   datosMaestrosMenu,
   adminMenu,

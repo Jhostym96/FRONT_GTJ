@@ -1,6 +1,14 @@
 import { useEffect, useState } from "react";
 import { notify } from "../utils/notify";
-import { CalendarClock, CheckCircle2, LoaderCircle, Pencil } from "lucide-react";
+import {
+  ArrowUpDown,
+  CalendarClock,
+  CheckCircle2,
+  LoaderCircle,
+  Pencil,
+  Search,
+  X,
+} from "lucide-react";
 import { useOrdenesServicio } from "../context/OrdenServicioContext";
 import { useConductores } from "../context/ConductorContext";
 import { useUnidades } from "../context/UnidadContext";
@@ -84,6 +92,81 @@ const getNombreConductor = (conductor) =>
     ? `${conductor.nombres || ""} ${conductor.apellidos || ""}`.trim() || "-"
     : "-";
 
+const toDateKey = (value) => {
+  if (!value) return "";
+
+  const text = String(value).trim();
+  if (!text) return "";
+
+  const isoMatch = text.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (isoMatch) return isoMatch[1];
+
+  const date = new Date(text);
+  if (Number.isNaN(date.getTime())) return "";
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
+
+const compareStrings = (a, b) =>
+  String(a || "").localeCompare(String(b || ""), "es", {
+    sensitivity: "base",
+    numeric: true,
+  });
+
+const compareDates = (a, b) => {
+  const dateA = toDateKey(a);
+  const dateB = toDateKey(b);
+
+  if (!dateA && !dateB) return 0;
+  if (!dateA) return 1;
+  if (!dateB) return -1;
+
+  return compareStrings(dateA, dateB);
+};
+
+const getFechaDevolucion = (item) => getValue(item, "fechaDevolucion", "");
+const getFechaVencimiento = (item) =>
+  getValue(item, "fechaVencimientoDevolucion", "");
+const getNombreCliente = (item) => getClienteSolicitante(item)?.razonSocial || "";
+
+const sortDevoluciones = (items, sortKey, sortDirection) => {
+  const direction = sortDirection === "desc" ? -1 : 1;
+  const rows = Array.isArray(items) ? [...items] : [];
+
+  rows.sort((a, b) => {
+    let result = 0;
+
+    switch (sortKey) {
+      case "cliente":
+        result =
+          compareStrings(getNombreCliente(a), getNombreCliente(b)) ||
+          compareStrings(getOrdenViaje(a), getOrdenViaje(b));
+        break;
+      case "fechaDevolucion":
+        result =
+          compareDates(getFechaDevolucion(a), getFechaDevolucion(b)) ||
+          compareStrings(getOrdenViaje(a), getOrdenViaje(b));
+        break;
+      case "fechaVencimiento":
+        result =
+          compareDates(getFechaVencimiento(a), getFechaVencimiento(b)) ||
+          compareStrings(getOrdenViaje(a), getOrdenViaje(b));
+        break;
+      default:
+        result = compareStrings(getOrdenViaje(a), getOrdenViaje(b));
+        break;
+    }
+
+    return result * direction;
+  });
+
+  return rows;
+};
+
 function DevolucionesPage() {
   const {
     devolucionesPendientes = [],
@@ -98,6 +181,9 @@ function DevolucionesPage() {
   const [actualizando, setActualizando] = useState({});
   const [ordenSeleccionada, setOrdenSeleccionada] = useState(null);
   const [modalMode, setModalMode] = useState("edit");
+  const [filtroCliente, setFiltroCliente] = useState("");
+  const [ordenTabla, setOrdenTabla] = useState("cliente");
+  const [direccionTabla, setDireccionTabla] = useState("asc");
   const [formDevolucion, setFormDevolucion] = useState({
     numeroContenedor: "",
     fechaVencimientoDevolucion: "",
@@ -457,6 +543,28 @@ function DevolucionesPage() {
     </select>
   );
 
+  const devolucionesFiltradas = sortDevoluciones(
+    devolucionesPendientes.filter((orden) => {
+      if (!filtroCliente.trim()) return true;
+
+      return getNombreCliente(orden)
+        .toLowerCase()
+        .includes(filtroCliente.trim().toLowerCase());
+    }),
+    ordenTabla,
+    direccionTabla
+  );
+
+  const toggleOrdenTabla = (clave) => {
+    if (ordenTabla === clave) {
+      setDireccionTabla((actual) => (actual === "asc" ? "desc" : "asc"));
+      return;
+    }
+
+    setOrdenTabla(clave);
+    setDireccionTabla("asc");
+  };
+
   return (
     <div className="page">
       <div className="page-wrap">
@@ -478,19 +586,19 @@ function DevolucionesPage() {
             <div className="loading-spinner" />
             <p className="text-muted text-sm">Cargando devoluciones...</p>
           </div>
-        ) : devolucionesPendientes.length === 0 ? (
+        ) : devolucionesFiltradas.length === 0 ? (
           <div className="empty-panel">
             <h2 className="text-main text-lg font-semibold">
-              No hay devoluciones pendientes
+              No hay devoluciones para mostrar
             </h2>
             <p className="text-muted mt-1 text-sm">
-              Las órdenes tipo contenedor pendientes aparecerán aquí.
+              Ajusta el filtro de cliente o limpia la búsqueda.
             </p>
           </div>
         ) : (
           <>
             <div className="mobile-list">
-              {devolucionesPendientes.map((orden) => {
+              {devolucionesFiltradas.map((orden) => {
                 const id = getItemId(orden);
                 const diasLibres = calcularDiasLibres(
                   getValue(orden, "fechaVencimientoDevolucion", null)
@@ -597,6 +705,13 @@ function DevolucionesPage() {
                       </div>
 
                       <div className="info-tile">
+                        <p className="mobile-card-subtitle">Fecha devolución</p>
+                        <p className="text-main font-semibold">
+                          {formatearFecha(getValue(orden, "fechaDevolucion", null))}
+                        </p>
+                      </div>
+
+                      <div className="info-tile">
                         <p className="mobile-card-subtitle">Conductor asignado</p>
                         <p className="text-main font-semibold">
                           {getNombreConductor(
@@ -673,12 +788,105 @@ function DevolucionesPage() {
                         Programación de viaje
                       </th>
                       <th className="px-4 py-4 text-left">Fecha</th>
-                      <th className="px-4 py-4 text-left">Cliente</th>
+                      <th className="px-4 py-4 text-left align-top">
+                        <div className="flex min-w-[240px] flex-col gap-2">
+                          <button
+                            type="button"
+                            onClick={() => toggleOrdenTabla("cliente")}
+                            className="flex w-full items-center justify-between gap-2 text-left"
+                            aria-label={`Ordenar por cliente ${
+                              ordenTabla === "cliente" && direccionTabla === "asc"
+                                ? "descendente"
+                                : "ascendente"
+                            }`}
+                          >
+                            <span className="text-xs font-bold uppercase text-[var(--app-text)]">
+                              Cliente
+                            </span>
+                            <ArrowUpDown
+                              className={`h-4 w-4 ${
+                                ordenTabla === "cliente"
+                                  ? "text-[var(--app-primary)]"
+                                  : "text-faint"
+                              }`}
+                            />
+                          </button>
+                          <div className="relative">
+                            <Search className="text-faint pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+                            <input
+                              type="text"
+                              value={filtroCliente}
+                              onChange={(event) =>
+                                setFiltroCliente(event.target.value)
+                              }
+                              className="input h-10 pl-9 pr-9"
+                              placeholder="Filtrar cliente"
+                            />
+                            {filtroCliente ? (
+                              <button
+                                type="button"
+                                onClick={() => setFiltroCliente("")}
+                                className="text-faint hover:text-main absolute right-2 top-1/2 -translate-y-1/2 rounded p-1"
+                                aria-label="Limpiar filtro de cliente"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            ) : null}
+                          </div>
+                        </div>
+                      </th>
                       <th className="px-4 py-4 text-left">Contenedor</th>
-                      <th className="px-4 py-4 text-left">Vencimiento</th>
+                      <th className="px-4 py-4 text-left">
+                        <button
+                          type="button"
+                          onClick={() => toggleOrdenTabla("fechaVencimiento")}
+                          className="flex w-full items-center justify-between gap-2 text-left"
+                          aria-label={`Ordenar por fecha de vencimiento ${
+                            ordenTabla === "fechaVencimiento" &&
+                            direccionTabla === "asc"
+                              ? "descendente"
+                              : "ascendente"
+                          }`}
+                        >
+                          <span className="text-xs font-bold uppercase text-[var(--app-text)]">
+                            Vencimiento
+                          </span>
+                          <ArrowUpDown
+                            className={`h-4 w-4 ${
+                              ordenTabla === "fechaVencimiento"
+                                ? "text-[var(--app-primary)]"
+                                : "text-faint"
+                            }`}
+                          />
+                        </button>
+                      </th>
                       <th className="px-4 py-4 text-left">Días libres</th>
                       <th className="px-4 py-4 text-left">Almacén</th>
                       <th className="px-4 py-4 text-left">Programada</th>
+                      <th className="px-4 py-4 text-left">
+                        <button
+                          type="button"
+                          onClick={() => toggleOrdenTabla("fechaDevolucion")}
+                          className="flex w-full items-center justify-between gap-2 text-left"
+                          aria-label={`Ordenar por fecha de devolución ${
+                            ordenTabla === "fechaDevolucion" &&
+                            direccionTabla === "asc"
+                              ? "descendente"
+                              : "ascendente"
+                          }`}
+                        >
+                          <span className="text-xs font-bold uppercase text-[var(--app-text)]">
+                            Fecha devolución
+                          </span>
+                          <ArrowUpDown
+                            className={`h-4 w-4 ${
+                              ordenTabla === "fechaDevolucion"
+                                ? "text-[var(--app-primary)]"
+                                : "text-faint"
+                            }`}
+                          />
+                        </button>
+                      </th>
                       <th className="px-4 py-4 text-left">Conductor</th>
                       <th className="px-4 py-4 text-center">Estado devolución</th>
                       <th className="px-4 py-4 text-right">Acción</th>
@@ -686,7 +894,7 @@ function DevolucionesPage() {
                   </thead>
 
                   <tbody>
-                    {devolucionesPendientes.map((orden) => {
+                    {devolucionesFiltradas.map((orden) => {
                       const id = getItemId(orden);
                       const diasLibres = calcularDiasLibres(
                         getValue(orden, "fechaVencimientoDevolucion", null)
@@ -754,6 +962,9 @@ function DevolucionesPage() {
                               {getValue(orden, "horaProgramadaDevolucion", "") ||
                                 ""}
                             </p>
+                          </td>
+                          <td className="text-muted whitespace-nowrap px-4 py-4">
+                            {formatearFecha(getValue(orden, "fechaDevolucion", null))}
                           </td>
                           <td className="min-w-[180px] px-4 py-4">
                             <p className="text-main font-semibold">

@@ -305,6 +305,22 @@ const GuiaTransportistaPage = () => {
     };
   };
 
+  const obtenerNombreRemitente = (datos, guia) =>
+    datos.remitente?.razonSocial ||
+    datos.remitente?.denominacion ||
+    datos.remitente?.nombre ||
+    datos.orden?.remitenteRazonSocial ||
+    guia.remitente_denominacion ||
+    guia.cliente_denominacion ||
+    "-";
+
+  const obtenerDocumentoRemitente = (datos, guia) =>
+    datos.remitente?.numeroDocumento ||
+    datos.orden?.remitenteNumeroDocumento ||
+    guia.remitente_numero_de_documento ||
+    guia.cliente_numero_de_documento ||
+    "";
+
   const AccionesGuia = ({ guia, mobile = false }) => {
     const id = getGuiaId(guia);
     const actionClass = (variant) => (mobile ? variant : `${variant} btn-icon`);
@@ -497,20 +513,14 @@ const GuiaTransportistaPage = () => {
                       </div>
 
                       <div className="info-tile">
-                        <p className="text-faint text-xs">Cliente</p>
+                        <p className="text-faint text-xs">Remitente</p>
 
                         <p className="text-main font-semibold">
-                          {datos.cliente?.razonSocial ||
-                            datos.cliente?.denominacion ||
-                            datos.cliente?.nombre ||
-                            guia.cliente_denominacion ||
-                            "-"}
+                          {obtenerNombreRemitente(datos, guia)}
                         </p>
 
                         <p className="text-faint text-xs">
-                          {datos.cliente?.numeroDocumento ||
-                            guia.cliente_numero_de_documento ||
-                            ""}
+                          {obtenerDocumentoRemitente(datos, guia)}
                         </p>
                       </div>
 
@@ -578,7 +588,7 @@ const GuiaTransportistaPage = () => {
                     <tr>
                       <th className="px-4 py-4 text-left">Guía</th>
                       <th className="px-4 py-4 text-left">Emisión</th>
-                      <th className="px-4 py-4 text-left">Cliente</th>
+                      <th className="px-4 py-4 text-left">Remitente</th>
                       <th className="px-4 py-4 text-left">Unidad</th>
                       <th className="px-4 py-4 text-left">Conductor</th>
                       <th className="px-4 py-4 text-left">Inicio traslado</th>
@@ -609,17 +619,11 @@ const GuiaTransportistaPage = () => {
 
                           <td className="min-w-[220px] px-4 py-4">
                             <p className="text-main max-w-[250px] truncate font-semibold">
-                              {datos.cliente?.razonSocial ||
-                                datos.cliente?.denominacion ||
-                                datos.cliente?.nombre ||
-                                guia.cliente_denominacion ||
-                                "-"}
+                              {obtenerNombreRemitente(datos, guia)}
                             </p>
 
                             <p className="text-faint text-xs">
-                              {datos.cliente?.numeroDocumento ||
-                                guia.cliente_numero_de_documento ||
-                                ""}
+                              {obtenerDocumentoRemitente(datos, guia)}
                             </p>
                           </td>
 

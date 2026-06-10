@@ -3,6 +3,7 @@ import { notify } from "../../utils/notify";
 import { useGuiaTransportista } from "../../context/GuiaTransportistaContext";
 import { useProgramacionViaje } from "../../context/ProgramacionViajeContext";
 import { useEmpresaConfig } from "../../context/EmpresaConfigContext";
+import { useConfirm } from "../../context/ConfirmContext";
 import { getRecordId } from "../../utils/apiData";
 import { obtenerMensajesErrorApi } from "../../utils/apiErrorMessages";
 import { getTodayInputDate } from "../../utils/date";
@@ -40,6 +41,14 @@ const DOCUMENTOS_RELACIONADOS_OPTIONS = [
   { value: "31", label: "31 - Guía de remisión transportista" },
 ];
 
+const INDICADOR_SUNAT_LABELS = {
+  "01": "Pagador flete: Remitente",
+  "02": "Pagador flete: Subcontratador",
+  "03": "Pagador flete: Tercero",
+  "04": "Flete por cobrar",
+  "05": "Flete por pagar",
+};
+
 const mostrarErroresApi = (error, fallback) => {
   const mensajes = obtenerMensajesErrorApi(error, fallback);
 
@@ -63,6 +72,7 @@ const mostrarErroresApi = (error, fallback) => {
 const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
   const isView = mode === "view";
   const isEdit = mode === "edit";
+  const confirm = useConfirm();
 
   const {
     crearGuiaTransportista,
@@ -497,6 +507,65 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
     return data;
   };
 
+  const obtenerResumenPagadorFlete = (data) => {
+    const indicador = data.sunat_envio_indicador || "01";
+    const label = INDICADOR_SUNAT_LABELS[indicador] || indicador;
+
+    if (indicador === "01") {
+      return {
+        label,
+        detalle: [
+          orden?.remitenteRazonSocial || guia?.cliente_denominacion || "",
+          orden?.remitenteNumeroDocumento || guia?.cliente_numero_de_documento || "",
+        ]
+          .filter(Boolean)
+          .join(" - "),
+      };
+    }
+
+    if (indicador === "02") {
+      return {
+        label,
+        detalle: [
+          data.subcontratador_denominacion,
+          data.subcontratador_documento_numero,
+        ]
+          .filter(Boolean)
+          .join(" - "),
+      };
+    }
+
+    if (indicador === "03") {
+      return {
+        label,
+        detalle: [
+          data.pagador_servicio_denominacion,
+          data.pagador_servicio_documento_numero_identidad,
+        ]
+          .filter(Boolean)
+          .join(" - "),
+      };
+    }
+
+    return {
+      label,
+      detalle: "",
+    };
+  };
+
+  const confirmarPagadorFlete = async (data) => {
+    const pagador = obtenerResumenPagadorFlete(data);
+    const detalle = pagador.detalle ? ` (${pagador.detalle})` : "";
+
+    return confirm({
+      title: "Confirmar pagador de flete",
+      message: `Se está seleccionando como pagador/indicador del flete: ${pagador.label}${detalle}. ¿Es conforme?`,
+      confirmText: isEdit ? "Sí, actualizar guía" : "Sí, guardar guía",
+      cancelText: "Revisar",
+      variant: "primary",
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -504,6 +573,9 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
 
     try {
       const data = limpiarPayloadGuia();
+      const confirmado = await confirmarPagadorFlete(data);
+
+      if (!confirmado) return;
 
       if (isEdit) {
         await actualizarGuiaTransportista(getRecordId(guia), data);
