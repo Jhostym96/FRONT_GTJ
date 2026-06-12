@@ -10,8 +10,10 @@ import {
 import TablePagination from "../components/TablePagination";
 import {
   entregarDocumentoFacturacionRequest,
+  entregarDocumentoFacturacionSunatRequest,
   obtenerDocumentosFacturacionRequest,
   recepcionarDocumentoFacturacionRequest,
+  recepcionarDocumentoFacturacionSunatRequest,
 } from "../api/documentosFacturacion";
 import { notify } from "../utils/notify";
 import { useAuth } from "../context/AuthContext";
@@ -39,7 +41,11 @@ const estadoConfig = {
 };
 
 const getDocumentoKey = (documento) =>
-  documento?.id || `guia-${documento?.guiaTransportistaId}`;
+  documento?.id ||
+  documento?.referenciaDocumento ||
+  `${documento?.tipoGuia || "GUIA"}-${
+    documento?.guiaTransportistaId || documento?.programacionViajeId || "sin-id"
+  }`;
 
 const formatDate = (value) => {
   if (!value) return "-";
@@ -148,8 +154,12 @@ const DocumentosFacturacionPage = () => {
   };
 
   const ejecutarAccion = async (tipo, documento, textoObservacion = "") => {
-    const guiaId = documento?.guiaTransportistaId;
-    if (!guiaId) return;
+    const esSunat = documento?.tipoGuia === "SUNAT";
+    const referenciaId = esSunat
+      ? documento?.programacionViajeId
+      : documento?.guiaTransportistaId;
+
+    if (!referenciaId) return;
 
     const key = getDocumentoKey(documento);
 
@@ -157,16 +167,20 @@ const DocumentosFacturacionPage = () => {
       setActualizando((prev) => ({ ...prev, [key]: true }));
 
       if (tipo === "entregar") {
-        await entregarDocumentoFacturacionRequest(guiaId, {
-          observacionOperaciones: textoObservacion,
-        });
+        const request = esSunat
+          ? entregarDocumentoFacturacionSunatRequest
+          : entregarDocumentoFacturacionRequest;
+
+        await request(referenciaId, { observacionOperaciones: textoObservacion });
         notify.success("Documento entregado a facturación");
       }
 
       if (tipo === "recepcionar") {
-        await recepcionarDocumentoFacturacionRequest(guiaId, {
-          observacionFacturacion: textoObservacion,
-        });
+        const request = esSunat
+          ? recepcionarDocumentoFacturacionSunatRequest
+          : recepcionarDocumentoFacturacionRequest;
+
+        await request(referenciaId, { observacionFacturacion: textoObservacion });
         notify.success("Documento recepcionado");
       }
 
@@ -364,6 +378,9 @@ const DocumentosFacturacionPage = () => {
                       <h2 className="mobile-card-title">
                         {documento.numeroGuia}
                       </h2>
+                      <p className="mobile-card-subtitle">
+                        {documento.tipoGuia === "SUNAT" ? "Guía SUNAT" : "Guía sistema"}
+                      </p>
                     </div>
                     <EstadoBadge estado={documento.estado} />
                   </div>
@@ -432,7 +449,10 @@ const DocumentosFacturacionPage = () => {
                             {documento.numeroGuia}
                           </p>
                           <p className="mobile-card-subtitle">
-                            Viaje #{documento.programacionViajeId || "-"}
+                            {documento.tipoGuia === "SUNAT"
+                              ? "Guía SUNAT"
+                              : "Guía sistema"}{" "}
+                            · Viaje #{documento.programacionViajeId || "-"}
                           </p>
                         </td>
                         <td className="min-w-[240px] px-4 py-4">

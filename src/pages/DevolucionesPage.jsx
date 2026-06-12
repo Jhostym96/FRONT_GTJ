@@ -450,11 +450,6 @@ function DevolucionesPage() {
       return;
     }
 
-    if (!formDevolucion.horaDevolucion) {
-      notify.error("Selecciona la hora de devolución");
-      return;
-    }
-
     try {
       setActualizando((prev) => ({ ...prev, [id]: true }));
       await actualizarEstadoDevolucion(id, {
@@ -466,7 +461,6 @@ function DevolucionesPage() {
         fechaProgramadaDevolucion: formDevolucion.fechaProgramadaDevolucion,
         horaProgramadaDevolucion: formDevolucion.horaProgramadaDevolucion,
         fechaDevolucion: formDevolucion.fechaDevolucion,
-        horaDevolucion: formDevolucion.horaDevolucion,
         conductorDevolucionId: Number(formDevolucion.conductorDevolucionId),
         tractoDevolucionId: Number(formDevolucion.tractoDevolucionId),
         observacionDevolucion: formDevolucion.observacionDevolucion,
@@ -1281,21 +1275,11 @@ function DevolucionesPage() {
                     />
                   </div>
 
-                  <div>
-                    <label className="text-muted mb-1 block text-sm">
-                      Hora real
-                    </label>
-                    <input
-                      type="time"
-                      value={formDevolucion.horaDevolucion}
-                      onChange={(event) =>
-                        setFormDevolucion((prev) => ({
-                          ...prev,
-                          horaDevolucion: event.target.value,
-                        }))
-                      }
-                      className="input p-3"
-                    />
+                  <div className="info-tile">
+                    <p className="mobile-card-subtitle">Hora programada</p>
+                    <p className="text-main font-semibold">
+                      {formDevolucion.horaProgramadaDevolucion || "-"}
+                    </p>
                   </div>
                 </div>
 
