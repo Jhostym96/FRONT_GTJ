@@ -6,6 +6,7 @@ import {
   LoaderCircle,
   Pencil,
   Search,
+  X,
 } from "lucide-react";
 import {
   marcarPagoOrdenRequest,
@@ -69,6 +70,9 @@ const getEstadoPagoStyle = (estado) => {
   }
 };
 
+const getProgramacionesOrden = (orden) =>
+  Array.isArray(orden?.programacionesViaje) ? orden.programacionesViaje : [];
+
 const FacturacionPage = () => {
   const [ordenes, setOrdenes] = useState([]);
   const [pagination, setPagination] = useState(DEFAULT_PAGINATION);
@@ -79,6 +83,7 @@ const FacturacionPage = () => {
   const [estadoPago, setEstadoPago] = useState("");
   const [facturaModalOpen, setFacturaModalOpen] = useState(false);
   const [pagoModalOpen, setPagoModalOpen] = useState(false);
+  const [detalleOrden, setDetalleOrden] = useState(null);
   const [ordenSeleccionada, setOrdenSeleccionada] = useState(null);
   const [facturaForm, setFacturaForm] = useState(emptyFacturaForm);
   const [pagoForm, setPagoForm] = useState(emptyPagoForm);
@@ -159,6 +164,14 @@ const FacturacionPage = () => {
     setOrdenSeleccionada(null);
     setFacturaForm(emptyFacturaForm);
     setPagoForm(emptyPagoForm);
+  };
+
+  const abrirDetalleOrden = (orden) => {
+    setDetalleOrden(orden);
+  };
+
+  const cerrarDetalleOrden = () => {
+    setDetalleOrden(null);
   };
 
   const handleFacturaChange = (event) => {
@@ -281,6 +294,7 @@ const FacturacionPage = () => {
     Number(ordenSeleccionada?.saldoPendiente || 0) - Number(pagoForm.montoPago || 0),
     0
   );
+  const programacionesDetalle = getProgramacionesOrden(detalleOrden);
 
   return (
     <div className="page">
@@ -379,7 +393,14 @@ const FacturacionPage = () => {
                   <div className="mobile-card-header">
                     <div>
                       <p className="text-faint text-xs">Orden</p>
-                      <h2 className="mobile-card-title">{orden.numeroOrden}</h2>
+                      <button
+                        type="button"
+                        onClick={() => abrirDetalleOrden(orden)}
+                        className="mobile-card-title text-left underline-offset-4 hover:underline"
+                        title="Ver programaciones y contenedores"
+                      >
+                        {orden.numeroOrden}
+                      </button>
                       <p className="mobile-card-subtitle">{formatDateOnly(orden.fechaProgramada)}</p>
                     </div>
                     <EstadoBadge estado={orden.estadoFacturacion} />
@@ -434,7 +455,14 @@ const FacturacionPage = () => {
                     {ordenes.map((orden) => (
                       <tr key={getItemId(orden)}>
                         <td className="px-4 py-4">
-                          <p className="text-main font-bold">{orden.numeroOrden}</p>
+                          <button
+                            type="button"
+                            onClick={() => abrirDetalleOrden(orden)}
+                            className="text-main font-bold underline-offset-4 hover:underline"
+                            title="Ver programaciones y contenedores"
+                          >
+                            {orden.numeroOrden}
+                          </button>
                           <p className="text-faint text-xs">
                             Servicio: {formatDateOnly(orden.fechaProgramada)}
                           </p>
@@ -498,6 +526,84 @@ const FacturacionPage = () => {
               onPageChange={(page) => cargarOrdenes({ page })}
             />
           </>
+        )}
+
+        {detalleOrden && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+            <div className="panel w-full max-w-xl overflow-hidden">
+              <div className="flex items-start justify-between gap-4 border-b px-5 py-4">
+                <div>
+                  <div className="eyebrow">Orden {detalleOrden.numeroOrden}</div>
+                  <h2 className="text-main text-lg font-bold">
+                    Programaciones asociadas
+                  </h2>
+                </div>
+                <button
+                  type="button"
+                  className="btn-secondary btn-icon"
+                  onClick={cerrarDetalleOrden}
+                  aria-label="Cerrar detalle"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="px-5 py-4">
+                {programacionesDetalle.length === 0 ? (
+                  <div className="empty-panel py-8">
+                    <FileText className="text-faint mx-auto mb-3 h-8 w-8" />
+                    <p className="text-main font-semibold">
+                      Esta orden no tiene programaciones asociadas
+                    </p>
+                  </div>
+                ) : (
+                  <div className="table-scroll">
+                    <table className="data-table dense-table w-full min-w-[480px] text-sm">
+                      <thead>
+                        <tr>
+                          <th className="px-4 py-3 text-left">Programación</th>
+                          <th className="px-4 py-3 text-left">Contenedor</th>
+                          <th className="px-4 py-3 text-left">Estado</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {programacionesDetalle.map((programacion) => (
+                          <tr key={programacion.id}>
+                            <td className="px-4 py-3">
+                              <p className="text-main font-semibold">
+                                {programacion.numeroProgramacion || "-"}
+                              </p>
+                              <p className="text-faint text-xs">
+                                {formatDateOnly(programacion.fechaInicioTraslado)}
+                              </p>
+                            </td>
+                            <td className="px-4 py-3 font-semibold">
+                              {programacion.numeroContenedor || "-"}
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="inline-flex rounded-full border border-white/10 px-3 py-1 text-[11px] font-bold">
+                                {programacion.estado || "-"}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end border-t px-5 py-4">
+                <button
+                  type="button"
+                  className="btn-secondary px-3 py-2"
+                  onClick={cerrarDetalleOrden}
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {facturaModalOpen && (

@@ -48,6 +48,8 @@ export function UnidadProvider({ children }) {
         page: params.page ?? 1,
         limit: params.limit ?? 10,
         search: params.search,
+        tipoUnidad: params.tipoUnidad,
+        estado: params.estado,
       });
       const res = await obtenerUnidadesRequest(requestParams);
       const data = normalizeCollection(res.data, ["unidades"]);
@@ -56,6 +58,45 @@ export function UnidadProvider({ children }) {
         normalizePagination(res.data, DEFAULT_PAGINATION)
       );
       return data;
+    } catch (error) {
+      const message =
+        error.response?.data?.message || "Error al obtener unidades";
+      setErrors([message]);
+      return [];
+    }
+  }, [limpiarErrores]);
+
+  const obtenerTodasUnidades = useCallback(async (params = {}) => {
+    try {
+      limpiarErrores();
+
+      const limit = params.limit ?? 100;
+      let page = params.page ?? 1;
+      let hasNextPage = true;
+      const todas = [];
+      let lastPagination = DEFAULT_PAGINATION;
+
+      while (hasNextPage) {
+        const requestParams = createPaginationParams({
+          page,
+          limit,
+          search: params.search,
+          tipoUnidad: params.tipoUnidad,
+          estado: params.estado,
+        });
+        const res = await obtenerUnidadesRequest(requestParams);
+        const data = normalizeCollection(res.data, ["unidades"]);
+        const pagination = normalizePagination(res.data, DEFAULT_PAGINATION);
+
+        todas.push(...data);
+        lastPagination = pagination;
+        hasNextPage = pagination.hasNextPage;
+        page += 1;
+      }
+
+      setUnidades(todas);
+      setPaginationUnidades(lastPagination);
+      return todas;
     } catch (error) {
       const message =
         error.response?.data?.message || "Error al obtener unidades";
@@ -171,6 +212,7 @@ export function UnidadProvider({ children }) {
         limpiarErrores,
         getRecordId,
         obtenerUnidades,
+        obtenerTodasUnidades,
         obtenerUnidad,
         crearUnidad,
         actualizarUnidad,

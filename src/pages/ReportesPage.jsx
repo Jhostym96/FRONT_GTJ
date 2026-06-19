@@ -335,9 +335,12 @@ const buildExcelHtml = (rows, filters) => {
 };
 
 const downloadExcel = (html, filters) => {
-  const blob = new Blob([html], {
-    type: "application/vnd.ms-excel;charset=utf-8;",
-  });
+  const blob =
+    html instanceof Blob
+      ? html
+      : new Blob([html], {
+          type: "application/vnd.ms-excel;charset=utf-8;",
+        });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -374,31 +377,11 @@ const ReportesPage = () => {
     try {
       setLoading(true);
       const res = await obtenerReporteServiciosRequest({
-        page: 1,
-        limit: REPORT_LIMIT,
         fechaInicio: filters.fechaInicio,
         fechaFin: filters.fechaFin,
       });
 
-      const servicios = normalizeCollection(res.data, ["programaciones", "servicios"]);
-      const serviciosFiltrados = servicios.filter((servicio) =>
-        isBetweenDates(getFechaServicio(servicio), filters.fechaInicio, filters.fechaFin)
-      );
-      const serviciosConDetalle = await Promise.all(
-        serviciosFiltrados.map(enriquecerServicio)
-      );
-      const detalles = serviciosConDetalle
-        .filter((servicio) =>
-          isBetweenDates(getFechaServicio(servicio), filters.fechaInicio, filters.fechaFin)
-        )
-        .map(getServicioDetalle);
-
-      if (detalles.length === 0) {
-        notify.info("No hay servicios en el rango seleccionado");
-        return;
-      }
-
-      downloadExcel(buildExcelHtml(detalles, filters), filters);
+      downloadExcel(res.data, filters);
       notify.success("Reporte Excel descargado");
     } catch (error) {
       console.error("Error al descargar reporte de servicios:", error);

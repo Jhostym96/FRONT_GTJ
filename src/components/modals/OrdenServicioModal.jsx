@@ -121,19 +121,22 @@ const OrdenServicioModal = ({
 }) => {
   const { crearOrdenServicio, editarOrdenServicio } = useOrdenesServicio();
 
-  const { clientes, getClientes, limpiarDatosRelacionados } = useClientes();
+  const { clientes, getClientes, getTodosClientes, limpiarDatosRelacionados } =
+    useClientes();
 
   const clientesActionsRef = useRef({
     getClientes,
+    getTodosClientes,
     limpiarDatosRelacionados,
   });
 
   useEffect(() => {
     clientesActionsRef.current = {
       getClientes,
+      getTodosClientes,
       limpiarDatosRelacionados,
     };
-  }, [getClientes, limpiarDatosRelacionados]);
+  }, [getClientes, getTodosClientes, limpiarDatosRelacionados]);
 
   const [form, setForm] = useState(createInitialForm);
   const [loading, setLoading] = useState(false);
@@ -158,7 +161,11 @@ const OrdenServicioModal = ({
   useEffect(() => {
     if (!isOpen) return;
     if (!isViewMode) {
-      clientesActionsRef.current.getClientes?.({ page: 1, limit: 100 });
+      if (clientesActionsRef.current.getTodosClientes) {
+        clientesActionsRef.current.getTodosClientes({ page: 1, limit: 100 });
+      } else {
+        clientesActionsRef.current.getClientes?.({ page: 1, limit: 100 });
+      }
     }
   }, [isOpen, isViewMode]);
 

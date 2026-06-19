@@ -374,6 +374,24 @@
     border-color: color-mix(in srgb, var(--app-primary) 24%, var(--app-border));
   }
 
+  .field-label {
+    @apply block text-sm font-semibold;
+    color: var(--app-muted);
+  }
+
+  .field-input {
+    @apply mt-1 w-full rounded-md border px-3 py-2.5 text-sm outline-none transition duration-150 placeholder:text-[var(--app-faint)] focus:border-[var(--app-primary)] focus:ring-2 disabled:cursor-not-allowed disabled:opacity-70;
+    background: var(--app-surface-muted);
+    border-color: var(--app-border);
+    color: var(--app-text);
+    box-shadow: none;
+    --tw-ring-color: color-mix(in srgb, var(--app-primary) 24%, transparent);
+  }
+
+  .field-input:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--app-primary) 18%, var(--app-border));
+  }
+
   .card {
     @apply panel animate-fade-in p-4 sm:p-5;
   }

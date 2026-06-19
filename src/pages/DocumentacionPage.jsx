@@ -33,9 +33,15 @@ import {
 import { getConductoresRequest } from "../api/conductores";
 import { obtenerUnidadesRequest } from "../api/unidades";
 import TablePagination from "../components/TablePagination";
-import { getRecordId, normalizeCollection, normalizePagination } from "../utils/apiData";
+import {
+  getRecordId,
+  normalizeCollection,
+  normalizePagination,
+} from "../utils/apiData";
 import { obtenerMensajeErrorApi } from "../utils/apiErrorMessages";
 import { notify } from "../utils/notify";
+
+const CATALOG_PAGE_LIMIT = 100;
 
 const DEFAULT_PAGINATION = {
   page: 1,
@@ -906,6 +912,31 @@ function DocumentacionPage() {
     [filters, pagination.limit, pagination.page]
   );
 
+  const cargarColeccionCompleta = async (
+    request,
+    collectionKeys,
+    params = {}
+  ) => {
+    let page = 1;
+    let hasNextPage = true;
+    const items = [];
+
+    while (hasNextPage) {
+      const res = await request({
+        ...params,
+        page,
+        limit: CATALOG_PAGE_LIMIT,
+      });
+      const paginationData = normalizePagination(res.data, DEFAULT_PAGINATION);
+
+      items.push(...normalizeCollection(res.data, collectionKeys));
+      hasNextPage = paginationData.hasNextPage;
+      page += 1;
+    }
+
+    return items;
+  };
+
   const cargarDocumentacion = async (page = 1) => {
     try {
       setLoadingDocumentos(true);
@@ -935,10 +966,29 @@ function DocumentacionPage() {
   const cargarTiposDocumentacion = async (page = 1, options = {}) => {
     try {
       setLoadingTipos(true);
+
+      if (options.soloActivos) {
+        const data = await cargarColeccionCompleta(
+          getTiposDocumentacionRequest,
+          ["tipos"],
+          { activo: "true" }
+        );
+
+        setTiposDocumentacion(data);
+        setPaginationTipos({
+          page: 1,
+          limit: data.length || CATALOG_PAGE_LIMIT,
+          total: data.length,
+          totalPages: data.length ? 1 : 0,
+          hasNextPage: false,
+          hasPrevPage: false,
+        });
+        return;
+      }
+
       const res = await getTiposDocumentacionRequest({
         page,
-        limit: options.soloActivos ? 100 : paginationTipos.limit,
-        activo: options.soloActivos ? "true" : undefined,
+        limit: paginationTipos.limit,
       });
       setTiposDocumentacion(normalizeCollection(res.data, ["tipos"]));
       setPaginationTipos(normalizePagination(res.data, DEFAULT_PAGINATION));
@@ -956,15 +1006,13 @@ function DocumentacionPage() {
 
     try {
       setLoadingCatalogos(true);
-      const [conductoresRes, unidadesRes] = await Promise.all([
-        getConductoresRequest({ page: 1, limit: 100 }),
-        obtenerUnidadesRequest({ page: 1, limit: 100 }),
+      const [conductoresData, unidadesData] = await Promise.all([
+        cargarColeccionCompleta(getConductoresRequest, ["conductores"]),
+        cargarColeccionCompleta(obtenerUnidadesRequest, ["unidades"]),
       ]);
 
-      setConductoresCatalogo(
-        normalizeCollection(conductoresRes.data, ["conductores"])
-      );
-      setUnidadesCatalogo(normalizeCollection(unidadesRes.data, ["unidades"]));
+      setConductoresCatalogo(conductoresData);
+      setUnidadesCatalogo(unidadesData);
       setCatalogosCargados(true);
     } catch (error) {
       notify.error(

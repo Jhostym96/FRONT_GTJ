@@ -63,6 +63,43 @@ export function ConductorProvider({ children }) {
     }
   }, [limpiarErrores]);
 
+  const obtenerTodosConductores = useCallback(async (params = {}) => {
+    try {
+      limpiarErrores();
+
+      const limit = params.limit ?? 100;
+      let page = params.page ?? 1;
+      let hasNextPage = true;
+      const todos = [];
+      let lastPagination = DEFAULT_PAGINATION;
+
+      while (hasNextPage) {
+        const requestParams = createPaginationParams({
+          page,
+          limit,
+          search: params.search,
+        });
+        const res = await getConductoresRequest(requestParams);
+        const data = normalizeCollection(res.data, ["conductores"]);
+        const pagination = normalizePagination(res.data, DEFAULT_PAGINATION);
+
+        todos.push(...data);
+        lastPagination = pagination;
+        hasNextPage = pagination.hasNextPage;
+        page += 1;
+      }
+
+      setConductores(todos);
+      setPaginationConductores(lastPagination);
+      return todos;
+    } catch (error) {
+      setErrors([
+        error.response?.data?.message || "Error al obtener conductores",
+      ]);
+      return [];
+    }
+  }, [limpiarErrores]);
+
   const obtenerConductor = useCallback(async (id) => {
     try {
       limpiarErrores();
@@ -173,8 +210,10 @@ export function ConductorProvider({ children }) {
         actualizarConductor,
         eliminarConductor,
         cambiarEstadoConductor,
+        obtenerTodosConductores,
 
         getConductores: obtenerConductores,
+        getAllConductores: obtenerTodosConductores,
         getConductor: obtenerConductor,
         createConductor: crearConductor,
         updateConductor: actualizarConductor,

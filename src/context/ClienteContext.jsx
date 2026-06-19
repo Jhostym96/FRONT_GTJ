@@ -133,6 +133,49 @@ export const ClienteProvider = ({ children }) => {
     }
   };
 
+  const getTodosClientes = async (params = {}) => {
+    try {
+      setLoadingClientes(true);
+      limpiarErroresCliente();
+
+      const limit = params.limit ?? 100;
+      let page = params.page ?? 1;
+      let hasNextPage = true;
+      const todos = [];
+      let lastPagination = DEFAULT_PAGINATION;
+
+      while (hasNextPage) {
+        const requestParams = createPaginationParams({
+          page,
+          limit,
+          search: params.search,
+        });
+        const res = await getClientesRequest(requestParams);
+        const data = normalizeCollection(res.data, ["clientes"]);
+        const pagination = normalizePagination(res.data, DEFAULT_PAGINATION);
+
+        todos.push(...data);
+        lastPagination = pagination;
+        hasNextPage = pagination.hasNextPage;
+        page += 1;
+      }
+
+      setClientes(todos);
+      setPaginationClientes(lastPagination);
+
+      return todos;
+    } catch (error) {
+      const mensaje = handleError(error);
+
+      return {
+        ok: false,
+        error: mensaje,
+      };
+    } finally {
+      setLoadingClientes(false);
+    }
+  };
+
   const getCliente = async (id) => {
     try {
       setLoadingClientes(true);
@@ -500,6 +543,8 @@ export const ClienteProvider = ({ children }) => {
         paginationClientes,
 
         getClientes,
+        getTodosClientes,
+        obtenerTodosClientes: getTodosClientes,
         getCliente,
         createCliente,
         updateCliente,

@@ -47,8 +47,16 @@ export const normalizePagination = (data, fallback = DEFAULT_PAGINATION) => {
   };
 };
 
-export const createPaginationParams = ({ page = 1, limit = 10, search } = {}) => ({
+export const createPaginationParams = ({
+  page = 1,
+  limit = 10,
+  search,
+  ...params
+} = {}) => ({
   page,
   limit,
   ...(search ? { search } : {}),
+  ...Object.fromEntries(
+    Object.entries(params).filter(([, value]) => value !== undefined && value !== "")
+  ),
 });

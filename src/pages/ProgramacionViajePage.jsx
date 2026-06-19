@@ -23,7 +23,6 @@ import ProgramacionViajeModal from "../components/modals/ProgramacionViajeModal"
 import ProgramacionGuiaSunatModal from "../components/modals/ProgramacionGuiaSunatModal";
 import TablePagination from "../components/TablePagination";
 
-const SELECT_OPTIONS_LIMIT = 1000;
 const APP_TIME_ZONE = "America/Lima";
 const APP_TIME_ZONE_OFFSET = "-05:00";
 
@@ -111,8 +110,9 @@ const ProgramacionViajePage = () => {
     cambiarEstadoProgramacion,
   } = useProgramacionViaje();
 
-  const { obtenerUnidades } = useUnidades();
-  const { obtenerConductores, getConductores } = useConductores();
+  const { obtenerUnidades, obtenerTodasUnidades } = useUnidades();
+  const { obtenerConductores, obtenerTodosConductores, getConductores } =
+    useConductores();
   const confirm = useConfirm();
 
   const [openModal, setOpenModal] = useState(false);
@@ -135,11 +135,17 @@ const ProgramacionViajePage = () => {
         await obtenerProgramacionesViaje();
       }
 
-      const selectParams = { page: 1, limit: SELECT_OPTIONS_LIMIT };
+      const selectParams = { page: 1, limit: 100 };
 
-      await obtenerUnidades?.(selectParams);
+      if (obtenerTodasUnidades) {
+        await obtenerTodasUnidades(selectParams);
+      } else {
+        await obtenerUnidades?.(selectParams);
+      }
 
-      if (obtenerConductores) {
+      if (obtenerTodosConductores) {
+        await obtenerTodosConductores(selectParams);
+      } else if (obtenerConductores) {
         await obtenerConductores(selectParams);
       } else if (getConductores) {
         await getConductores(selectParams);
@@ -151,7 +157,9 @@ const ProgramacionViajePage = () => {
     getConductores,
     getProgramacionesViaje,
     obtenerConductores,
+    obtenerTodosConductores,
     obtenerProgramacionesViaje,
+    obtenerTodasUnidades,
     obtenerUnidades,
   ]);
 

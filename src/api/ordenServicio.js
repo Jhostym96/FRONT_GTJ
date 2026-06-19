@@ -23,5 +23,8 @@ export const anularOrdenServicioRequest = (id) =>
 export const obtenerDevolucionesPendientesRequest = (params = {}) =>
   axios.get(`/ordenes-servicio/devoluciones/pendientes`, { params });
 
+export const obtenerProgramacionDevolucionesRequest = (params = {}) =>
+  axios.get(`/ordenes-servicio/devoluciones/programacion`, { params });
+
 export const actualizarEstadoDevolucionRequest = (id, data) =>
   axios.patch(`/ordenes-servicio/devoluciones/${id}`, data);

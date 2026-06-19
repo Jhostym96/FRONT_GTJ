@@ -55,7 +55,7 @@ export const OrdenServicioProvider = ({ children }) => {
 
       const requestParams = createPaginationParams({
         page: params.page ?? 1,
-        limit: params.limit ?? 10,
+        limit: params.limit ??  10,
         search: params.search,
       });
       const res = await obtenerOrdenesServicioRequest(requestParams);
@@ -148,8 +148,10 @@ export const OrdenServicioProvider = ({ children }) => {
       setLoading(true);
       const requestParams = createPaginationParams({
         page: params.page ?? 1,
-        limit: params.limit ?? 10,
+        limit: params.limit ??  100,
         search: params.search,
+        sortBy: params.sortBy,
+        sortDirection: params.sortDirection,
       });
       const res = await obtenerDevolucionesPendientesRequest(requestParams);
       const data = normalizeCollection(res.data, ["devoluciones", "ordenes"]);
@@ -168,11 +170,13 @@ export const OrdenServicioProvider = ({ children }) => {
     }
   }, []);
 
-  const actualizarEstadoDevolucion = useCallback(async (id, data) => {
+  const actualizarEstadoDevolucion = useCallback(async (id, data, options = {}) => {
     try {
       const res = await actualizarEstadoDevolucionRequest(id, data);
-      await cargarOrdenesServicio();
-      await cargarDevolucionesPendientes();
+      if (!options.skipRefresh) {
+        await cargarOrdenesServicio();
+        await cargarDevolucionesPendientes();
+      }
       return res.data;
     } catch (error) {
       setErrors([
