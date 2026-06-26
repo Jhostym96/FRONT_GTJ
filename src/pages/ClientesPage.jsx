@@ -1,11 +1,21 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { notify } from "../utils/notify";
-import { Eye, Pencil, Power, PowerOff } from "lucide-react";
+import { Building2, Eye, Network, Pencil, Power, PowerOff } from "lucide-react";
 import { useClientes } from "../context/ClienteContext";
 import { useConfirm } from "../context/ConfirmContext";
 import ClienteModal from "../components/modals/ClienteModal";
 import TablePagination from "../components/TablePagination";
 import { getRecordId } from "../utils/apiData";
+import { useDebouncedValue } from "../hooks/useDebouncedValue";
+import {
+  ErrorAlert,
+} from "../components/ui/Accessibility";
+import {
+  FilterButtonGroup,
+  ListSearchInput,
+  StatusBadge,
+  SummaryIndicator,
+} from "../components/ui/ListingControls";
 
 function ClientesPage() {
   const {
@@ -23,11 +33,22 @@ function ClientesPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState("create");
   const [clienteSeleccionado, setClienteSeleccionado] = useState(null);
+  const [busqueda, setBusqueda] = useState("");
+  const [filtroEstado, setFiltroEstado] = useState("TODOS");
+  const busquedaDebounced = useDebouncedValue(busqueda.trim());
+
+  const getFilterParams = (page = 1) => ({
+    page,
+    limit: paginationClientes.limit,
+    search: busquedaDebounced,
+    activo:
+      filtroEstado === "TODOS" ? "all" : filtroEstado === "ACTIVOS",
+  });
 
   useEffect(() => {
-    getClientes({ page: 1, limit: 10 });
+    getClientes(getFilterParams(1));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [busquedaDebounced, filtroEstado]);
 
   const getClienteId = getRecordId;
 
@@ -48,6 +69,23 @@ function ClientesPage() {
   const getTotalDestinatarios = (cliente) => {
     return getEntidadesPorTipo(cliente, "DESTINATARIO").length;
   };
+
+  const resumen = useMemo(
+    () =>
+      clientes.reduce(
+        (acc, cliente) => {
+          acc.total += 1;
+          if (cliente.activo) acc.activos += 1;
+          else acc.inactivos += 1;
+          acc.entidades += Array.isArray(cliente.entidadesRelacionadas)
+            ? cliente.entidadesRelacionadas.length
+            : 0;
+          return acc;
+        },
+        { total: 0, activos: 0, inactivos: 0, entidades: 0 }
+      ),
+    [clientes]
+  );
 
   const abrirCrear = () => {
     setClienteSeleccionado(null);
@@ -97,7 +135,7 @@ function ClientesPage() {
       }
 
       cerrarModal();
-      await getClientes({ page: paginationClientes.page, limit: paginationClientes.limit });
+      await getClientes(getFilterParams(paginationClientes.page));
     } catch (error) {
       console.error("Error inesperado al guardar cliente:", error);
       notify.error("Error inesperado al guardar cliente");
@@ -137,29 +175,18 @@ function ClientesPage() {
         ? "Cliente activado correctamente"
         : "Cliente desactivado correctamente"
     );
-    await getClientes({
-      page: paginationClientes.page,
-      limit: paginationClientes.limit,
-    });
+    await getClientes(getFilterParams(paginationClientes.page));
   };
 
   const handlePageChange = (page) => {
-    getClientes({ page, limit: paginationClientes.limit });
+    getClientes(getFilterParams(page));
   };
 
   const EstadoBadge = ({ activo }) => {
-    if (activo) {
-      return (
-        <span className="inline-flex items-center justify-center rounded-full border border-green-500/30 bg-green-500/10 px-3 py-1 text-[11px] font-bold tracking-wide text-green-300">
-          ACTIVO
-        </span>
-      );
-    }
-
     return (
-      <span className="inline-flex items-center justify-center rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1 text-[11px] font-bold tracking-wide text-red-300">
-        INACTIVO
-      </span>
+      <StatusBadge tone={activo ? "success" : "danger"}>
+        {activo ? "ACTIVO" : "INACTIVO"}
+      </StatusBadge>
     );
   };
 
@@ -174,13 +201,13 @@ function ClientesPage() {
     return (
       <div className="flex flex-wrap gap-2">
         {remitentes > 0 && (
-          <span className="rounded-full border border-blue-500/20 bg-blue-500/10 px-3 py-1 text-xs font-semibold text-blue-300">
+          <span className="rounded-full border border-blue-500/20 bg-blue-500/10 px-3 py-1 text-xs font-semibold text-blue-700 dark:text-blue-300">
             {remitentes} remitente{remitentes === 1 ? "" : "s"}
           </span>
         )}
 
         {destinatarios > 0 && (
-          <span className="rounded-full border border-purple-500/20 bg-purple-500/10 px-3 py-1 text-xs font-semibold text-purple-300">
+          <span className="rounded-full border border-purple-500/20 bg-purple-500/10 px-3 py-1 text-xs font-semibold text-purple-700 dark:text-purple-300">
             {destinatarios} destinatario{destinatarios === 1 ? "" : "s"}
           </span>
         )}
@@ -198,21 +225,23 @@ function ClientesPage() {
         <button
           type="button"
           onClick={() => abrirVer(cliente)}
-          className="btn-secondary btn-icon"
+          className={mobile ? "btn-secondary" : "btn-secondary btn-icon"}
           title="Ver cliente"
           aria-label="Ver cliente"
         >
           <Eye />
+          {mobile && "Ver"}
         </button>
 
         <button
           type="button"
           onClick={() => abrirEditar(cliente)}
-          className="btn-primary btn-icon"
+          className={mobile ? "btn-primary" : "btn-primary btn-icon"}
           title="Editar cliente"
           aria-label="Editar cliente"
         >
           <Pencil />
+          {mobile && "Editar"}
         </button>
 
         <button
@@ -220,11 +249,12 @@ function ClientesPage() {
           onClick={() => handleCambiarEstado(cliente)}
           className={`${
             cliente.activo ? "btn-danger" : "btn-success"
-          } btn-icon`}
+          } ${mobile ? "" : "btn-icon"}`}
           title={cliente.activo ? "Desactivar cliente" : "Activar cliente"}
           aria-label={cliente.activo ? "Desactivar cliente" : "Activar cliente"}
         >
           {cliente.activo ? <PowerOff /> : <Power />}
+          {mobile && (cliente.activo ? "Desactivar" : "Activar")}
         </button>
       </div>
     );
@@ -260,12 +290,53 @@ function ClientesPage() {
           </div>
         </header>
 
+        <section className="summary-grid">
+          <SummaryIndicator icon={Building2} label="Clientes" value={resumen.total} />
+          <SummaryIndicator
+            icon={Power}
+            label="Activos"
+            value={resumen.activos}
+            tone="bg-emerald-500/10 text-emerald-600 dark:text-emerald-300"
+          />
+          <SummaryIndicator
+            icon={Network}
+            label="Entidades"
+            value={resumen.entidades}
+            tone="bg-violet-500/10 text-violet-600 dark:text-violet-300"
+          />
+        </section>
+
+        <section className="filter-panel">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <ListSearchInput
+              value={busqueda}
+              onChange={setBusqueda}
+              onClear={() => setBusqueda("")}
+              placeholder="Buscar por razón social, documento o dirección"
+              ariaLabel="Buscar clientes"
+              className="lg:max-w-md"
+            />
+            <FilterButtonGroup
+              value={filtroEstado}
+              onChange={setFiltroEstado}
+              options={[
+                { value: "TODOS", label: "Todos" },
+                { value: "ACTIVOS", label: "Activos" },
+                { value: "INACTIVOS", label: "Inactivos" },
+              ]}
+            />
+          </div>
+          <p className="text-muted mt-3 border-t pt-3 text-xs">
+            {paginationClientes.total} registros encontrados
+          </p>
+        </section>
+
         {errorsCliente?.length > 0 && (
-          <div className="alert-panel">
+          <ErrorAlert>
             {errorsCliente.map((error, index) => (
               <p key={index}>{error}</p>
             ))}
-          </div>
+          </ErrorAlert>
         )}
 
         {loadingClientes ? (

@@ -47,6 +47,7 @@ const EmpresaConfigPage = lazy(() => import("./pages/EmpresaConfigPage"));
 const WhatsappBotConfigPage = lazy(() => import("./pages/WhatsappBotConfigPage"));
 const ReportesPage = lazy(() => import("./pages/ReportesPage"));
 const FacturacionPage = lazy(() => import("./pages/FacturacionPage"));
+const FacturasPage = lazy(() => import("./pages/FacturasPage"));
 const SistemaSaludPage = lazy(() => import("./pages/SistemaSaludPage"));
 const BackupsPage = lazy(() => import("./pages/BackupsPage"));
 const CorrelativosPage = lazy(() => import("./pages/CorrelativosPage"));
@@ -62,6 +63,9 @@ function Layout() {
 
   return (
     <div className="app-shell flex">
+      <a href="#main-content" className="skip-link">
+        Saltar al contenido principal
+      </a>
       {/* Sidebar */}
       <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
 
@@ -73,6 +77,8 @@ function Layout() {
         {/* Contenido principal + footer dentro del mismo fondo */}
         <div className="flex flex-col flex-1">
           <main
+            id="main-content"
+            tabIndex="-1"
             className={`app-main ${collapsed ? "md:ml-20" : "md:ml-64"
               }`}
           >
@@ -103,6 +109,7 @@ function Layout() {
                 <Route path="/devoluciones" element={<DevolucionesPage />} />
                 <Route path="/reportes" element={<ReportesPage />} />
                 <Route path="/facturacion" element={<FacturacionPage />} />
+                <Route path="/facturas" element={<FacturasPage />} />
               </Routes>
             </Suspense>
           </main>

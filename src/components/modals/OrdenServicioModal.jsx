@@ -1,6 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { notify } from "../../utils/notify";
 import { FaTimes } from "react-icons/fa";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Building2,
+  CheckCircle2,
+  ClipboardCheck,
+  MapPinned,
+  Package,
+  Route,
+  Users,
+} from "lucide-react";
 import { useOrdenesServicio } from "../../context/OrdenServicioContext";
 import { useClientes } from "../../context/ClienteContext";
 import { getTodayInputDate } from "../../utils/date";
@@ -32,6 +43,37 @@ const DIMENSIONES_CARGA = [
 
 const requiereDimensionContenedor = (tipoCarga) =>
   ["CONTENEDOR", "EXPORTACION"].includes(tipoCarga);
+
+const FORM_STEPS = [
+  {
+    id: "servicio",
+    label: "Servicio y cliente",
+    shortLabel: "Servicio",
+    description: "Datos generales y solicitante",
+    icon: Package,
+  },
+  {
+    id: "participantes",
+    label: "Participantes",
+    shortLabel: "Participantes",
+    description: "Remitente y destinatario",
+    icon: Users,
+  },
+  {
+    id: "ruta",
+    label: "Ruta",
+    shortLabel: "Ruta",
+    description: "Puntos de partida y llegada",
+    icon: MapPinned,
+  },
+  {
+    id: "revision",
+    label: "Revisión",
+    shortLabel: "Revisión",
+    description: "Confirmación del servicio",
+    icon: ClipboardCheck,
+  },
+];
 
 const createInitialForm = () => ({
   fechaProgramada: getTodayInputDate(),
@@ -140,6 +182,8 @@ const OrdenServicioModal = ({
 
   const [form, setForm] = useState(createInitialForm);
   const [loading, setLoading] = useState(false);
+  const [activeStep, setActiveStep] = useState(0);
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const [clienteIdSeleccionado, setClienteIdSeleccionado] = useState("");
   const [remitenteIdSeleccionado, setRemitenteIdSeleccionado] = useState("");
@@ -171,6 +215,8 @@ const OrdenServicioModal = ({
 
   useEffect(() => {
     if (!isOpen) return;
+    setActiveStep(0);
+    setFieldErrors({});
 
     if ((isEditMode || isViewMode) && orden) {
       const clienteBase =
@@ -226,6 +272,8 @@ const OrdenServicioModal = ({
 
     if (isCreateMode) {
       setForm(createInitialForm());
+      setActiveStep(0);
+      setFieldErrors({});
       setClienteIdSeleccionado("");
       setRemitenteIdSeleccionado("");
       setDestinatarioIdSeleccionado("");
@@ -313,6 +361,8 @@ const OrdenServicioModal = ({
 
   const resetForm = () => {
     setForm(createInitialForm());
+    setActiveStep(0);
+    setFieldErrors({});
     setClienteIdSeleccionado("");
     setRemitenteIdSeleccionado("");
     setDestinatarioIdSeleccionado("");
@@ -584,6 +634,12 @@ const OrdenServicioModal = ({
 
     const { name, value } = e.target;
     const keys = name.split(".");
+    setFieldErrors((current) => {
+      if (!current[name]) return current;
+      const next = { ...current };
+      delete next[name];
+      return next;
+    });
 
     if (name === "clienteEs") {
       setForm((prev) => ({
@@ -625,95 +681,107 @@ const OrdenServicioModal = ({
     }));
   };
 
-  const validarFormulario = () => {
+  const obtenerErroresFormulario = () => {
+    const errors = {};
+
     if (!form.fechaProgramada) {
-      notify.error("La fecha programada es obligatoria");
-      return false;
+      errors.fechaProgramada = "La fecha programada es obligatoria";
     }
 
     const cantidadViajes = Number(form.cantidadViajes);
 
     if (!Number.isInteger(cantidadViajes) || cantidadViajes < 1) {
-      notify.error("La cantidad de viajes debe ser mayor a 0");
-      return false;
+      errors.cantidadViajes = "Debe ser un número entero mayor a 0";
     }
 
     if (!form.clienteSolicitante.numeroDocumento.trim()) {
-      notify.error("Ingresa el número de documento del cliente");
-      return false;
+      errors["clienteSolicitante.numeroDocumento"] = "Ingresa el número de documento";
     }
 
     if (!form.clienteSolicitante.razonSocial.trim()) {
-      notify.error("Ingresa la razón social del cliente");
-      return false;
+      errors["clienteSolicitante.razonSocial"] = "Ingresa la razón social o nombre";
     }
 
     if (!form.clienteSolicitante.direccion.trim()) {
-      notify.error("Ingresa la dirección del cliente");
-      return false;
+      errors["clienteSolicitante.direccion"] = "Ingresa la dirección principal";
     }
 
     if (!form.remitente.numeroDocumento.trim()) {
-      notify.error("Selecciona o ingresa el remitente");
-      return false;
+      errors["remitente.numeroDocumento"] = "Selecciona o ingresa el remitente";
     }
 
     if (!form.remitente.razonSocial.trim()) {
-      notify.error("Ingresa la razón social del remitente");
-      return false;
+      errors["remitente.razonSocial"] = "Ingresa la razón social del remitente";
     }
 
     if (!form.destinatario.numeroDocumento.trim()) {
-      notify.error("Selecciona o ingresa el destinatario");
-      return false;
+      errors["destinatario.numeroDocumento"] = "Selecciona o ingresa el destinatario";
     }
 
     if (!form.destinatario.razonSocial.trim()) {
-      notify.error("Ingresa la razón social del destinatario");
-      return false;
+      errors["destinatario.razonSocial"] = "Ingresa la razón social del destinatario";
     }
 
     if (!form.partida.ubigeo.trim()) {
-      notify.error("Ingresa el ubigeo de partida");
-      return false;
-    }
-
-    if (form.partida.ubigeo.trim().length !== 6) {
-      notify.error("El ubigeo de partida debe tener 6 dígitos");
-      return false;
+      errors["partida.ubigeo"] = "Ingresa el ubigeo de partida";
+    } else if (!/^\d{6}$/.test(form.partida.ubigeo.trim())) {
+      errors["partida.ubigeo"] = "Debe contener exactamente 6 dígitos";
     }
 
     if (!form.partida.direccion.trim()) {
-      notify.error("Ingresa la dirección de partida");
-      return false;
+      errors["partida.direccion"] = "Ingresa la dirección de partida";
     }
 
     if (!form.llegada.ubigeo.trim()) {
-      notify.error("Ingresa el ubigeo de llegada");
-      return false;
-    }
-
-    if (form.llegada.ubigeo.trim().length !== 6) {
-      notify.error("El ubigeo de llegada debe tener 6 dígitos");
-      return false;
+      errors["llegada.ubigeo"] = "Ingresa el ubigeo de llegada";
+    } else if (!/^\d{6}$/.test(form.llegada.ubigeo.trim())) {
+      errors["llegada.ubigeo"] = "Debe contener exactamente 6 dígitos";
     }
 
     if (!form.llegada.direccion.trim()) {
-      notify.error("Ingresa la dirección de llegada");
-      return false;
+      errors["llegada.direccion"] = "Ingresa la dirección de llegada";
     }
 
     if (!form.clasificacionCarga) {
-      notify.error("Selecciona la clasificación de la carga");
-      return false;
+      errors.clasificacionCarga = "Selecciona la clasificación";
     }
 
     if (requiereDimensionContenedor(form.tipoCarga) && !form.dimensionCarga) {
-      notify.error("Selecciona la dimensión del contenedor");
-      return false;
+      errors.dimensionCarga = "Selecciona la dimensión del contenedor";
     }
 
-    return true;
+    return errors;
+  };
+
+  const getStepForField = (field) => {
+    if (
+      field.startsWith("remitente.") ||
+      field.startsWith("destinatario.")
+    ) {
+      return 1;
+    }
+    if (field.startsWith("partida.") || field.startsWith("llegada.")) return 2;
+    return 0;
+  };
+
+  const validateAndGoToStep = (targetStep) => {
+    if (isViewMode || targetStep <= activeStep) {
+      setActiveStep(targetStep);
+      return;
+    }
+
+    const errors = obtenerErroresFormulario();
+    setFieldErrors(errors);
+    const currentStepErrors = Object.keys(errors).filter(
+      (field) => getStepForField(field) === activeStep
+    );
+
+    if (targetStep > activeStep && currentStepErrors.length > 0) {
+      notify.error("Completa los campos obligatorios antes de continuar");
+      return;
+    }
+
+    setActiveStep(targetStep);
   };
 
   const limpiarPayloadOrden = () => {
@@ -778,7 +846,13 @@ const OrdenServicioModal = ({
 
     if (isViewMode) return;
 
-    if (!validarFormulario()) return;
+    const errors = obtenerErroresFormulario();
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      setActiveStep(getStepForField(Object.keys(errors)[0]));
+      notify.error("Revisa los campos obligatorios de la orden");
+      return;
+    }
 
     try {
       setLoading(true);
@@ -818,6 +892,20 @@ const OrdenServicioModal = ({
     }
   };
 
+  const getFieldClass = (name) =>
+    `${inputClass} ${
+      fieldErrors[name]
+        ? "border-red-500 focus:border-red-500 focus:ring-red-500/25"
+        : ""
+    }`;
+
+  const FieldError = ({ name }) =>
+    fieldErrors[name] ? (
+      <p className="mt-1 text-xs font-medium text-red-600 dark:text-red-300">
+        {fieldErrors[name]}
+      </p>
+    ) : null;
+
   const renderPersonaFields = (prefix, mostrarDireccion = true) => (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
       <div className="md:col-span-2">
@@ -827,7 +915,7 @@ const OrdenServicioModal = ({
           value={form[prefix].tipoDocumento}
           onChange={handleChange}
           disabled={disabled}
-          className={inputClass}
+          className={getFieldClass(`${prefix}.tipoDocumento`)}
         >
           <option value="6">RUC</option>
           <option value="1">DNI</option>
@@ -847,8 +935,9 @@ const OrdenServicioModal = ({
           onChange={handleChange}
           disabled={disabled}
           placeholder="Ingrese el número de documento"
-          className={inputClass}
+          className={getFieldClass(`${prefix}.numeroDocumento`)}
         />
+        <FieldError name={`${prefix}.numeroDocumento`} />
       </div>
 
       <div className="md:col-span-7">
@@ -860,8 +949,9 @@ const OrdenServicioModal = ({
           onChange={handleChange}
           disabled={disabled}
           placeholder="Ingrese la razón social o nombre"
-          className={inputClass}
+          className={getFieldClass(`${prefix}.razonSocial`)}
         />
+        <FieldError name={`${prefix}.razonSocial`} />
       </div>
 
       {mostrarDireccion && (
@@ -874,8 +964,9 @@ const OrdenServicioModal = ({
             onChange={handleChange}
             disabled={disabled}
             placeholder="Ingrese la dirección principal"
-            className={inputClass}
+            className={getFieldClass(`${prefix}.direccion`)}
           />
+          <FieldError name={`${prefix}.direccion`} />
         </div>
       )}
     </div>
@@ -891,7 +982,7 @@ const OrdenServicioModal = ({
 
   return (
     <div className="modal-backdrop">
-      <div className="panel flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden">
+      <div className="panel flex max-h-[94vh] w-full max-w-7xl flex-col overflow-hidden">
         <div className="flex items-start justify-between gap-4 border-b px-5 py-4 sm:px-6">
           <div>
             <h2 className="text-main text-xl font-bold">{getTitulo()}</h2>
@@ -909,8 +1000,59 @@ const OrdenServicioModal = ({
           </button>
         </div>
 
+        <div className="border-b px-4 py-3 sm:px-6">
+          <div className="grid grid-cols-4 gap-1 sm:gap-2">
+            {FORM_STEPS.map((step, index) => {
+              const Icon = step.icon;
+              const active = activeStep === index;
+              const completed = activeStep > index;
+
+              return (
+                <button
+                  type="button"
+                  key={step.id}
+                  onClick={() => validateAndGoToStep(index)}
+                  className={`flex min-w-0 items-center gap-2 rounded-lg border px-2 py-2.5 text-left transition sm:px-3 ${
+                    active
+                      ? "border-[var(--app-primary)] bg-[var(--app-primary-soft)]"
+                      : "border-transparent hover:bg-[var(--app-surface-muted)]"
+                  }`}
+                  aria-current={active ? "step" : undefined}
+                >
+                  <span
+                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md ${
+                      active
+                        ? "bg-[var(--app-primary)] text-white"
+                        : completed
+                        ? "bg-emerald-500/12 text-emerald-600 dark:text-emerald-300"
+                        : "bg-[var(--app-surface-muted)] text-[var(--app-muted)]"
+                    }`}
+                  >
+                    {completed ? <CheckCircle2 className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+                  </span>
+                  <span className="hidden min-w-0 sm:block">
+                    <span className="text-main block truncate text-xs font-bold">
+                      {step.label}
+                    </span>
+                    <span className="text-faint hidden truncate text-[10px] lg:block">
+                      {step.description}
+                    </span>
+                  </span>
+                  <span className="text-main truncate text-[10px] font-bold sm:hidden">
+                    {step.shortLabel}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
-          <div className="flex-1 space-y-6 overflow-y-auto p-4 sm:p-6">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+            <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
+              <div className="min-w-0 space-y-5">
+            {activeStep === 0 && (
+              <>
             <section className={sectionClass}>
               <div className={sectionTitleClass}>
                 <div>
@@ -932,8 +1074,9 @@ const OrdenServicioModal = ({
                     value={form.fechaProgramada}
                     onChange={handleChange}
                     disabled={disabled}
-                    className={inputClass}
+                    className={getFieldClass("fechaProgramada")}
                   />
+                  <FieldError name="fechaProgramada" />
                 </div>
 
                 {(isEditMode || isViewMode) && (
@@ -968,8 +1111,9 @@ const OrdenServicioModal = ({
                     value={form.cantidadViajes}
                     onChange={handleChange}
                     disabled={disabled}
-                    className={inputClass}
+                    className={getFieldClass("cantidadViajes")}
                   />
+                  <FieldError name="cantidadViajes" />
                 </div>
 
                 <div className="md:col-span-3">
@@ -979,7 +1123,7 @@ const OrdenServicioModal = ({
                     value={form.tipoCarga}
                     onChange={handleChange}
                     disabled={disabled}
-                    className={inputClass}
+                    className={getFieldClass("tipoCarga")}
                   >
                     {TIPOS_CARGA.map((tipo) => (
                       <option key={tipo.value} value={tipo.value}>
@@ -996,7 +1140,7 @@ const OrdenServicioModal = ({
                     value={form.clasificacionCarga}
                     onChange={handleChange}
                     disabled={disabled}
-                    className={inputClass}
+                    className={getFieldClass("clasificacionCarga")}
                   >
                     {CLASIFICACIONES_CARGA.map((clasificacion) => (
                       <option
@@ -1007,6 +1151,7 @@ const OrdenServicioModal = ({
                       </option>
                     ))}
                   </select>
+                  <FieldError name="clasificacionCarga" />
                 </div>
 
                 {requiereDimensionContenedor(form.tipoCarga) && (
@@ -1017,7 +1162,7 @@ const OrdenServicioModal = ({
                       value={form.dimensionCarga}
                       onChange={handleChange}
                       disabled={disabled}
-                      className={inputClass}
+                      className={getFieldClass("dimensionCarga")}
                     >
                       <option value="">Seleccione dimensión</option>
                       {DIMENSIONES_CARGA.map((dimension) => (
@@ -1026,6 +1171,7 @@ const OrdenServicioModal = ({
                         </option>
                       ))}
                     </select>
+                    <FieldError name="dimensionCarga" />
                   </div>
                 )}
               </div>
@@ -1069,7 +1215,11 @@ const OrdenServicioModal = ({
 
               {renderPersonaFields("clienteSolicitante", true)}
             </section>
+              </>
+            )}
 
+            {activeStep === 1 && (
+              <>
             <section className={sectionClass}>
               <div className={sectionTitleClass}>
                 <div>
@@ -1160,7 +1310,10 @@ const OrdenServicioModal = ({
 
               {renderPersonaFields("destinatario", false)}
             </section>
+              </>
+            )}
 
+            {activeStep === 2 && (
             <section className={sectionClass}>
               <div className={sectionTitleClass}>
                 <div>
@@ -1219,8 +1372,10 @@ const OrdenServicioModal = ({
                           disabled={disabled}
                           placeholder="Ingrese el ubigeo de partida"
                           maxLength={6}
-                          className={inputClass}
+                          inputMode="numeric"
+                          className={getFieldClass("partida.ubigeo")}
                         />
+                        <FieldError name="partida.ubigeo" />
                       </div>
 
                       <div className="md:col-span-3">
@@ -1232,8 +1387,9 @@ const OrdenServicioModal = ({
                           onChange={handleChange}
                           disabled={disabled}
                           placeholder="Ingrese la dirección de partida"
-                          className={inputClass}
+                          className={getFieldClass("partida.direccion")}
                         />
+                        <FieldError name="partida.direccion" />
                       </div>
                     </div>
 
@@ -1297,8 +1453,10 @@ const OrdenServicioModal = ({
                           disabled={disabled}
                           placeholder="Ingrese el ubigeo de llegada"
                           maxLength={6}
-                          className={inputClass}
+                          inputMode="numeric"
+                          className={getFieldClass("llegada.ubigeo")}
                         />
+                        <FieldError name="llegada.ubigeo" />
                       </div>
 
                       <div className="md:col-span-3">
@@ -1310,8 +1468,9 @@ const OrdenServicioModal = ({
                           onChange={handleChange}
                           disabled={disabled}
                           placeholder="Ingrese la dirección de llegada"
-                          className={inputClass}
+                          className={getFieldClass("llegada.direccion")}
                         />
+                        <FieldError name="llegada.direccion" />
                       </div>
                     </div>
 
@@ -1331,11 +1490,130 @@ const OrdenServicioModal = ({
                 </div>
               </div>
             </section>
+            )}
 
+            {activeStep === 3 && (
+              <section className={sectionClass}>
+                <div className={sectionTitleClass}>
+                  <div>
+                    <h3 className="text-main text-base font-bold">Revisión final</h3>
+                    <p className="text-faint text-xs">
+                      Confirma la información antes de guardar la orden.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="info-tile">
+                    <div className="mb-2 flex items-center gap-2">
+                      <Package className="h-4 w-4 text-[var(--app-primary)]" />
+                      <p className="text-main text-sm font-bold">Servicio</p>
+                    </div>
+                    <p className="text-muted text-xs">
+                      {form.fechaProgramada || "Sin fecha"} · {form.cantidadViajes || 0} viaje(s)
+                    </p>
+                    <p className="text-main mt-1 text-sm font-semibold">
+                      {form.tipoCarga.replaceAll("_", " ")} · {form.clasificacionCarga}
+                      {form.dimensionCarga ? ` · ${form.dimensionCarga} pies` : ""}
+                    </p>
+                  </div>
+
+                  <div className="info-tile">
+                    <div className="mb-2 flex items-center gap-2">
+                      <Building2 className="h-4 w-4 text-[var(--app-primary)]" />
+                      <p className="text-main text-sm font-bold">Cliente</p>
+                    </div>
+                    <p className="text-main truncate text-sm font-semibold">
+                      {form.clienteSolicitante.razonSocial || "Sin cliente"}
+                    </p>
+                    <p className="text-muted mt-1 truncate text-xs">
+                      {form.clienteSolicitante.numeroDocumento || "Sin documento"}
+                    </p>
+                  </div>
+
+                  <div className="info-tile">
+                    <div className="mb-2 flex items-center gap-2">
+                      <Users className="h-4 w-4 text-[var(--app-primary)]" />
+                      <p className="text-main text-sm font-bold">Participantes</p>
+                    </div>
+                    <p className="text-muted text-xs">Remitente</p>
+                    <p className="text-main truncate text-sm font-semibold">
+                      {form.remitente.razonSocial || "Sin remitente"}
+                    </p>
+                    <p className="text-muted mt-2 text-xs">Destinatario</p>
+                    <p className="text-main truncate text-sm font-semibold">
+                      {form.destinatario.razonSocial || "Sin destinatario"}
+                    </p>
+                  </div>
+
+                  <div className="info-tile">
+                    <div className="mb-2 flex items-center gap-2">
+                      <Route className="h-4 w-4 text-[var(--app-primary)]" />
+                      <p className="text-main text-sm font-bold">Ruta</p>
+                    </div>
+                    <p className="text-muted text-xs">Partida</p>
+                    <p className="text-main line-clamp-2 text-sm font-semibold">
+                      {form.partida.direccion || "Sin dirección"}
+                    </p>
+                    <p className="text-muted mt-2 text-xs">Llegada</p>
+                    <p className="text-main line-clamp-2 text-sm font-semibold">
+                      {form.llegada.direccion || "Sin dirección"}
+                    </p>
+                  </div>
+                </div>
+              </section>
+            )}
+              </div>
+
+              <aside className="h-fit rounded-lg border bg-[var(--app-surface-muted)] p-4 xl:sticky xl:top-0">
+                <p className="text-faint text-[10px] font-extrabold uppercase tracking-[0.14em]">
+                  Resumen de la orden
+                </p>
+                <h3 className="text-main mt-2 truncate text-base font-extrabold">
+                  {form.clienteSolicitante.razonSocial || "Cliente por definir"}
+                </h3>
+                <p className="text-muted mt-1 text-xs">
+                  {form.fechaProgramada || "Sin fecha"} · {form.cantidadViajes || 0} viaje(s)
+                </p>
+
+                <div className="mt-4 space-y-3 border-t pt-4">
+                  <div>
+                    <p className="text-faint text-[10px] font-bold uppercase">Carga</p>
+                    <p className="text-main mt-0.5 text-xs font-semibold">
+                      {form.tipoCarga.replaceAll("_", " ")}
+                      {form.dimensionCarga ? ` · ${form.dimensionCarga} pies` : ""}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-faint text-[10px] font-bold uppercase">Origen</p>
+                    <p className="text-main mt-0.5 line-clamp-2 text-xs font-semibold">
+                      {form.partida.direccion || "Pendiente"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-faint text-[10px] font-bold uppercase">Destino</p>
+                    <p className="text-main mt-0.5 line-clamp-2 text-xs font-semibold">
+                      {form.llegada.direccion || "Pendiente"}
+                    </p>
+                  </div>
+                </div>
+
+                {Object.keys(fieldErrors).length > 0 && (
+                  <div className="mt-4 rounded-md border border-red-500/30 bg-red-500/10 p-3">
+                    <p className="text-xs font-bold text-red-700 dark:text-red-300">
+                      {Object.keys(fieldErrors).length} campo(s) pendiente(s)
+                    </p>
+                    <p className="text-muted mt-1 text-xs">
+                      Revisa los pasos marcados antes de guardar.
+                    </p>
+                  </div>
+                )}
+              </aside>
+            </div>
           </div>
 
           <div className="border-t px-5 py-4 sm:px-6">
-            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
               <button
                 type="button"
                 onClick={handleClose}
@@ -1345,7 +1623,30 @@ const OrdenServicioModal = ({
                 {isViewMode ? "Cerrar" : "Cancelar"}
               </button>
 
-              {!isViewMode && (
+              <div className="flex gap-2">
+                {activeStep > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveStep((current) => current - 1)}
+                    className="btn-secondary"
+                  >
+                    <ArrowLeft />
+                    Anterior
+                  </button>
+                )}
+
+                {activeStep < FORM_STEPS.length - 1 && (
+                  <button
+                    type="button"
+                    onClick={() => validateAndGoToStep(activeStep + 1)}
+                    className="btn-primary"
+                  >
+                    Siguiente
+                    <ArrowRight />
+                  </button>
+                )}
+
+              {!isViewMode && activeStep === FORM_STEPS.length - 1 && (
                 <button
                   type="submit"
                   disabled={loading}
@@ -1360,6 +1661,7 @@ const OrdenServicioModal = ({
                     : "Guardar orden"}
                 </button>
               )}
+              </div>
             </div>
           </div>
         </form>

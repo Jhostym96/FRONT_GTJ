@@ -1,11 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { notify } from "../utils/notify";
-import { Eye, Pencil, Power, PowerOff } from "lucide-react";
+import { Eye, Pencil, Power, PowerOff, ShieldCheck, Truck } from "lucide-react";
 import { useUnidades } from "../context/UnidadContext";
 import { useConfirm } from "../context/ConfirmContext";
 import UnidadModal from "../components/modals/UnidadModal";
 import TablePagination from "../components/TablePagination";
 import { getRecordId } from "../utils/apiData";
+import { useDebouncedValue } from "../hooks/useDebouncedValue";
+import {
+  FilterButtonGroup,
+  ListSearchInput,
+  StatusBadge,
+  SummaryIndicator,
+} from "../components/ui/ListingControls";
 
 function UnidadesPage() {
   const {
@@ -22,11 +29,26 @@ function UnidadesPage() {
   const [mode, setMode] = useState("create");
   const [unidadSeleccionada, setUnidadSeleccionada] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [busqueda, setBusqueda] = useState("");
+  const [filtroEstado, setFiltroEstado] = useState("TODOS");
+  const [filtroTipo, setFiltroTipo] = useState("TODOS");
+  const busquedaDebounced = useDebouncedValue(busqueda.trim());
 
-  const cargarUnidades = async (page = paginationUnidades.page) => {
+  const cargarUnidades = async (page = 1) => {
     try {
       setLoading(true);
-      await obtenerUnidades?.({ page, limit: paginationUnidades.limit });
+      await obtenerUnidades?.({
+        page,
+        limit: paginationUnidades.limit,
+        search: busquedaDebounced,
+        tipoUnidad: filtroTipo === "TODOS" ? undefined : filtroTipo,
+        estado:
+          filtroEstado === "TODOS"
+            ? undefined
+            : filtroEstado === "ACTIVOS"
+              ? "ACTIVO"
+              : "INACTIVO",
+      });
     } catch (error) {
       console.error("Error al cargar unidades:", error);
     } finally {
@@ -37,7 +59,7 @@ function UnidadesPage() {
   useEffect(() => {
     cargarUnidades();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [busquedaDebounced, filtroEstado, filtroTipo]);
 
   const abrirCrear = () => {
     setMode("create");
@@ -113,19 +135,26 @@ function UnidadesPage() {
     cargarUnidades(page);
   };
 
-  const EstadoBadge = ({ estado }) => {
-    if (estado === "ACTIVO") {
-      return (
-        <span className="inline-flex items-center justify-center rounded-full border border-green-500/30 bg-green-500/10 px-3 py-1 text-[11px] font-bold tracking-wide text-green-300">
-          ACTIVO
-        </span>
-      );
-    }
+  const resumen = useMemo(
+    () =>
+      unidades.reduce(
+        (acc, unidad) => {
+          acc.total += 1;
+          if ((unidad.estado || "ACTIVO") === "ACTIVO") acc.activos += 1;
+          if (unidad.tipoUnidad === "TRACTO") acc.tractos += 1;
+          if (unidad.tipoUnidad === "CARRETA") acc.carretas += 1;
+          return acc;
+        },
+        { total: 0, activos: 0, tractos: 0, carretas: 0 }
+      ),
+    [unidades]
+  );
 
+  const EstadoBadge = ({ estado }) => {
     return (
-      <span className="inline-flex items-center justify-center rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1 text-[11px] font-bold tracking-wide text-red-300">
+      <StatusBadge tone={estado === "ACTIVO" ? "success" : "danger"}>
         {estado || "INACTIVO"}
-      </span>
+      </StatusBadge>
     );
   };
 
@@ -133,15 +162,9 @@ function UnidadesPage() {
     const isTracto = tipo === "TRACTO";
 
     return (
-      <span
-        className={`inline-flex items-center justify-center rounded-full border px-3 py-1 text-[11px] font-bold tracking-wide ${
-          isTracto
-            ? "border-blue-500/30 bg-blue-500/10 text-blue-300"
-            : "border-amber-500/30 bg-amber-500/10 text-amber-300"
-        }`}
-      >
+      <StatusBadge tone={isTracto ? "info" : "warning"}>
         {tipo || "UNIDAD"}
-      </span>
+      </StatusBadge>
     );
   };
 
@@ -155,21 +178,23 @@ function UnidadesPage() {
         <button
           type="button"
           onClick={() => abrirVer(unidad)}
-          className="btn-secondary btn-icon"
+          className={mobile ? "btn-secondary" : "btn-secondary btn-icon"}
           title="Ver unidad"
           aria-label="Ver unidad"
         >
           <Eye />
+          {mobile && "Ver"}
         </button>
 
         <button
           type="button"
           onClick={() => abrirEditar(unidad)}
-          className="btn-primary btn-icon"
+          className={mobile ? "btn-primary" : "btn-primary btn-icon"}
           title="Editar unidad"
           aria-label="Editar unidad"
         >
           <Pencil />
+          {mobile && "Editar"}
         </button>
 
         <button
@@ -177,11 +202,12 @@ function UnidadesPage() {
           onClick={() => handleCambiarEstado(unidad)}
           className={`${
             unidad.estado === "ACTIVO" ? "btn-danger" : "btn-success"
-          } btn-icon`}
+          } ${mobile ? "" : "btn-icon"}`}
           title={unidad.estado === "ACTIVO" ? "Desactivar unidad" : "Activar unidad"}
           aria-label={unidad.estado === "ACTIVO" ? "Desactivar unidad" : "Activar unidad"}
         >
           {unidad.estado === "ACTIVO" ? <PowerOff /> : <Power />}
+          {mobile && (unidad.estado === "ACTIVO" ? "Desactivar" : "Activar")}
         </button>
       </div>
     );
@@ -216,6 +242,55 @@ function UnidadesPage() {
             </button>
           </div>
         </header>
+
+        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {[
+            ["Unidades", resumen.total, Truck, "bg-blue-500/10 text-blue-600 dark:text-blue-300"],
+            ["Activas", resumen.activos, Power, "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300"],
+            ["Tractos", resumen.tractos, Truck, "bg-violet-500/10 text-violet-600 dark:text-violet-300"],
+            ["Carretas", resumen.carretas, ShieldCheck, "bg-amber-500/10 text-amber-600 dark:text-amber-300"],
+          ].map(([label, value, icon, tone]) => (
+            <SummaryIndicator
+              key={label}
+              icon={icon}
+              label={label}
+              value={value}
+              tone={tone}
+            />
+          ))}
+        </section>
+
+        <section className="filter-panel">
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center">
+            <ListSearchInput
+              value={busqueda}
+              onChange={setBusqueda}
+              onClear={() => setBusqueda("")}
+              placeholder="Buscar por placa, marca, modelo o TUCE"
+              ariaLabel="Buscar unidades"
+              className="lg:max-w-md"
+            />
+            <FilterButtonGroup
+              value={filtroTipo}
+              onChange={setFiltroTipo}
+              options={[
+                { value: "TODOS", label: "Todos" },
+                { value: "TRACTO", label: "Tractos" },
+                { value: "CARRETA", label: "Carretas" },
+              ]}
+            />
+            <FilterButtonGroup
+              value={filtroEstado}
+              onChange={setFiltroEstado}
+              options={[
+                { value: "TODOS", label: "Todos" },
+                { value: "ACTIVOS", label: "Activas" },
+                { value: "INACTIVOS", label: "Inactivas" },
+              ]}
+            />
+          </div>
+          <p className="text-muted mt-3 border-t pt-3 text-xs">{paginationUnidades.total} registros encontrados</p>
+        </section>
 
         {loading ? (
           <div className="loading-panel">

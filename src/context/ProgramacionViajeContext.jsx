@@ -44,6 +44,7 @@ export function ProgramacionViajeProvider({ children }) {
         page: params.page ?? 1,
         limit: params.limit ?? 10,
         search: params.search,
+        estado: params.estado,
       });
       const res = await getProgramacionesViajeRequest(requestParams);
       const data = normalizeCollection(res.data, ["programaciones"]);

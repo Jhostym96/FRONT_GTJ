@@ -19,7 +19,6 @@ import {
   FaTools,
   FaSave,
   FaSortNumericUp,
-  FaVideo,
 } from "react-icons/fa";
 
 export const dashboardMenu = {
@@ -106,6 +105,11 @@ export const facturacionMenu = {
     {
       path: "/facturacion",
       label: "Control de Facturas",
+      icon: FaFileInvoice,
+    },
+    {
+      path: "/facturas",
+      label: "Facturas Nubefact",
       icon: FaFileInvoice,
     },
   ],

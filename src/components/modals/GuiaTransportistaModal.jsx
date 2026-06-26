@@ -49,6 +49,14 @@ const INDICADOR_SUNAT_LABELS = {
   "05": "Flete por pagar",
 };
 
+const SECTION_TABS = [
+  { id: "programacion", label: "Programación" },
+  { id: "emision", label: "Emisión" },
+  { id: "pagador", label: "Pagador SUNAT" },
+  { id: "items", label: "Items" },
+  { id: "documentos", label: "Documentos" },
+];
+
 const mostrarErroresApi = (error, fallback) => {
   const mensajes = obtenerMensajesErrorApi(error, fallback);
 
@@ -73,6 +81,9 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
   const isView = mode === "view";
   const isEdit = mode === "edit";
   const confirm = useConfirm();
+  const sectionRefs = useRef({});
+  const [activeSection, setActiveSection] = useState("programacion");
+  const [isDirty, setIsDirty] = useState(false);
 
   const {
     crearGuiaTransportista,
@@ -140,6 +151,12 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
   const [form, setForm] = useState(initialForm);
   const [subcontratadorClienteId, setSubcontratadorClienteId] = useState("");
   const [pagadorTerceroClienteId, setPagadorTerceroClienteId] = useState("");
+
+  const setDirty = () => {
+    if (!isView) {
+      setIsDirty(true);
+    }
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -213,12 +230,14 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
       });
       setSubcontratadorClienteId("");
       setPagadorTerceroClienteId("");
+      setIsDirty(false);
     }
 
     if (!guia && mode === "create") {
       setForm(initialForm);
       setSubcontratadorClienteId("");
       setPagadorTerceroClienteId("");
+      setIsDirty(false);
     }
   }, [guia, mode, isOpen, isEdit, isView, initialForm]);
 
@@ -312,9 +331,68 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
   const mtcVisible = isView ? guia?.mtc || mtcEmpresa : mtcEmpresa;
   const numeroVisible = guia?.numero || "Automático";
 
+  const scrollToSection = (sectionId) => {
+    setActiveSection(sectionId);
+
+    const section = sectionRefs.current[sectionId];
+    if (section?.scrollIntoView) {
+      section.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
+  const handleClose = async () => {
+    if (!isView && isDirty) {
+      const confirmar = await confirm({
+        title: "Descartar cambios",
+        message: "Hay cambios sin guardar. Si cierras ahora, se perderán.",
+        confirmText: "Descartar",
+        cancelText: "Seguir editando",
+        variant: "danger",
+      });
+
+      if (!confirmar) return;
+    }
+
+    onClose();
+  };
+
+  const resumenGuia = [
+    {
+      label: "Programación",
+      value:
+        programacionSeleccionada?.numeroProgramacion ||
+        guia?.programacionViaje?.numeroProgramacion ||
+        guia?.programacionViajeId ||
+        "Sin seleccionar",
+    },
+    {
+      label: "Cliente",
+      value:
+        orden?.clienteSolicitanteRazonSocial ||
+        guia?.cliente_denominacion ||
+        guia?.clienteSolicitante?.razonSocial ||
+        "Pendiente",
+    },
+    {
+      label: "Conductor",
+      value: conductor
+        ? `${conductor.nombres || ""} ${conductor.apellidos || ""}`.trim()
+        : guia?.conductor_denominacion || guia?.conductor_nombre || "Pendiente",
+    },
+    {
+      label: "Unidad",
+      value:
+        vehiculoPrincipal?.placa ||
+        guia?.transportista_placa_numero ||
+        guia?.programacionViaje?.vehiculoPrincipal?.placa ||
+        "Pendiente",
+    },
+  ];
+
   const handleChange = (e) => {
     const { name, value } = e.target;
 
+    setDirty();
     setForm((prev) => ({
       ...prev,
       [name]: value,
@@ -330,6 +408,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
   const handleSubcontratadorClienteChange = (e) => {
     if (isView) return;
 
+    setDirty();
     const clienteId = e.target.value;
     setSubcontratadorClienteId(clienteId);
 
@@ -361,6 +440,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
   const handlePagadorTerceroClienteChange = (e) => {
     if (isView) return;
 
+    setDirty();
     const clienteId = e.target.value;
     setPagadorTerceroClienteId(clienteId);
 
@@ -390,6 +470,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
   };
 
   const handleItemChange = (index, e) => {
+    setDirty();
     const nuevosItems = [...form.items];
 
     nuevosItems[index] = {
@@ -404,6 +485,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
   };
 
   const agregarItem = () => {
+    setDirty();
     setForm((prev) => ({
       ...prev,
       items: [
@@ -420,6 +502,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
   };
 
   const eliminarItem = (index) => {
+    setDirty();
     setForm((prev) => ({
       ...prev,
       items: prev.items.filter((_, i) => i !== index),
@@ -427,6 +510,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
   };
 
   const handleDocumentoChange = (index, e) => {
+    setDirty();
     const nuevosDocumentos = [...form.documento_relacionado];
 
     nuevosDocumentos[index] = {
@@ -441,12 +525,13 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
   };
 
   const agregarDocumento = () => {
+    setDirty();
     setForm((prev) => ({
       ...prev,
       documento_relacionado: [
         ...prev.documento_relacionado,
         {
-          tipo: "01",
+          tipo: "09",
           serie: "",
           numero: "",
         },
@@ -455,6 +540,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
   };
 
   const eliminarDocumento = (index) => {
+    setDirty();
     setForm((prev) => ({
       ...prev,
       documento_relacionado: prev.documento_relacionado.filter(
@@ -602,6 +688,36 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
     }
   };
 
+  const getEstadoStyle = (estado) => {
+    switch (estado) {
+      case "PENDIENTE":
+      case "BORRADOR":
+        return "bg-yellow-500/10 text-yellow-300 border-yellow-500/30";
+      case "GENERADA":
+        return "bg-blue-500/10 text-blue-300 border-blue-500/30";
+      case "ENVIADA":
+        return "bg-orange-500/10 text-orange-300 border-orange-500/30";
+      case "ACEPTADA":
+        return "bg-green-500/10 text-green-300 border-green-500/30";
+      case "RECHAZADA":
+      case "ERROR":
+      case "ANULADA":
+        return "bg-red-500/10 text-red-300 border-red-500/30";
+      default:
+        return "text-muted";
+    }
+  };
+
+  const EstadoBadge = ({ estado }) => (
+    <span
+      className={`inline-flex items-center justify-center rounded-full border px-3 py-1 text-[11px] font-bold tracking-wide ${getEstadoStyle(
+        estado
+      )}`}
+    >
+      {estado || "SIN ESTADO"}
+    </span>
+  );
+
   return (
     <div className="modal-backdrop">
       <div className="panel max-h-[95vh] w-full max-w-6xl overflow-y-auto">
@@ -619,16 +735,77 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
 
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="btn-secondary px-3 py-2 text-sm"
             >
-              X
+              Cerrar
             </button>
           </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5 p-5">
-          <section className="panel p-4">
+          <section className="panel border-dashed p-4">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <p className="text-muted text-xs font-semibold uppercase tracking-wide">
+                  Resumen de emisión
+                </p>
+
+                <h3 className="text-main mt-1 text-lg font-bold">
+                  {isView ? "Vista previa de guía" : isEdit ? "Edición de guía" : "Nueva guía"}
+                </h3>
+
+                <p className="text-faint mt-1 text-sm">
+                  Revisa la programación y los datos base antes de completar la emisión.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <EstadoBadge estado={guia?.estado || (isEdit ? "BORRADOR" : "PENDIENTE")} />
+                <span className="status-badge bg-sky-500/10 text-sky-300 border-sky-500/30">
+                  {serieVisible} / {numeroVisible}
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              {resumenGuia.map((item) => (
+                <div key={item.label} className="info-tile">
+                  <p className="text-faint text-xs uppercase tracking-wide">
+                    {item.label}
+                  </p>
+                  <p className="text-main mt-1 text-sm font-semibold">
+                    {item.value}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              {SECTION_TABS.map((section) => (
+                <button
+                  key={section.id}
+                  type="button"
+                  onClick={() => scrollToSection(section.id)}
+                  className={`rounded-full border px-3 py-2 text-xs font-bold transition ${
+                    activeSection === section.id
+                      ? "border-blue-500/40 bg-blue-500/15 text-blue-200"
+                      : "border-white/10 bg-white/5 text-muted hover:text-main"
+                  }`}
+                >
+                  {section.label}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section
+            className="panel p-4"
+            ref={(el) => {
+              sectionRefs.current.programacion = el;
+            }}
+            onFocusCapture={() => setActiveSection("programacion")}
+          >
             <h3 className="text-muted mb-4 text-sm font-bold uppercase tracking-wide">
               Programación de viaje
             </h3>
@@ -666,6 +843,10 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
                 No hay programaciones pendientes de guía.
               </p>
             )}
+
+            <p className="text-faint mt-3 text-xs">
+              La programación define automáticamente cliente, vehículo y conductor.
+            </p>
 
             {orden && (
               <div className="mt-4 grid gap-3 md:grid-cols-3">
@@ -737,7 +918,13 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
             )}
           </section>
 
-          <section className="panel p-4">
+          <section
+            className="panel p-4"
+            ref={(el) => {
+              sectionRefs.current.emision = el;
+            }}
+            onFocusCapture={() => setActiveSection("emision")}
+          >
             <h3 className="text-muted mb-4 text-sm font-bold uppercase tracking-wide">
               Datos de emisión
             </h3>
@@ -831,102 +1018,114 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
               />
             </div>
 
-            {form.sunat_envio_indicador === "02" && (
-              <div className="mt-4 rounded-xl border border-blue-500/20 bg-blue-500/5 p-4">
-                <h4 className="mb-3 text-sm font-bold text-blue-300">
-                  Datos del subcontratador
-                </h4>
+            <p className="text-faint mt-3 text-xs">
+              Estos campos determinan la forma de emisión y los datos obligatorios del comprobante.
+            </p>
 
-                <div className="grid gap-4 md:grid-cols-3">
-                  <Select
-                    label="Cliente"
-                    name="subcontratador_cliente"
-                    value={subcontratadorClienteId}
-                    onChange={handleSubcontratadorClienteChange}
-                    disabled={isView || !clienteSolicitante}
-                    options={clienteSolicitanteOptions}
-                  />
+            <div
+              className="mt-4"
+              ref={(el) => {
+                sectionRefs.current.pagador = el;
+              }}
+              onFocusCapture={() => setActiveSection("pagador")}
+            >
+              {form.sunat_envio_indicador === "02" && (
+                <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-4">
+                  <h4 className="mb-3 text-sm font-bold text-blue-300">
+                    Datos del subcontratador
+                  </h4>
 
-                  <Input
-                    label="Tipo doc."
-                    name="subcontratador_documento_tipo"
-                    value="6"
-                    disabled={true}
-                  />
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <Select
+                      label="Cliente"
+                      name="subcontratador_cliente"
+                      value={subcontratadorClienteId}
+                      onChange={handleSubcontratadorClienteChange}
+                      disabled={isView || !clienteSolicitante}
+                      options={clienteSolicitanteOptions}
+                    />
 
-                  <Input
-                    label="RUC subcontratador"
-                    name="subcontratador_documento_numero"
-                    value={form.subcontratador_documento_numero}
-                    onChange={handleChange}
-                    disabled={isView}
-                    required
-                  />
+                    <Input
+                      label="Tipo doc."
+                      name="subcontratador_documento_tipo"
+                      value="6"
+                      disabled={true}
+                    />
 
-                  <Input
-                    label="Razón social"
-                    name="subcontratador_denominacion"
-                    value={form.subcontratador_denominacion}
-                    onChange={handleChange}
-                    disabled={isView}
-                    required
-                  />
+                    <Input
+                      label="RUC subcontratador"
+                      name="subcontratador_documento_numero"
+                      value={form.subcontratador_documento_numero}
+                      onChange={handleChange}
+                      disabled={isView}
+                      required
+                    />
+
+                    <Input
+                      label="Razón social"
+                      name="subcontratador_denominacion"
+                      value={form.subcontratador_denominacion}
+                      onChange={handleChange}
+                      disabled={isView}
+                      required
+                    />
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {form.sunat_envio_indicador === "03" && (
-              <div className="mt-4 rounded-xl border border-purple-500/20 bg-purple-500/5 p-4">
-                <h4 className="mb-3 text-sm font-bold text-purple-300">
-                  Datos del pagador tercero
-                </h4>
+              {form.sunat_envio_indicador === "03" && (
+                <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-4">
+                  <h4 className="mb-3 text-sm font-bold text-purple-300">
+                    Datos del pagador tercero
+                  </h4>
 
-                <div className="grid gap-4 md:grid-cols-3">
-                  <Select
-                    label="Cliente"
-                    name="pagador_tercero_cliente"
-                    value={pagadorTerceroClienteId}
-                    onChange={handlePagadorTerceroClienteChange}
-                    disabled={isView || !clienteSolicitante}
-                    options={clienteSolicitanteOptions}
-                  />
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <Select
+                      label="Cliente"
+                      name="pagador_tercero_cliente"
+                      value={pagadorTerceroClienteId}
+                      onChange={handlePagadorTerceroClienteChange}
+                      disabled={isView || !clienteSolicitante}
+                      options={clienteSolicitanteOptions}
+                    />
 
-                  <Select
-                    label="Tipo doc."
-                    name="pagador_servicio_documento_tipo_identidad"
-                    value={form.pagador_servicio_documento_tipo_identidad}
-                    onChange={handleChange}
-                    disabled={isView}
-                    options={[
-                      { value: "6", label: "6 - RUC" },
-                      { value: "1", label: "1 - DNI" },
-                      { value: "4", label: "4 - Carnet extranjería" },
-                      { value: "7", label: "7 - Pasaporte" },
-                      { value: "A", label: "A - Cédula diplomática" },
-                      { value: "0", label: "0 - No domiciliado" },
-                    ]}
-                  />
+                    <Select
+                      label="Tipo doc."
+                      name="pagador_servicio_documento_tipo_identidad"
+                      value={form.pagador_servicio_documento_tipo_identidad}
+                      onChange={handleChange}
+                      disabled={isView}
+                      options={[
+                        { value: "6", label: "6 - RUC" },
+                        { value: "1", label: "1 - DNI" },
+                        { value: "4", label: "4 - Carnet extranjería" },
+                        { value: "7", label: "7 - Pasaporte" },
+                        { value: "A", label: "A - Cédula diplomática" },
+                        { value: "0", label: "0 - No domiciliado" },
+                      ]}
+                    />
 
-                  <Input
-                    label="N° documento"
-                    name="pagador_servicio_documento_numero_identidad"
-                    value={form.pagador_servicio_documento_numero_identidad}
-                    onChange={handleChange}
-                    disabled={isView}
-                    required
-                  />
+                    <Input
+                      label="N° documento"
+                      name="pagador_servicio_documento_numero_identidad"
+                      value={form.pagador_servicio_documento_numero_identidad}
+                      onChange={handleChange}
+                      disabled={isView}
+                      required
+                    />
 
-                  <Input
-                    label="Denominación"
-                    name="pagador_servicio_denominacion"
-                    value={form.pagador_servicio_denominacion}
-                    onChange={handleChange}
-                    disabled={isView}
-                    required
-                  />
+                    <Input
+                      label="Denominación"
+                      name="pagador_servicio_denominacion"
+                      value={form.pagador_servicio_denominacion}
+                      onChange={handleChange}
+                      disabled={isView}
+                      required
+                    />
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
             <div className="mt-4">
               <label className="text-muted mb-1 block text-xs font-semibold">
@@ -944,7 +1143,13 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
             </div>
           </section>
 
-          <section className="panel p-4">
+          <section
+            className="panel p-4"
+            ref={(el) => {
+              sectionRefs.current.items = el;
+            }}
+            onFocusCapture={() => setActiveSection("items")}
+          >
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-muted text-sm font-bold uppercase tracking-wide">
                 Items
@@ -960,6 +1165,10 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
                 </button>
               )}
             </div>
+
+            <p className="text-faint mb-4 text-xs">
+              Cada item debe representar una carga o concepto incluido en la guía.
+            </p>
 
             <div className="space-y-3">
               {form.items.map((item, index) => (
@@ -1031,7 +1240,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
                         onClick={() => eliminarItem(index)}
                         className="btn-danger w-full px-3 py-2 text-xs"
                       >
-                        X
+                        Eliminar
                       </button>
                     )}
                   </div>
@@ -1040,7 +1249,13 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
             </div>
           </section>
 
-          <section className="panel p-4">
+          <section
+            className="panel p-4"
+            ref={(el) => {
+              sectionRefs.current.documentos = el;
+            }}
+            onFocusCapture={() => setActiveSection("documentos")}
+          >
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-muted text-sm font-bold uppercase tracking-wide">
                 Documentos relacionados
@@ -1056,6 +1271,10 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
                 </button>
               )}
             </div>
+
+            <p className="text-faint mb-4 text-xs">
+              Úsalo solo cuando la guía dependa de facturas, boletas o guías previas.
+            </p>
 
             {form.documento_relacionado.length === 0 ? (
               <p className="text-faint text-sm">
@@ -1106,7 +1325,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
                           onClick={() => eliminarDocumento(index)}
                           className="btn-danger w-full px-3 py-2 text-xs"
                         >
-                          X
+                          Eliminar
                         </button>
                       )}
                     </div>
@@ -1119,7 +1338,7 @@ const GuiaTransportistaModal = ({ isOpen, onClose, mode = "create", guia }) => {
           <div className="sticky bottom-0 flex flex-col gap-3 border-t py-4 sm:flex-row sm:justify-end" style={{ background: "var(--app-surface)" }}>
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="btn-secondary px-3 py-2 text-sm"
             >
               {isView ? "Cerrar" : "Cancelar"}

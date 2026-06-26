@@ -2,7 +2,9 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { AlertTriangle, CheckCircle2, X } from "lucide-react";
@@ -24,16 +26,64 @@ function ConfirmDialog({ options, onCancel, onConfirm }) {
   const Icon = isDanger ? AlertTriangle : CheckCircle2;
   const requiresText = Boolean(options.confirmationText);
   const [confirmationValue, setConfirmationValue] = useState("");
+  const dialogRef = useRef(null);
+  const cancelButtonRef = useRef(null);
   const matchesConfirmation =
     !requiresText || confirmationValue.trim() === options.confirmationText;
 
+  useEffect(() => {
+    const previousActiveElement = document.activeElement;
+    cancelButtonRef.current?.focus();
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onCancel();
+        return;
+      }
+
+      if (event.key !== "Tab") return;
+
+      const focusable = dialogRef.current?.querySelectorAll(
+        'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
+      );
+      if (!focusable?.length) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      previousActiveElement?.focus?.();
+    };
+  }, [onCancel]);
+
   return (
-    <div className="modal-backdrop z-[70]" role="presentation">
+    <div
+      className="modal-backdrop z-[70]"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onCancel();
+      }}
+    >
       <div
+        ref={dialogRef}
         className="modal-panel max-w-md animate-fade-in"
         role="dialog"
         aria-modal="true"
         aria-labelledby="confirm-dialog-title"
+        aria-describedby="confirm-dialog-description"
       >
         <div className="mb-5 flex items-start justify-between gap-4">
           <div className="flex items-start gap-3">
@@ -51,7 +101,10 @@ function ConfirmDialog({ options, onCancel, onConfirm }) {
               <h2 id="confirm-dialog-title" className="text-main text-lg font-bold">
                 {options.title}
               </h2>
-              <p className="text-muted mt-1 text-sm leading-5">
+              <p
+                id="confirm-dialog-description"
+                className="text-muted mt-1 text-sm leading-5"
+              >
                 {options.message}
               </p>
             </div>
@@ -59,6 +112,7 @@ function ConfirmDialog({ options, onCancel, onConfirm }) {
 
           <button
             type="button"
+            ref={cancelButtonRef}
             onClick={onCancel}
             className="btn-secondary btn-icon h-8 w-8 min-w-8"
             aria-label="Cerrar confirmación"

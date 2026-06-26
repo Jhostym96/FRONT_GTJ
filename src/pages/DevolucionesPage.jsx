@@ -585,6 +585,60 @@ function DevolucionesPage() {
     ? devolucionesPendientes
     : [];
 
+  const devolucionesResumen = devolucionesFiltradas.reduce(
+    (acc, orden) => {
+      const diasLibres = calcularDiasLibres(
+        getValue(orden, "fechaVencimientoDevolucion", null)
+      );
+      const estado = normalizar(getValue(orden, "estadoDevolucion", ""));
+      const programada = estado === "PROGRAMADA";
+
+      acc.total += 1;
+      acc.programadas += programada ? 1 : 0;
+      acc.pendientes += programada ? 0 : 1;
+      acc.vencidas += diasLibres !== null && diasLibres < 0 ? 1 : 0;
+      acc.hoy += diasLibres === 0 ? 1 : 0;
+      acc.proximas += diasLibres !== null && diasLibres > 0 && diasLibres <= 3 ? 1 : 0;
+
+      return acc;
+    },
+    {
+      total: 0,
+      programadas: 0,
+      pendientes: 0,
+      vencidas: 0,
+      hoy: 0,
+      proximas: 0,
+    }
+  );
+
+  const resumenCards = [
+    {
+      label: "Pendientes",
+      value: devolucionesResumen.pendientes,
+      helper: "Aún no programadas",
+      tone: "amber",
+    },
+    {
+      label: "Programadas",
+      value: devolucionesResumen.programadas,
+      helper: "Ya agendadas",
+      tone: "blue",
+    },
+    {
+      label: "Vencidas",
+      value: devolucionesResumen.vencidas,
+      helper: "Requieren atención",
+      tone: "red",
+    },
+    {
+      label: "Próximas 3 días",
+      value: devolucionesResumen.proximas + devolucionesResumen.hoy,
+      helper: "Hoy y próximos días",
+      tone: "violet",
+    },
+  ];
+
   const toggleOrdenTabla = (clave) => {
     if (ordenTabla === clave) {
       setDireccionTabla((actual) => (actual === "asc" ? "desc" : "asc"));
@@ -600,19 +654,49 @@ function DevolucionesPage() {
       <div className="page-wrap">
         <header className="page-hero">
           <div className="page-hero-content">
-            <div>
-              <div className="eyebrow">Control operativo</div>
-              <h1 className="page-title">Devoluciones</h1>
-              <p className="page-description">
-                Órdenes de servicio con carga tipo contenedor pendientes de devolución.
-              </p>
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div className="max-w-2xl">
+                <div className="eyebrow">Control operativo</div>
+                <h1 className="page-title">Devoluciones</h1>
+                <p className="page-description">
+                  Órdenes de servicio con carga tipo contenedor pendientes de
+                  devolución.
+                </p>
+              </div>
+
+              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                {resumenCards.map((card) => (
+                  <div
+                    key={card.label}
+                    className={`rounded-xl border px-4 py-3 shadow-sm ${
+                      card.tone === "amber"
+                        ? "border-amber-500/20 bg-amber-500/8"
+                        : card.tone === "blue"
+                        ? "border-blue-500/20 bg-blue-500/8"
+                        : card.tone === "red"
+                        ? "border-red-500/20 bg-red-500/8"
+                        : "border-violet-500/20 bg-violet-500/8"
+                    }`}
+                  >
+                    <p className="text-faint text-[11px] font-bold uppercase tracking-wide">
+                      {card.label}
+                    </p>
+                    <div className="mt-1 flex items-end justify-between gap-3">
+                      <p className="text-main text-2xl font-extrabold">
+                        {card.value}
+                      </p>
+                      <p className="text-faint text-[11px]">{card.helper}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
 
           </div>
         </header>
 
         <div className="panel mb-4 p-4">
-          <div className="grid gap-3 lg:grid-cols-[1fr_auto_auto] lg:items-center">
+          <div className="grid gap-3 xl:grid-cols-[1fr_auto] xl:items-center">
             <div className="relative">
               <Search className="text-faint pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
               <input
@@ -634,25 +718,26 @@ function DevolucionesPage() {
                 </button>
               ) : null}
             </div>
+            <div className="flex flex-wrap items-center gap-2 xl:justify-end">
+              {filtroCliente ? (
+                <button
+                  type="button"
+                  onClick={() => setFiltroCliente("")}
+                  className="btn-secondary px-4 py-2"
+                >
+                  Limpiar búsqueda
+                </button>
+              ) : null}
 
-            {filtroCliente ? (
               <button
                 type="button"
-                onClick={() => setFiltroCliente("")}
-                className="btn-secondary px-4 py-2"
+                onClick={abrirProgramacionDevoluciones}
+                className="btn-primary px-4 py-2"
               >
-                Limpiar búsqueda
+                <CalendarClock className="h-4 w-4" />
+                Programación
               </button>
-            ) : null}
-
-            <button
-              type="button"
-              onClick={abrirProgramacionDevoluciones}
-              className="btn-primary px-4 py-2"
-            >
-              <CalendarClock className="h-4 w-4" />
-              Programación
-            </button>
+            </div>
           </div>
         </div>
 
@@ -693,7 +778,11 @@ function DevolucionesPage() {
                 return (
                   <article
                     key={`${id}-${orden.programacionViajeId || ""}`}
-                    className="mobile-card"
+                    className={`mobile-card ${
+                      diasLibres !== null && diasLibres < 0
+                        ? "border border-red-500/30"
+                        : ""
+                    }`}
                   >
                     <div className="mobile-card-header">
                       <div>
@@ -711,6 +800,29 @@ function DevolucionesPage() {
                       <EstadoDevolucionBadge
                         estado={getValue(orden, "estadoDevolucion", "PENDIENTE")}
                       />
+                    </div>
+
+                    <div className="mb-3 flex flex-wrap gap-2">
+                      <span className="inline-flex rounded-full border border-[var(--app-border)] px-2.5 py-1 text-[11px] font-semibold text-[var(--app-text-muted)]">
+                        {programada ? "Programada" : "Pendiente"}
+                      </span>
+                      {diasLibres !== null ? (
+                        <span
+                          className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
+                            diasLibres < 0
+                              ? "border-red-500/30 bg-red-500/10 text-red-400"
+                              : diasLibres === 0
+                              ? "border-amber-500/30 bg-amber-500/10 text-amber-400"
+                              : "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                          }`}
+                        >
+                          {diasLibres < 0
+                            ? `${Math.abs(diasLibres)} día(s) vencido`
+                            : diasLibres === 0
+                            ? "Vence hoy"
+                            : `${diasLibres} día(s) para vencer`}
+                        </span>
+                      ) : null}
                     </div>
 
                     <div className="mobile-detail-grid">
@@ -873,6 +985,7 @@ function DevolucionesPage() {
                       </th>
                       <th className="px-4 py-4 text-left">Programada</th>
                       <th className="px-4 py-4 text-center">Estado devolución</th>
+                      <th className="px-4 py-4 text-center">Alerta</th>
                       <th className="px-4 py-4 text-right">Acciones</th>
                     </tr>
                   </thead>
@@ -887,7 +1000,14 @@ function DevolucionesPage() {
                       const programada = estaProgramada(orden);
 
                       return (
-                        <tr key={`${id}-${orden.programacionViajeId || ""}`}>
+                        <tr
+                          key={`${id}-${orden.programacionViajeId || ""}`}
+                          className={
+                            diasLibres !== null && diasLibres < 0
+                              ? "bg-red-500/[0.04]"
+                              : ""
+                          }
+                        >
                           <td className="min-w-[220px] px-4 py-4">
                             <p className="text-main max-w-[260px] truncate font-semibold">
                               {cliente?.razonSocial || "-"}
@@ -954,6 +1074,23 @@ function DevolucionesPage() {
                                 "PENDIENTE"
                               )}
                             />
+                          </td>
+                          <td className="px-4 py-4 text-center">
+                            {diasLibres !== null && diasLibres < 0 ? (
+                              <span className="inline-flex rounded-full border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-[11px] font-semibold text-red-400">
+                                Vencida
+                              </span>
+                            ) : diasLibres === 0 ? (
+                              <span className="inline-flex rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[11px] font-semibold text-amber-400">
+                                Hoy
+                              </span>
+                            ) : diasLibres !== null && diasLibres <= 3 ? (
+                              <span className="inline-flex rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-1 text-[11px] font-semibold text-violet-400">
+                                Próxima
+                              </span>
+                            ) : (
+                              <span className="text-faint text-xs">—</span>
+                            )}
                           </td>
                           <td className="px-4 py-4">
                             <div className="flex justify-end gap-2">
@@ -1089,6 +1226,57 @@ function DevolucionesPage() {
                 <p className="mobile-card-subtitle">Total programadas</p>
                 <p className="text-main text-xl font-bold">
                   {programacionDevoluciones.length}
+                </p>
+              </div>
+            </div>
+
+            <div className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="info-tile py-3">
+                <p className="mobile-card-subtitle">Vencidas</p>
+                <p className="text-main text-xl font-bold">
+                  {
+                    programacionDevoluciones.filter(
+                      (item) =>
+                        calcularDiasLibres(
+                          getValue(item, "fechaVencimientoDevolucion", null)
+                        ) < 0
+                    ).length
+                  }
+                </p>
+              </div>
+              <div className="info-tile py-3">
+                <p className="mobile-card-subtitle">Hoy</p>
+                <p className="text-main text-xl font-bold">
+                  {
+                    programacionDevoluciones.filter(
+                      (item) =>
+                        calcularDiasLibres(
+                          getValue(item, "fechaVencimientoDevolucion", null)
+                        ) === 0
+                    ).length
+                  }
+                </p>
+              </div>
+              <div className="info-tile py-3">
+                <p className="mobile-card-subtitle">Conductor</p>
+                <p className="text-main text-xl font-bold">
+                  {new Set(
+                    programacionDevoluciones.map((item) =>
+                      getNombreConductor(
+                        getValue(item, "conductorDevolucion", null)
+                      )
+                    )
+                  ).size}
+                </p>
+              </div>
+              <div className="info-tile py-3">
+                <p className="mobile-card-subtitle">Contenedores únicos</p>
+                <p className="text-main text-xl font-bold">
+                  {new Set(
+                    programacionDevoluciones.map((item) =>
+                      getValue(item, "numeroContenedor", "-")
+                    )
+                  ).size}
                 </p>
               </div>
             </div>

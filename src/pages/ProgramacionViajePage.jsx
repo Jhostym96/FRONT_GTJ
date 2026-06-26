@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Ban,
   CalendarClock,
   CheckCircle2,
+  Clock3,
   Eye,
   FileCheck2,
   Flag,
@@ -10,6 +11,8 @@ import {
   MapPin,
   Pencil,
   Route,
+  Truck,
+  Users,
   Warehouse,
 } from "lucide-react";
 import { notify } from "../utils/notify";
@@ -22,6 +25,13 @@ import { formatDateOnly } from "../utils/date";
 import ProgramacionViajeModal from "../components/modals/ProgramacionViajeModal";
 import ProgramacionGuiaSunatModal from "../components/modals/ProgramacionGuiaSunatModal";
 import TablePagination from "../components/TablePagination";
+import { useDebouncedValue } from "../hooks/useDebouncedValue";
+import {
+  FilterButtonGroup,
+  ListSearchInput,
+  StatusBadge,
+  SummaryIndicator,
+} from "../components/ui/ListingControls";
 
 const APP_TIME_ZONE = "America/Lima";
 const APP_TIME_ZONE_OFFSET = "-05:00";
@@ -84,6 +94,26 @@ const TRANSICIONES = {
   ENTREGADO: [{ estado: "FINALIZADO", label: "Finalizar" }],
 };
 
+const ETAPAS_OPERATIVAS = [
+  "ASIGNADO",
+  "EN_RUTA",
+  "EN_ALMACEN",
+  "EN_CLIENTE",
+  "ENTREGADO",
+  "FINALIZADO",
+];
+
+const ESTADOS_FILTRO = [
+  { value: "TODOS", label: "Todos" },
+  { value: "ACTIVOS", label: "En operación" },
+  { value: "ASIGNADO", label: "Asignados" },
+  { value: "EN_RUTA", label: "En ruta" },
+  { value: "EN_CLIENTE", label: "En cliente" },
+  { value: "FINALIZADO", label: "Finalizados" },
+];
+
+const ESTADOS_ACTIVOS = ["ASIGNADO", "EN_RUTA", "EN_ALMACEN", "EN_CLIENTE", "ENTREGADO"];
+
 const getAccionIcon = (estado) => {
   switch (estado) {
     case "EN_RUTA":
@@ -121,6 +151,9 @@ const ProgramacionViajePage = () => {
   const [cambiandoEstado, setCambiandoEstado] = useState({});
   const [estadoConFecha, setEstadoConFecha] = useState(null);
   const [viajeGuiaSunat, setViajeGuiaSunat] = useState(null);
+  const [busqueda, setBusqueda] = useState("");
+  const [filtroEstado, setFiltroEstado] = useState("TODOS");
+  const busquedaDebounced = useDebouncedValue(busqueda.trim());
   const [fechaHoraOperacion, setFechaHoraOperacion] = useState(
     getDateTimeLocalNow()
   );
@@ -128,13 +161,29 @@ const ProgramacionViajePage = () => {
   const getId = (item) => item?.id ?? item?._id ?? "";
 
   useEffect(() => {
-    const cargarDatos = async () => {
+    const cargarProgramaciones = async () => {
       if (getProgramacionesViaje) {
-        await getProgramacionesViaje({ page: 1, limit: 10 });
+        await getProgramacionesViaje({
+          page: 1,
+          limit: 10,
+          search: busquedaDebounced,
+          estado: filtroEstado === "TODOS" ? undefined : filtroEstado,
+        });
       } else if (obtenerProgramacionesViaje) {
         await obtenerProgramacionesViaje();
       }
+    };
 
+    cargarProgramaciones();
+  }, [
+    busquedaDebounced,
+    filtroEstado,
+    getProgramacionesViaje,
+    obtenerProgramacionesViaje,
+  ]);
+
+  useEffect(() => {
+    const cargarCatalogos = async () => {
       const selectParams = { page: 1, limit: 100 };
 
       if (obtenerTodasUnidades) {
@@ -152,13 +201,11 @@ const ProgramacionViajePage = () => {
       }
     };
 
-    cargarDatos();
+    cargarCatalogos();
   }, [
     getConductores,
-    getProgramacionesViaje,
     obtenerConductores,
     obtenerTodosConductores,
-    obtenerProgramacionesViaje,
     obtenerTodasUnidades,
     obtenerUnidades,
   ]);
@@ -193,28 +240,28 @@ const ProgramacionViajePage = () => {
   const getEstadoStyle = (estado) => {
     switch (estado) {
       case "PENDIENTE":
-        return "bg-yellow-500/10 text-yellow-300 border-yellow-500/30";
+        return "bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 border-yellow-500/30";
 
       case "ASIGNADO":
-        return "bg-blue-500/10 text-blue-300 border-blue-500/30";
+        return "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30";
 
       case "EN_RUTA":
-        return "bg-purple-500/10 text-purple-300 border-purple-500/30";
+        return "bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30";
 
       case "EN_ALMACEN":
-        return "bg-cyan-500/10 text-cyan-300 border-cyan-500/30";
+        return "bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 border-cyan-500/30";
 
       case "EN_CLIENTE":
-        return "bg-orange-500/10 text-orange-300 border-orange-500/30";
+        return "bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-500/30";
 
       case "ENTREGADO":
-        return "bg-emerald-500/10 text-emerald-300 border-emerald-500/30";
+        return "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30";
 
       case "FINALIZADO":
-        return "bg-green-500/10 text-green-300 border-green-500/30";
+        return "bg-green-500/10 text-green-700 dark:text-green-300 border-green-500/30";
 
       case "ANULADO":
-        return "bg-red-500/10 text-red-300 border-red-500/30";
+        return "bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/30";
 
       default:
         return "text-muted";
@@ -264,6 +311,8 @@ const ProgramacionViajePage = () => {
       await getProgramacionesViaje({
         page,
         limit: paginationProgramaciones.limit,
+        search: busquedaDebounced,
+        estado: filtroEstado === "TODOS" ? undefined : filtroEstado,
       });
     } else if (obtenerProgramacionesViaje) {
       await obtenerProgramacionesViaje();
@@ -451,26 +500,112 @@ const ProgramacionViajePage = () => {
     return null;
   };
 
-  const listaProgramaciones = Array.isArray(programaciones)
-    ? programaciones
-    : [];
+  const listaProgramaciones = useMemo(
+    () => (Array.isArray(programaciones) ? programaciones : []),
+    [programaciones]
+  );
+
+  const resumenEstados = useMemo(
+    () =>
+      listaProgramaciones.reduce(
+        (resumen, viaje) => {
+          resumen.total += 1;
+          if (ESTADOS_ACTIVOS.includes(viaje.estado)) resumen.activos += 1;
+          if (viaje.estado === "EN_RUTA") resumen.enRuta += 1;
+          if (viaje.estado === "EN_CLIENTE") resumen.enCliente += 1;
+          if (viaje.estado === "FINALIZADO") resumen.finalizados += 1;
+          return resumen;
+        },
+        { total: 0, activos: 0, enRuta: 0, enCliente: 0, finalizados: 0 }
+      ),
+    [listaProgramaciones]
+  );
 
   const EstadoBadge = ({ estado }) => (
-    <span
-      className={`inline-flex items-center justify-center rounded-full border px-3 py-1 text-[11px] font-bold tracking-wide ${getEstadoStyle(
-        estado
-      )}`}
-    >
+    <StatusBadge tone={getEstadoStyle(estado)}>
       {estado || "SIN ESTADO"}
-    </span>
+    </StatusBadge>
   );
+
+  const ProgresoViaje = ({ estado, compact = false }) => {
+    const currentIndex = ETAPAS_OPERATIVAS.indexOf(estado);
+    const isCancelled = estado === "ANULADO";
+
+    if (isCancelled) {
+      return (
+        <div className="flex items-center gap-2 text-xs font-semibold text-red-600 dark:text-red-300">
+          <Ban className="h-4 w-4" />
+          Flujo anulado
+        </div>
+      );
+    }
+
+    return (
+      <div
+        className={`grid grid-cols-6 ${compact ? "gap-1" : "min-w-[250px] gap-1.5"}`}
+        aria-label={`Progreso del viaje: ${estado || "sin estado"}`}
+      >
+        {ETAPAS_OPERATIVAS.map((etapa, index) => {
+          const completed = currentIndex >= index;
+          const current = currentIndex === index;
+
+          return (
+            <div key={etapa} className="min-w-0">
+              <div
+                className={`h-1.5 rounded-full transition ${
+                  completed
+                    ? current
+                      ? "bg-[var(--app-primary)]"
+                      : "bg-emerald-500"
+                    : "bg-[var(--app-border)]"
+                }`}
+                title={etapa.replaceAll("_", " ")}
+              />
+              {!compact && (
+                <p
+                  className={`mt-1 truncate text-[9px] font-bold ${
+                    current ? "text-[var(--app-primary)]" : "text-faint"
+                  }`}
+                >
+                  {etapa === "EN_ALMACEN"
+                    ? "Almacén"
+                    : etapa === "EN_CLIENTE"
+                    ? "Cliente"
+                    : etapa.charAt(0) + etapa.slice(1).toLowerCase()}
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
 
   const AccionesViaje = ({ viaje, mobile = false }) => {
     const viajeId = getId(viaje);
     const actionClass = (variant) => (mobile ? variant : `${variant} btn-icon`);
 
     return (
-      <div className={mobile ? "mobile-actions" : "table-actions"}>
+      <div className={mobile ? "mobile-actions" : "flex justify-end gap-2"}>
+        {(TRANSICIONES[viaje.estado] || []).map((accion) => (
+          <button
+            key={accion.estado}
+            type="button"
+            disabled={cambiandoEstado[viajeId]}
+            onClick={() => handleCambiarEstado(viaje, accion.estado)}
+            className={mobile ? "btn-primary" : "btn-primary px-3"}
+            title={accion.label}
+            aria-label={accion.label}
+          >
+            {cambiandoEstado[viajeId] ? (
+              <LoaderCircle className="animate-spin" />
+            ) : (
+              getAccionIcon(accion.estado)
+            )}
+            {accion.label}
+          </button>
+        ))}
+
         <button
           type="button"
           onClick={() => abrirVer(viaje)}
@@ -498,25 +633,6 @@ const ProgramacionViajePage = () => {
             {mobile && "Editar"}
           </button>
         )}
-
-        {(TRANSICIONES[viaje.estado] || []).map((accion) => (
-          <button
-            key={accion.estado}
-            type="button"
-            disabled={cambiandoEstado[viajeId]}
-            onClick={() => handleCambiarEstado(viaje, accion.estado)}
-            className={actionClass("btn-primary")}
-            title={accion.label}
-            aria-label={accion.label}
-          >
-            {cambiandoEstado[viajeId] ? (
-              <LoaderCircle className="animate-spin" />
-            ) : (
-              getAccionIcon(accion.estado)
-            )}
-            {mobile && accion.label}
-          </button>
-        ))}
 
         {!tieneGuiaRegistrada(viaje) &&
           !["FINALIZADO", "ANULADO"].includes(viaje.estado) && (
@@ -558,14 +674,14 @@ const ProgramacionViajePage = () => {
       <div className="page-wrap">
         <header className="page-hero">
           <div className="page-hero-content">
-            <div>
+            <div className="max-w-3xl">
               <div className="eyebrow">Gestión de viajes</div>
 
               <h1 className="page-title">Programación de Viajes</h1>
 
               <p className="page-description">
-                Asigna órdenes de servicio a unidades y conductores para iniciar
-                el flujo operativo.
+                Supervisa asignaciones, avance operativo y próximas acciones de
+                cada servicio.
               </p>
             </div>
 
@@ -578,6 +694,69 @@ const ProgramacionViajePage = () => {
             </button>
           </div>
         </header>
+
+        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <SummaryIndicator
+            icon={Truck}
+            label="En operación"
+            value={resumenEstados.activos}
+          />
+          <SummaryIndicator
+            icon={Route}
+            label="En ruta"
+            value={resumenEstados.enRuta}
+            tone="bg-purple-500/10 text-purple-600 dark:text-purple-300"
+          />
+          <SummaryIndicator
+            icon={MapPin}
+            label="En cliente"
+            value={resumenEstados.enCliente}
+            tone="bg-orange-500/10 text-orange-600 dark:text-orange-300"
+          />
+          <SummaryIndicator
+            icon={CheckCircle2}
+            label="Finalizados"
+            value={resumenEstados.finalizados}
+            tone="bg-emerald-500/10 text-emerald-600 dark:text-emerald-300"
+          />
+        </section>
+
+        <section className="filter-panel">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <ListSearchInput
+              value={busqueda}
+              onChange={setBusqueda}
+              onClear={() => setBusqueda("")}
+              placeholder="Buscar programación, cliente, placa o conductor"
+              ariaLabel="Buscar programaciones"
+              className="xl:max-w-md"
+            />
+
+            <FilterButtonGroup
+              options={ESTADOS_FILTRO}
+              value={filtroEstado}
+              onChange={setFiltroEstado}
+              className="pb-1 xl:pb-0"
+            />
+          </div>
+          <div className="mt-3 flex items-center justify-between border-t pt-3">
+            <p className="text-muted text-xs">
+              {paginationProgramaciones.total} registros encontrados
+            </p>
+            {(busqueda || filtroEstado !== "TODOS") && (
+              <button
+                type="button"
+                onClick={() => {
+                  setBusqueda("");
+                  setFiltroEstado("TODOS");
+                }}
+                className="text-xs font-bold text-[var(--app-primary)] hover:underline"
+              >
+                Limpiar filtros
+              </button>
+            )}
+          </div>
+        </section>
 
         {listaProgramaciones.length === 0 ? (
           <div className="empty-panel">
@@ -621,6 +800,18 @@ const ProgramacionViajePage = () => {
                       </div>
 
                       <EstadoBadge estado={viaje.estado} />
+                    </div>
+
+                    <div className="mb-3 rounded-md border bg-[var(--app-surface-muted)] p-3">
+                      <div className="mb-2 flex items-center justify-between gap-3">
+                        <p className="text-faint text-[10px] font-extrabold uppercase tracking-wide">
+                          Avance operativo
+                        </p>
+                        <p className="text-main text-xs font-bold">
+                          {(TRANSICIONES[viaje.estado] || [])[0]?.label || "Sin acción pendiente"}
+                        </p>
+                      </div>
+                      <ProgresoViaje estado={viaje.estado} />
                     </div>
 
                     <div className="mobile-detail-grid-2">
@@ -716,19 +907,15 @@ const ProgramacionViajePage = () => {
 
             <div className="data-table-wrap">
               <div className="table-scroll">
-                <table className="data-table dense-table w-full min-w-[1250px] text-sm">
+                <table className="data-table dense-table w-full min-w-[1320px] text-sm">
                   <thead>
                     <tr>
                       <th className="px-4 py-4 text-left">Programación</th>
                       <th className="px-4 py-4 text-left">Cliente</th>
-                      <th className="px-4 py-4 text-left">Carga</th>
-                      <th className="px-4 py-4 text-left">Tracto</th>
-                      <th className="px-4 py-4 text-left">Carreta</th>
-                      <th className="px-4 py-4 text-left">Conductor</th>
-                      <th className="px-4 py-4 text-left">Fecha Inicio</th>
-                      <th className="px-4 py-4 text-left">Operación</th>
-                      <th className="px-4 py-4 text-center">Estado</th>
-                      <th className="px-4 py-4 text-left">Acciones</th>
+                      <th className="px-4 py-4 text-left">Recurso asignado</th>
+                      <th className="px-4 py-4 text-left">Inicio y carga</th>
+                      <th className="px-4 py-4 text-left">Avance operativo</th>
+                      <th className="px-4 py-4 text-right">Acciones</th>
                     </tr>
                   </thead>
 
@@ -736,10 +923,11 @@ const ProgramacionViajePage = () => {
                     {listaProgramaciones.map((viaje) => {
                       const viajeId = getId(viaje);
                       const cliente = obtenerClienteSolicitante(viaje);
+                      const siguienteAccion = (TRANSICIONES[viaje.estado] || [])[0];
 
                       return (
                         <tr key={viajeId}>
-                          <td className="px-4 py-4">
+                          <td className="min-w-[180px] px-4 py-4">
                             <p className="text-main font-bold">
                               {viaje.numeroProgramacion ||
                                 `PV-${String(viajeId).padStart(6, "0")}`}
@@ -747,6 +935,9 @@ const ProgramacionViajePage = () => {
                             <p className="text-faint text-xs">
                               Orden: {viaje.ordenServicio?.numeroOrden || "-"}
                             </p>
+                            <div className="mt-2">
+                              <EstadoBadge estado={viaje.estado} />
+                            </div>
                           </td>
 
                           <td className="min-w-[220px] px-4 py-4">
@@ -758,77 +949,70 @@ const ProgramacionViajePage = () => {
                             </p>
                           </td>
 
-                          <td className="whitespace-nowrap px-4 py-4">
-                            <p className="text-main font-semibold">
-                              {formatearTipoCarga(
-                                viaje.ordenServicio?.tipoCarga
-                              )}
+                          <td className="min-w-[230px] px-4 py-4">
+                            <div className="flex items-start gap-2">
+                              <Truck className="mt-0.5 h-4 w-4 shrink-0 text-[var(--app-primary)]" />
+                              <div>
+                                <p className="text-main font-semibold">
+                                  {viaje.vehiculoPrincipal?.placa || "Sin tracto"}
+                                  {viaje.vehiculoSecundario?.placa
+                                    ? ` / ${viaje.vehiculoSecundario.placa}`
+                                    : ""}
+                                </p>
+                                <p className="text-faint mt-1 flex items-center gap-1.5 text-xs">
+                                  <Users className="h-3.5 w-3.5" />
+                                  {obtenerNombreConductor(viaje.conductor)}
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="min-w-[210px] px-4 py-4">
+                            <p className="text-main flex items-center gap-1.5 font-semibold">
+                              <CalendarClock className="h-4 w-4 text-[var(--app-primary)]" />
+                              {formatearFecha(viaje.fechaInicioTraslado)}
                             </p>
-                            <p className="text-faint text-xs">
-                              {viaje.ordenServicio?.clasificacionCarga ||
-                                "GENERAL"}
-                              {requiereDimensionContenedor(
-                                viaje.ordenServicio?.tipoCarga
-                              ) &&
+                            <p className="text-faint mt-1 text-xs">
+                              Cita: {viaje.horaCita || "-"}
+                            </p>
+                            <p className="text-muted mt-2 text-xs font-semibold">
+                              {formatearTipoCarga(viaje.ordenServicio?.tipoCarga)}
+                              {requiereDimensionContenedor(viaje.ordenServicio?.tipoCarga) &&
                               viaje.ordenServicio?.dimensionCarga
                                 ? ` · ${formatearDimensionCarga(
                                     viaje.ordenServicio.dimensionCarga
                                   )}`
                                 : ""}
                             </p>
-                            {viaje.ordenServicio?.tipoCarga ===
-                              "CONTENEDOR" && (
+                            {viaje.numeroContenedor && (
                               <p className="text-faint text-xs">
-                                Contenedor: {viaje.numeroContenedor || "-"}
+                                Contenedor: {viaje.numeroContenedor}
                               </p>
                             )}
                           </td>
 
-                          <td className="text-muted px-4 py-4">
-                            {viaje.vehiculoPrincipal?.placa || "-"}
-                          </td>
-
-                          <td className="text-muted px-4 py-4">
-                            {viaje.vehiculoSecundario?.placa || "-"}
-                          </td>
-
-                          <td className="text-muted min-w-[220px] px-4 py-4">
-                            {obtenerNombreConductor(viaje.conductor)}
-                          </td>
-
-                          <td className="text-muted whitespace-nowrap px-4 py-4">
-                            <p>{formatearFecha(viaje.fechaInicioTraslado)}</p>
-                            <p className="text-faint text-xs">
-                              Cita: {viaje.horaCita || "-"}
-                            </p>
-                          </td>
-
-                          <td className="text-muted min-w-[220px] px-4 py-4">
-                            <p className="text-faint text-xs">
-                              Cliente:{" "}
-                              {formatearFechaHora(
-                                viaje.fechaHoraLlegadaCliente
+                          <td className="min-w-[300px] px-4 py-4">
+                            <ProgresoViaje estado={viaje.estado} />
+                            <div className="mt-3 flex items-center justify-between gap-3">
+                              <p className="text-muted flex items-center gap-1.5 text-xs">
+                                <Clock3 className="h-3.5 w-3.5" />
+                                Standby: {formatearStandby(viaje.standbyMinutos)}
+                              </p>
+                              {siguienteAccion && (
+                                <p className="text-xs font-bold text-[var(--app-primary)]">
+                                  Siguiente: {siguienteAccion.label}
+                                </p>
                               )}
-                            </p>
-                            <p className="text-faint text-xs">
-                              Entrega:{" "}
-                              {formatearFechaHora(viaje.fechaHoraEntrega)}
-                            </p>
-                            <p className="text-main text-xs font-semibold">
-                              Standby: {formatearStandby(viaje.standbyMinutos)}
-                            </p>
+                            </div>
                             {viaje.guiaSunatNumero && (
-                              <p className="mt-1 text-xs font-semibold text-amber-300">
+                              <p className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-amber-700 dark:text-amber-300">
+                                <FileCheck2 className="h-3.5 w-3.5" />
                                 Guía SUNAT: {viaje.guiaSunatNumero}
                               </p>
                             )}
                           </td>
 
-                          <td className="whitespace-nowrap px-4 py-4 text-center">
-                            <EstadoBadge estado={viaje.estado} />
-                          </td>
-
-                          <td className="px-4 py-4">
+                          <td className="px-4 py-4 text-right">
                             <AccionesViaje viaje={viaje} />
                           </td>
                         </tr>

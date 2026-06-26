@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   AlertTriangle,
   Calendar,
@@ -125,7 +125,7 @@ function CorrelativosPage() {
 
   const canEdit = user?.role === "Superadministrador";
 
-  const cargarCorrelativos = async ({ silent = false } = {}) => {
+  const cargarCorrelativos = useCallback(async ({ silent = false } = {}) => {
     try {
       if (!silent) setLoading(true);
       const res = await listarCorrelativosRequest({ year, _t: Date.now() });
@@ -145,11 +145,11 @@ function CorrelativosPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [year]);
 
   useEffect(() => {
     cargarCorrelativos();
-  }, [year]);
+  }, [cargarCorrelativos]);
 
   const handleValueChange = (tipo, value) => {
     setValues((prev) => ({
@@ -270,4 +270,3 @@ function CorrelativosPage() {
 }
 
 export default CorrelativosPage;
-

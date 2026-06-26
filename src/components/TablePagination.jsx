@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Tooltip } from "./ui/Accessibility";
 
 function TablePagination({
   page = 1,
@@ -32,31 +33,39 @@ function TablePagination({
       </p>
 
       <div className="flex items-center gap-2">
-        <button
-          type="button"
-          className="btn-secondary btn-icon"
-          disabled={safePage <= 1}
-          onClick={() => goToPage(safePage - 1)}
-          title="Página anterior"
-          aria-label="Página anterior"
-        >
-          <ChevronLeft />
-        </button>
+        <Tooltip label="Página anterior" position="top">
+          {(tooltipProps) => (
+            <button
+              type="button"
+              className="btn-secondary btn-icon"
+              disabled={safePage <= 1}
+              onClick={() => goToPage(safePage - 1)}
+              aria-label="Página anterior"
+              {...tooltipProps}
+            >
+              <ChevronLeft />
+            </button>
+          )}
+        </Tooltip>
 
-        <span className="pagination-page">
+        <span className="pagination-page" aria-current="page">
           Página {safePage} de {safeTotalPages || 1}
         </span>
 
-        <button
-          type="button"
-          className="btn-secondary btn-icon"
-          disabled={safeTotalPages === 0 || safePage >= safeTotalPages}
-          onClick={() => goToPage(safePage + 1)}
-          title="Página siguiente"
-          aria-label="Página siguiente"
-        >
-          <ChevronRight />
-        </button>
+        <Tooltip label="Página siguiente" position="top">
+          {(tooltipProps) => (
+            <button
+              type="button"
+              className="btn-secondary btn-icon"
+              disabled={safeTotalPages === 0 || safePage >= safeTotalPages}
+              onClick={() => goToPage(safePage + 1)}
+              aria-label="Página siguiente"
+              {...tooltipProps}
+            >
+              <ChevronRight />
+            </button>
+          )}
+        </Tooltip>
       </div>
     </div>
   );

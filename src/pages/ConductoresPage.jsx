@@ -1,11 +1,21 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { notify } from "../utils/notify";
-import { Pencil, Power, PowerOff } from "lucide-react";
+import { BadgeCheck, Pencil, Power, PowerOff, ShieldCheck, UserRound } from "lucide-react";
 import { useConductores } from "../context/ConductorContext";
 import { useConfirm } from "../context/ConfirmContext";
 import ConductorModal from "../components/modals/ConductorModal";
 import TablePagination from "../components/TablePagination";
 import { getRecordId } from "../utils/apiData";
+import { useDebouncedValue } from "../hooks/useDebouncedValue";
+import {
+  ErrorAlert,
+} from "../components/ui/Accessibility";
+import {
+  FilterButtonGroup,
+  ListSearchInput,
+  StatusBadge,
+  SummaryIndicator,
+} from "../components/ui/ListingControls";
 
 function ConductoresPage() {
   const {
@@ -24,11 +34,24 @@ function ConductoresPage() {
   const [mode, setMode] = useState("create");
   const [selectedConductor, setSelectedConductor] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [busqueda, setBusqueda] = useState("");
+  const [filtroEstado, setFiltroEstado] = useState("TODOS");
+  const busquedaDebounced = useDebouncedValue(busqueda.trim());
 
-  const cargarConductores = async (page = paginationConductores.page) => {
+  const cargarConductores = async (page = 1) => {
     try {
       setLoading(true);
-      await obtenerConductores({ page, limit: paginationConductores.limit });
+      await obtenerConductores({
+        page,
+        limit: paginationConductores.limit,
+        search: busquedaDebounced,
+        estado:
+          filtroEstado === "TODOS"
+            ? undefined
+            : filtroEstado === "ACTIVOS"
+              ? "ACTIVO"
+              : "INACTIVO",
+      });
     } catch (error) {
       console.error("Error al cargar conductores:", error);
     } finally {
@@ -39,7 +62,7 @@ function ConductoresPage() {
   useEffect(() => {
     cargarConductores();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [busquedaDebounced, filtroEstado]);
 
   const abrirCrear = () => {
     limpiarErrores();
@@ -115,19 +138,25 @@ function ConductoresPage() {
     }
   };
 
-  const EstadoBadge = ({ estado }) => {
-    if (estado === "ACTIVO") {
-      return (
-        <span className="inline-flex items-center justify-center rounded-full border border-green-500/30 bg-green-500/10 px-3 py-1 text-[11px] font-bold tracking-wide text-green-300">
-          ACTIVO
-        </span>
-      );
-    }
+  const resumen = useMemo(
+    () =>
+      conductores.reduce(
+        (acc, conductor) => {
+          acc.total += 1;
+          if ((conductor.estado || "ACTIVO") === "ACTIVO") acc.activos += 1;
+          if (conductor.permisoIMO || conductor.permisoIQBF) acc.especializados += 1;
+          return acc;
+        },
+        { total: 0, activos: 0, especializados: 0 }
+      ),
+    [conductores]
+  );
 
+  const EstadoBadge = ({ estado }) => {
     return (
-      <span className="inline-flex items-center justify-center rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1 text-[11px] font-bold tracking-wide text-red-300">
+      <StatusBadge tone={estado === "ACTIVO" ? "success" : "danger"}>
         {estado || "INACTIVO"}
-      </span>
+      </StatusBadge>
     );
   };
 
@@ -141,18 +170,19 @@ function ConductoresPage() {
         <button
           type="button"
           onClick={() => abrirEditar(conductor)}
-          className="btn-primary btn-icon"
+          className={mobile ? "btn-primary" : "btn-primary btn-icon"}
           title="Editar conductor"
           aria-label="Editar conductor"
         >
           <Pencil />
+          {mobile && "Editar"}
         </button>
         <button
           type="button"
           onClick={() => handleCambiarEstado(conductor)}
           className={`${
             conductor.estado === "ACTIVO" ? "btn-danger" : "btn-success"
-          } btn-icon`}
+          } ${mobile ? "" : "btn-icon"}`}
           title={
             conductor.estado === "ACTIVO"
               ? "Desactivar conductor"
@@ -165,6 +195,7 @@ function ConductoresPage() {
           }
         >
           {conductor.estado === "ACTIVO" ? <PowerOff /> : <Power />}
+          {mobile && (conductor.estado === "ACTIVO" ? "Desactivar" : "Activar")}
         </button>
       </div>
     );
@@ -200,12 +231,51 @@ function ConductoresPage() {
           </div>
         </header>
 
+        <section className="summary-grid">
+          <SummaryIndicator icon={UserRound} label="Conductores" value={resumen.total} />
+          <SummaryIndicator
+            icon={BadgeCheck}
+            label="Activos"
+            value={resumen.activos}
+            tone="bg-emerald-500/10 text-emerald-600 dark:text-emerald-300"
+          />
+          <SummaryIndicator
+            icon={ShieldCheck}
+            label="Con permisos"
+            value={resumen.especializados}
+            tone="bg-violet-500/10 text-violet-600 dark:text-violet-300"
+          />
+        </section>
+
+        <section className="filter-panel">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <ListSearchInput
+              value={busqueda}
+              onChange={setBusqueda}
+              onClear={() => setBusqueda("")}
+              placeholder="Buscar por nombre, documento, licencia o teléfono"
+              ariaLabel="Buscar conductores"
+              className="lg:max-w-md"
+            />
+            <FilterButtonGroup
+              value={filtroEstado}
+              onChange={setFiltroEstado}
+              options={[
+                { value: "TODOS", label: "Todos" },
+                { value: "ACTIVOS", label: "Activos" },
+                { value: "INACTIVOS", label: "Inactivos" },
+              ]}
+            />
+          </div>
+          <p className="text-muted mt-3 border-t pt-3 text-xs">{paginationConductores.total} registros encontrados</p>
+        </section>
+
         {errors?.length > 0 && (
-          <div className="alert-panel">
+          <ErrorAlert>
             {errors.map((error, index) => (
               <p key={index}>{error}</p>
             ))}
-          </div>
+          </ErrorAlert>
         )}
 
         {loading ? (

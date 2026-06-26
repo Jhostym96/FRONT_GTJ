@@ -13,11 +13,17 @@ const initialTest = {
   text: "Mensaje operativo desde Transporte J.",
 };
 
-const initialDocumentacionRules = {
+const initialAlertasRules = {
   activo: true,
   hora: "08:00",
   diasInicio: 15,
   modoDiario: false,
+  contenedoresHora: "08:15",
+  contenedoresDiasInicio: 7,
+  documentacion: true,
+  ordenes: true,
+  programaciones: true,
+  contenedores: true,
 };
 
 const getGroupJid = (group) =>
@@ -35,11 +41,8 @@ function WhatsappBotConfigPage() {
   const [loadingGroups, setLoadingGroups] = useState(false);
   const [selectedGroupJid, setSelectedGroupJid] = useState("");
   const [savingGroup, setSavingGroup] = useState(false);
-  const [documentacionRules, setDocumentacionRules] = useState(
-    initialDocumentacionRules
-  );
-  const [savingDocumentacionRules, setSavingDocumentacionRules] =
-    useState(false);
+  const [alertasWhatsapp, setAlertasWhatsapp] = useState(initialAlertasRules);
+  const [savingAlertasWhatsapp, setSavingAlertasWhatsapp] = useState(false);
   const [test, setTest] = useState(initialTest);
   const [sendingTest, setSendingTest] = useState(false);
 
@@ -61,11 +64,19 @@ function WhatsappBotConfigPage() {
       number: prev.number || groupJid,
     }));
 
-    setDocumentacionRules({
+    setAlertasWhatsapp({
       activo: config?.documentacionAlertasWhatsappActivo ?? true,
       hora: config?.documentacionAlertasWhatsappHora || "08:00",
       diasInicio: config?.documentacionAlertasWhatsappDiasInicio || 15,
       modoDiario: config?.documentacionAlertasWhatsappModoDiario ?? false,
+      contenedoresHora:
+        config?.contenedoresAlertasWhatsappHora || "08:15",
+      contenedoresDiasInicio:
+        config?.contenedoresAlertasWhatsappDiasInicio || 7,
+      documentacion: config?.documentacionAlertasWhatsappActivo ?? true,
+      ordenes: config?.ordenesAlertasWhatsappActivo ?? true,
+      programaciones: config?.programacionesAlertasWhatsappActivo ?? true,
+      contenedores: config?.contenedoresAlertasWhatsappActivo ?? true,
     });
   }, [config]);
 
@@ -117,25 +128,31 @@ function WhatsappBotConfigPage() {
     }
   };
 
-  const guardarReglasDocumentacion = async () => {
+  const guardarAlertasWhatsapp = async () => {
     try {
-      setSavingDocumentacionRules(true);
+      setSavingAlertasWhatsapp(true);
       await actualizarConfig({
-        documentacionAlertasWhatsappActivo: documentacionRules.activo,
-        documentacionAlertasWhatsappHora: documentacionRules.hora,
+        documentacionAlertasWhatsappActivo: alertasWhatsapp.documentacion,
+        documentacionAlertasWhatsappHora: alertasWhatsapp.hora,
         documentacionAlertasWhatsappDiasInicio:
-          Number(documentacionRules.diasInicio) || 15,
+          Number(alertasWhatsapp.diasInicio) || 15,
         documentacionAlertasWhatsappModoDiario:
-          documentacionRules.modoDiario,
+          alertasWhatsapp.modoDiario,
+        ordenesAlertasWhatsappActivo: alertasWhatsapp.ordenes,
+        programacionesAlertasWhatsappActivo: alertasWhatsapp.programaciones,
+        contenedoresAlertasWhatsappActivo: alertasWhatsapp.contenedores,
+        contenedoresAlertasWhatsappHora: alertasWhatsapp.contenedoresHora,
+        contenedoresAlertasWhatsappDiasInicio:
+          Number(alertasWhatsapp.contenedoresDiasInicio) || 7,
       });
-      notify.success("Reglas de documentación guardadas");
+      notify.success("Alertas de WhatsApp guardadas");
     } catch (error) {
       notify.error(
         error.response?.data?.message ||
-          "No se pudieron guardar las reglas de documentación"
+          "No se pudieron guardar las alertas de WhatsApp"
       );
     } finally {
-      setSavingDocumentacionRules(false);
+      setSavingAlertasWhatsapp(false);
     }
   };
 
@@ -345,104 +362,283 @@ function WhatsappBotConfigPage() {
                   <div>
                     <h2 className="text-main flex items-center gap-2 text-base font-extrabold">
                       <BellRing className="h-4 w-4 text-amber-300" />
-                      Alertas de documentación
+                      Alertas automáticas
                     </h2>
                     <p className="text-muted mt-1 text-sm">
-                      Define cuándo el bot enviará el resumen automático de
-                      documentos por vencer.
+                      La documentación es programada; órdenes y viajes son alertas por evento.
                     </p>
                   </div>
                   <button
                     type="button"
-                    onClick={guardarReglasDocumentacion}
-                    disabled={savingDocumentacionRules}
+                    onClick={guardarAlertasWhatsapp}
+                    disabled={savingAlertasWhatsapp}
                     className="btn-primary gap-2 px-4 py-2"
                   >
                     <Save className="h-4 w-4" />
-                    {savingDocumentacionRules ? "Guardando..." : "Guardar reglas"}
+                    {savingAlertasWhatsapp ? "Guardando..." : "Guardar alertas"}
                   </button>
                 </div>
 
-                <div className="mt-5 grid gap-4 md:grid-cols-3">
-                  <label className="info-tile flex items-center gap-3 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={documentacionRules.activo}
-                      onChange={(event) =>
-                        setDocumentacionRules((prev) => ({
-                          ...prev,
-                          activo: event.target.checked,
-                        }))
-                      }
-                      className="h-4 w-4"
-                    />
-                    <span className="text-main font-semibold">
-                      Envío automático activo
-                    </span>
-                  </label>
+                <div className="mt-5 grid gap-4 xl:grid-cols-3">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-main text-sm font-extrabold">
+                          Alerta programada
+                        </p>
+                        <p className="text-muted text-xs">
+                          Se envía por vencimientos según horario y días de anticipación.
+                        </p>
+                      </div>
+                      <span className="status-badge border-amber-500/30 bg-amber-500/10 text-amber-300">
+                        Programada
+                      </span>
+                    </div>
 
-                  <label className="space-y-1">
-                    <span className="text-muted text-xs font-semibold uppercase tracking-wide">
-                      Hora de envío
-                    </span>
-                    <input
-                      type="time"
-                      value={documentacionRules.hora}
-                      onChange={(event) =>
-                        setDocumentacionRules((prev) => ({
-                          ...prev,
-                          hora: event.target.value,
-                        }))
-                      }
-                      className="input"
-                    />
-                  </label>
+                    <label className="info-tile flex cursor-pointer items-start justify-between gap-4 text-sm transition hover:border-[var(--app-primary)]">
+                      <div>
+                        <p className="text-main font-semibold">
+                          Documentación
+                        </p>
+                        <p className="text-muted mt-1 text-xs leading-5">
+                          Resumen automático de documentos por vencer.
+                        </p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={alertasWhatsapp.documentacion}
+                        onChange={(event) =>
+                          setAlertasWhatsapp((prev) => ({
+                            ...prev,
+                            documentacion: event.target.checked,
+                          }))
+                        }
+                        className="h-4 w-4 shrink-0"
+                        aria-label="Activar alerta de documentación"
+                      />
+                    </label>
 
-                  <label className="space-y-1">
-                    <span className="text-muted text-xs font-semibold uppercase tracking-wide">
-                      Alertar desde
-                    </span>
-                    <input
-                      type="number"
-                      min="1"
-                      max="365"
-                      value={documentacionRules.diasInicio}
-                      onChange={(event) =>
-                        setDocumentacionRules((prev) => ({
-                          ...prev,
-                          diasInicio: event.target.value,
-                        }))
-                      }
-                      className="input"
-                    />
-                  </label>
-                </div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <label className="space-y-1">
+                        <span className="text-muted text-xs font-semibold uppercase tracking-wide">
+                          Hora de envío
+                        </span>
+                        <input
+                          type="time"
+                          value={alertasWhatsapp.contenedoresHora}
+                          onChange={(event) =>
+                            setAlertasWhatsapp((prev) => ({
+                              ...prev,
+                              contenedoresHora: event.target.value,
+                            }))
+                          }
+                          className="input"
+                        />
+                      </label>
 
-                <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
-                  <label className="info-tile flex items-center gap-3 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={documentacionRules.modoDiario}
-                      onChange={(event) =>
-                        setDocumentacionRules((prev) => ({
-                          ...prev,
-                          modoDiario: event.target.checked,
-                        }))
-                      }
-                      className="h-4 w-4"
-                    />
-                    <span className="text-main font-semibold">
-                      Repetir diario hasta vencer
-                    </span>
-                  </label>
+                      <label className="space-y-1">
+                        <span className="text-muted text-xs font-semibold uppercase tracking-wide">
+                          Alertar desde
+                        </span>
+                        <input
+                          type="number"
+                          min="1"
+                          max="365"
+                          value={alertasWhatsapp.contenedoresDiasInicio}
+                          onChange={(event) =>
+                            setAlertasWhatsapp((prev) => ({
+                              ...prev,
+                              contenedoresDiasInicio: event.target.value,
+                            }))
+                          }
+                          className="input"
+                        />
+                      </label>
+                    </div>
 
-                  <div className="info-tile text-sm">
-                    <p className="text-main font-bold">Regla actual</p>
-                    <p className="text-muted mt-1">
-                      {documentacionRules.modoDiario
-                        ? `Desde ${documentacionRules.diasInicio || 15} días antes, todos los días hasta el vencimiento.`
-                        : `Hitos principales hasta ${documentacionRules.diasInicio || 15} días antes.`}
-                    </p>
+                    <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
+                      <label className="info-tile flex items-center gap-3 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={alertasWhatsapp.modoDiario}
+                          onChange={(event) =>
+                            setAlertasWhatsapp((prev) => ({
+                              ...prev,
+                              modoDiario: event.target.checked,
+                            }))
+                          }
+                          className="h-4 w-4"
+                        />
+                        <span className="text-main font-semibold">
+                          Repetir diario
+                        </span>
+                      </label>
+
+                      <div className="info-tile text-sm">
+                        <p className="text-main font-bold">
+                          Regla de documentación
+                        </p>
+                        <p className="text-muted mt-1">
+                          {alertasWhatsapp.modoDiario
+                            ? `Desde ${alertasWhatsapp.diasInicio || 15} días antes, todos los días hasta el vencimiento.`
+                            : `Hitos principales hasta ${alertasWhatsapp.diasInicio || 15} días antes.`}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-main text-sm font-extrabold">
+                          Alertas por evento
+                        </p>
+                        <p className="text-muted text-xs">
+                          Se envían una vez por cada creación registrada.
+                        </p>
+                      </div>
+                      <span className="status-badge border-sky-500/30 bg-sky-500/10 text-sky-300">
+                        Inmediatas
+                      </span>
+                    </div>
+
+                    {[
+                      {
+                        key: "ordenes",
+                        title: "Creación de órdenes",
+                        detail: "Notificación al registrar una nueva orden de servicio.",
+                      },
+                      {
+                        key: "programaciones",
+                        title: "Creación de viajes",
+                        detail: "Notificación al crear una nueva programación de viaje.",
+                      },
+                    ].map((item) => {
+                      const checked = alertasWhatsapp[item.key];
+
+                      return (
+                        <label
+                          key={item.key}
+                          className="info-tile flex cursor-pointer flex-col gap-3 text-sm transition hover:border-[var(--app-primary)]"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-main font-semibold">
+                                {item.title}
+                              </p>
+                              <p className="text-muted mt-1 text-xs leading-5">
+                                {item.detail}
+                              </p>
+                            </div>
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={(event) =>
+                                setAlertasWhatsapp((prev) => ({
+                                  ...prev,
+                                  [item.key]: event.target.checked,
+                                }))
+                              }
+                              className="h-4 w-4 shrink-0"
+                              aria-label={`Activar alerta de ${item.title.toLowerCase()}`}
+                            />
+                          </div>
+
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="text-faint text-xs uppercase tracking-wide">
+                              Estado actual
+                            </span>
+                            <span
+                              className={`status-badge ${
+                                checked
+                                  ? "border-green-500/30 bg-green-500/10 text-green-300"
+                                  : "border-red-500/30 bg-red-500/10 text-red-300"
+                              }`}
+                            >
+                              {checked ? "Activa" : "Desactivada"}
+                            </span>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-main text-sm font-extrabold">
+                          Contenedores próximos a vencer
+                        </p>
+                        <p className="text-muted text-xs">
+                          Envío automático diario para contenedores con
+                          devolución cercana.
+                        </p>
+                      </div>
+                      <span className="status-badge border-violet-500/30 bg-violet-500/10 text-violet-300">
+                        {`${alertasWhatsapp.contenedoresDiasInicio || 7} días`}
+                      </span>
+                    </div>
+
+                    <label className="info-tile flex cursor-pointer items-start justify-between gap-4 text-sm transition hover:border-[var(--app-primary)]">
+                      <div>
+                        <p className="text-main font-semibold">
+                          Activar alerta
+                        </p>
+                        <p className="text-muted mt-1 text-xs leading-5">
+                          Resumen diario de contenedores por vencer.
+                        </p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={alertasWhatsapp.contenedores}
+                        onChange={(event) =>
+                          setAlertasWhatsapp((prev) => ({
+                            ...prev,
+                            contenedores: event.target.checked,
+                          }))
+                        }
+                        className="h-4 w-4 shrink-0"
+                        aria-label="Activar alerta de contenedores próximos a vencer"
+                      />
+                    </label>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <label className="space-y-1">
+                        <span className="text-muted text-xs font-semibold uppercase tracking-wide">
+                          Hora de envío
+                        </span>
+                        <input
+                          type="time"
+                          value={alertasWhatsapp.hora}
+                          onChange={(event) =>
+                            setAlertasWhatsapp((prev) => ({
+                              ...prev,
+                              hora: event.target.value,
+                            }))
+                          }
+                          className="input"
+                        />
+                      </label>
+
+                      <label className="space-y-1">
+                        <span className="text-muted text-xs font-semibold uppercase tracking-wide">
+                          Alertar desde
+                        </span>
+                        <input
+                          type="number"
+                          min="1"
+                          max="365"
+                          value={alertasWhatsapp.diasInicio}
+                          onChange={(event) =>
+                            setAlertasWhatsapp((prev) => ({
+                              ...prev,
+                              diasInicio: event.target.value,
+                            }))
+                          }
+                          className="input"
+                        />
+                      </label>
+                    </div>
                   </div>
                 </div>
               </section>

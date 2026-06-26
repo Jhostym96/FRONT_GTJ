@@ -176,20 +176,84 @@ const OrdenesServicioPage = () => {
   );
 
   const DevolucionBadge = ({ orden }) => {
-    if (orden.tipoCarga !== "CONTENEDOR") {
+    if (
+      orden.estado === "ANULADA" ||
+      orden.estado === "ANULADO" ||
+      orden.tipoCarga !== "CONTENEDOR"
+    ) {
       return <span className="text-faint text-xs">No aplica</span>;
     }
 
-    const pendiente = orden.estadoDevolucion !== "DEVUELTO";
+    const devoluciones = Array.isArray(orden.devolucionesContenedor)
+      ? orden.devolucionesContenedor
+      : [];
+    const devolucionesValidas = devoluciones.filter(
+      (devolucion) => devolucion?.estadoDevolucion
+    );
+
+    if (devolucionesValidas.length === 0) {
+      const estadoLegado = orden.estadoDevolucion || "PENDIENTE";
+      const devuelta = estadoLegado === "DEVUELTO";
+      const programada = estadoLegado === "PROGRAMADA";
+
+      return (
+        <span
+          className={`inline-flex items-center justify-center rounded-full border px-3 py-1 text-[11px] font-bold tracking-wide ${
+            devuelta
+              ? "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-300"
+              : programada
+              ? "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-300"
+              : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+          }`}
+        >
+          {devuelta ? "DEVUELTO" : programada ? "PROGRAMADA" : "PENDIENTE"}
+        </span>
+      );
+    }
+
+    const total = devolucionesValidas.length;
+    const devueltas = devolucionesValidas.filter(
+      (devolucion) => devolucion.estadoDevolucion === "DEVUELTO"
+    ).length;
+    const programadas = devolucionesValidas.filter(
+      (devolucion) => devolucion.estadoDevolucion === "PROGRAMADA"
+    ).length;
+
+    const todasDevueltas = devueltas === total;
+    const parcialmenteDevuelta = devueltas > 0 && devueltas < total;
+    const todasProgramadas = programadas === total;
+    const tieneProgramadas = programadas > 0;
+
+    let label = "PENDIENTE";
+    let classes =
+      "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300";
+
+    if (todasDevueltas) {
+      label = total > 1 ? `DEVUELTO ${devueltas}/${total}` : "DEVUELTO";
+      classes =
+        "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-300";
+    } else if (parcialmenteDevuelta) {
+      label = `PARCIAL ${devueltas}/${total}`;
+      classes =
+        "border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-300";
+    } else if (todasProgramadas) {
+      label = total > 1 ? `PROGRAMADA ${programadas}/${total}` : "PROGRAMADA";
+      classes =
+        "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-300";
+    } else if (tieneProgramadas) {
+      label = `PROGRAMADA ${programadas}/${total}`;
+      classes =
+        "border-cyan-500/30 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300";
+    } else if (total > 1) {
+      label = `PENDIENTE 0/${total}`;
+    }
 
     return (
       <span
-        className={`inline-flex items-center justify-center rounded-full border px-3 py-1 text-[11px] font-bold tracking-wide ${pendiente
-            ? "border-amber-500/30 bg-amber-500/10 text-amber-400"
-            : "border-green-500/30 bg-green-500/10 text-green-400"
-          }`}
+        className={`inline-flex items-center justify-center rounded-full border px-3 py-1 text-[11px] font-bold tracking-wide ${classes}`}
+        title={`${devueltas} de ${total} contenedor(es) devuelto(s)`}
       >
-        {pendiente ? "PENDIENTE" : "DEVUELTO"}
+        {label}
       </span>
     );
   };

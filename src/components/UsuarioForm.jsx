@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useUsuarios } from "../context/UserContext";
 import { getRecordId } from "../utils/apiData";
+import { ErrorAlert, FieldMessage } from "./ui/Accessibility";
 
 const rolesDisponibles = [
   "User",
@@ -80,15 +81,16 @@ const UsuarioForm = ({ usuario = null, onSuccess }) => {
 
       {/* Error */}
       {error && (
-        <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-400">
-          {error}
-        </div>
+        <ErrorAlert>{error}</ErrorAlert>
       )}
 
       {/* DNI */}
       <div>
-        <label className="text-muted mb-1 block text-sm">DNI</label>
+        <label htmlFor="usuario-dni" className="text-muted mb-1 block text-sm">
+          DNI
+        </label>
         <input
+          id="usuario-dni"
           type="text"
           name="dni"
           value={form.dni}
@@ -101,8 +103,11 @@ const UsuarioForm = ({ usuario = null, onSuccess }) => {
 
       {/* Nombre */}
       <div>
-        <label className="text-muted mb-1 block text-sm">Nombre</label>
+        <label htmlFor="usuario-name" className="text-muted mb-1 block text-sm">
+          Nombre
+        </label>
         <input
+          id="usuario-name"
           type="text"
           name="name"
           value={form.name}
@@ -115,8 +120,11 @@ const UsuarioForm = ({ usuario = null, onSuccess }) => {
 
       {/* Correo */}
       <div>
-        <label className="text-muted mb-1 block text-sm">Correo</label>
+        <label htmlFor="usuario-email" className="text-muted mb-1 block text-sm">
+          Correo
+        </label>
         <input
+          id="usuario-email"
           type="email"
           name="email"
           value={form.email}
@@ -130,8 +138,14 @@ const UsuarioForm = ({ usuario = null, onSuccess }) => {
       {/* Contraseña solo en creación */}
       {!usuario && (
         <div>
-          <label className="text-muted mb-1 block text-sm">Contraseña</label>
+          <label
+            htmlFor="usuario-password"
+            className="text-muted mb-1 block text-sm"
+          >
+            Contraseña
+          </label>
           <input
+            id="usuario-password"
             type="password"
             name="password"
             value={form.password}
@@ -139,14 +153,21 @@ const UsuarioForm = ({ usuario = null, onSuccess }) => {
             required
             placeholder="Ingrese una contraseña segura"
             className="input p-2"
+            aria-describedby="usuario-password-help"
           />
+          <FieldMessage id="usuario-password-help">
+            Usa al menos 6 caracteres.
+          </FieldMessage>
         </div>
       )}
 
       {/* Rol */}
       <div>
-        <label className="text-muted mb-1 block text-sm">Rol</label>
+        <label htmlFor="usuario-role" className="text-muted mb-1 block text-sm">
+          Rol
+        </label>
         <select
+          id="usuario-role"
           name="role"
           value={form.role}
           onChange={handleChange}

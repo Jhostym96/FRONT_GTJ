@@ -29,7 +29,11 @@ export default function AppNotification({ id, type = "info", message, title }) {
   const Icon = config.icon;
 
   return (
-    <div className="pointer-events-auto flex w-[min(92vw,380px)] items-start gap-3 rounded-xl border p-3 shadow-xl backdrop-blur-xl animate-fade-in"
+    <div
+      className="pointer-events-auto flex w-[min(92vw,380px)] items-start gap-3 rounded-xl border p-3 shadow-xl backdrop-blur-xl animate-fade-in"
+      role={type === "error" ? "alert" : "status"}
+      aria-live={type === "error" ? "assertive" : "polite"}
+      aria-atomic="true"
       style={{
         background: "color-mix(in srgb, var(--app-elevated) 94%, transparent)",
         borderColor: "var(--app-border)",

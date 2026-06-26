@@ -1,21 +1,18 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { ChevronDown, Home, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { FaBars, FaSignInAlt, FaTimes } from "react-icons/fa";
 import { useAuth } from "../context/AuthContext";
 import { getAllowedRoutes } from "../utils/permissions";
-import { ChevronDown, Home } from "lucide-react";
-import { FaBars, FaTimes, FaSignInAlt } from "react-icons/fa";
 
 function Sidebar({ collapsed, setCollapsed }) {
   const { isAuthenticated, user } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState(null);
   const location = useLocation();
-
-  const rolePermissions = getAllowedRoutes(user);
-
-  const toggleDropdown = (menuId) => {
-    setActiveDropdown((prev) => (prev === menuId ? null : menuId));
-  };
+  const rolePermissions = getAllowedRoutes(user).filter(
+    (menu) => menu.id !== "perfil"
+  );
 
   const isPathActive = (path) =>
     location.pathname === path || location.pathname.startsWith(`${path}/`);
@@ -23,14 +20,22 @@ function Sidebar({ collapsed, setCollapsed }) {
   const isMenuActive = (menu) =>
     menu.children?.some((child) => isPathActive(child.path));
 
-  // 👉 Nueva función: si está colapsado, auto-expande al hacer click
+  useEffect(() => {
+    const currentMenu = rolePermissions.find(isMenuActive);
+    if (currentMenu) setActiveDropdown(currentMenu.id);
+    setMobileOpen(false);
+    // La ruta es la fuente de verdad para el grupo abierto.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
+
   const handleMenuClick = (menuId) => {
     if (collapsed) {
-      setCollapsed(false); // expandir sidebar
-      setActiveDropdown(menuId); // abrir el dropdown
-    } else {
-      toggleDropdown(menuId);
+      setCollapsed(false);
+      setActiveDropdown(menuId);
+      return;
     }
+
+    setActiveDropdown((current) => (current === menuId ? null : menuId));
   };
 
   return (
@@ -38,148 +43,162 @@ function Sidebar({ collapsed, setCollapsed }) {
       {mobileOpen && (
         <button
           type="button"
-          className="fixed inset-0 z-30 bg-slate-950/45 backdrop-blur-[2px] md:hidden"
+          className="fixed inset-0 z-40 bg-slate-950/50 backdrop-blur-[2px] md:hidden"
           onClick={() => setMobileOpen(false)}
           aria-label="Cerrar menú"
         />
       )}
 
-      {/* Botón hamburguesa (solo móvil) */}
       <button
-        className="btn-secondary fixed left-3 top-2.5 z-50 h-9 w-9 px-0 md:hidden"
-        onClick={() => setMobileOpen(!mobileOpen)}
+        type="button"
+        className="sidebar-mobile-trigger"
+        onClick={() => setMobileOpen((current) => !current)}
         aria-label={mobileOpen ? "Cerrar menú" : "Abrir menú"}
+        aria-expanded={mobileOpen}
       >
-        {mobileOpen ? <FaTimes size={22} /> : <FaBars size={22} />}
+        {mobileOpen ? <FaTimes /> : <FaBars />}
       </button>
 
-      {/* Sidebar */}
       <aside
-        className={`app-sidebar
-        ${collapsed ? "w-72 md:w-20" : "w-72 md:w-64"}
-        ${mobileOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0`}
+        className={`app-sidebar ${
+          collapsed ? "w-72 md:w-20" : "w-72 md:w-64"
+        } ${mobileOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0`}
+        aria-label="Navegación principal"
       >
-        {/* Logo + toggle desktop */}
-        <div
-          className={`flex border-b ${
-            collapsed
-              ? "h-24 flex-col items-center justify-center gap-2 px-0"
-              : "h-16 items-center justify-between px-5"
-          }`}
-        >
-          <div
-            className={`flex items-center ${
-              collapsed ? "justify-center" : "gap-2"
-            }`}
+        <div className={`sidebar-brand ${collapsed ? "md:justify-center md:px-2" : ""}`}>
+          <Link
+            to="/"
+            className={`flex min-w-0 items-center ${collapsed ? "md:justify-center" : "gap-3"}`}
+            aria-label="Ir al inicio"
           >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-sm font-black text-white">
-              TJ
-            </div>
-            {!collapsed && (
-              <Link
-                to="/"
-                onClick={() => setMobileOpen(false)}
-                className="text-main text-base font-extrabold tracking-tight transition-colors hover:text-blue-500"
-              >
+            <span className="sidebar-logo">TJ</span>
+            <span className={`${collapsed ? "md:hidden" : ""} min-w-0`}>
+              <span className="text-main block truncate text-sm font-extrabold">
                 Transportes J
-              </Link>
-            )}
-          </div>
-
-          {/* Botón colapsar/expandir (solo desktop) */}
-          <button
-            className="btn-secondary hidden h-9 w-9 shrink-0 px-0 md:inline-flex"
-            onClick={() => setCollapsed(!collapsed)}
-            aria-label={collapsed ? "Expandir menú" : "Colapsar menú"}
-          >
-            <FaBars size={20} />
-          </button>
+              </span>
+              <span className="text-faint block truncate text-[10px] font-bold uppercase tracking-[0.14em]">
+                Gestión operativa
+              </span>
+            </span>
+          </Link>
         </div>
 
-        {/* Navegación */}
-        <nav className={`flex-1 overflow-y-auto text-sm ${collapsed ? "px-2 py-4" : "p-3 md:p-4"}`}>
-          <ul className="space-y-2">
+        <nav className={`sidebar-nav ${collapsed ? "md:px-2" : ""}`}>
+          <p className={`sidebar-section-label ${collapsed ? "md:hidden" : ""}`}>
+            Espacio de trabajo
+          </p>
+
+          <ul className="space-y-1">
             {isAuthenticated ? (
               <>
                 <li>
                   <Link
                     to="/"
-                    onClick={() => setMobileOpen(false)}
-                    className={`nav-item ${collapsed ? "justify-center px-0" : ""} ${
+                    className={`nav-item ${collapsed ? "md:justify-center md:px-0" : ""} ${
                       location.pathname === "/" ? "nav-item-active" : ""
                     }`}
-                    title="Inicio"
+                    aria-current={location.pathname === "/" ? "page" : undefined}
+                    title={collapsed ? "Inicio" : undefined}
                   >
-                    <Home className="h-5 w-5 shrink-0" />
-                    {!collapsed && "Inicio"}
+                    <Home className="h-[18px] w-[18px] shrink-0" />
+                    <span className={collapsed ? "md:hidden" : ""}>Inicio</span>
                   </Link>
                 </li>
-                {rolePermissions.map((menu) => (
-                  <li key={menu.id}>
-                    <button
-                      onClick={() => handleMenuClick(menu.id)}
-                      className={`nav-item ${
-                        collapsed ? "justify-center px-0" : "justify-between"
-                      }
-                        ${
-                          isMenuActive(menu) ? "nav-item-active" : ""
-                        }`}
-                    >
-                      <span
-                        className={`flex items-center ${
-                          collapsed ? "justify-center" : "gap-3"
-                        }`}
+
+                {rolePermissions.map((menu) => {
+                  const menuActive = isMenuActive(menu);
+                  const isOpen = activeDropdown === menu.id;
+                  const singleChild = menu.children.length === 1;
+
+                  if (singleChild) {
+                    const child = menu.children[0];
+                    return (
+                      <li key={menu.id}>
+                        <Link
+                          to={child.path}
+                          className={`nav-item ${collapsed ? "md:justify-center md:px-0" : ""} ${
+                            menuActive ? "nav-item-active" : ""
+                          }`}
+                          title={collapsed ? child.label : undefined}
+                          aria-current={menuActive ? "page" : undefined}
+                        >
+                          <menu.icon className="h-[18px] w-[18px] shrink-0" />
+                          <span className={collapsed ? "md:hidden" : ""}>{menu.label}</span>
+                        </Link>
+                      </li>
+                    );
+                  }
+
+                  return (
+                    <li key={menu.id}>
+                      <button
+                        type="button"
+                        onClick={() => handleMenuClick(menu.id)}
+                        className={`nav-item ${
+                          collapsed ? "md:justify-center md:px-0" : "justify-between"
+                        } ${menuActive ? "nav-item-parent-active" : ""}`}
+                        title={collapsed ? menu.label : undefined}
+                        aria-expanded={isOpen}
                       >
-                        <menu.icon className="h-5 w-5 shrink-0" />
-                        {!collapsed && menu.label}
-                      </span>
-                      {!collapsed && (
+                        <span className="flex min-w-0 items-center gap-3">
+                          <menu.icon className="h-[18px] w-[18px] shrink-0" />
+                          <span className={`${collapsed ? "md:hidden" : ""} truncate`}>
+                            {menu.label}
+                          </span>
+                        </span>
                         <ChevronDown
-                          className={`w-4 h-4 transform transition-transform ${
-                            activeDropdown === menu.id ? "rotate-180" : ""
+                          className={`${collapsed ? "md:hidden" : ""} h-4 w-4 shrink-0 transition-transform ${
+                            isOpen ? "rotate-180" : ""
                           }`}
                         />
-                      )}
-                    </button>
+                      </button>
 
-                    {/* Submenús */}
-                    {activeDropdown === menu.id && !collapsed && (
-                      <ul className="ml-6 mt-1 space-y-1 overflow-hidden transition-all">
-                        {menu.children.map((child) => (
-                          <li key={child.path}>
-                            <Link
-                              to={child.path}
-                              className={`nav-item
-                                ${
-                                  isPathActive(child.path)
-                                    ? "nav-item-active"
-                                    : ""
+                      {isOpen && (
+                        <ul className={`${collapsed ? "md:hidden" : ""} sidebar-submenu`}>
+                          {menu.children.map((child) => (
+                            <li key={child.path}>
+                              <Link
+                                to={child.path}
+                                className={`sidebar-submenu-item ${
+                                  isPathActive(child.path) ? "sidebar-submenu-item-active" : ""
                                 }`}
-                              onClick={() => setMobileOpen(false)}
-                            >
-                              <child.icon className="h-4 w-4" />
-                              {child.label}
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </li>
-                ))}
+                                aria-current={
+                                  isPathActive(child.path) ? "page" : undefined
+                                }
+                              >
+                                <child.icon className="h-4 w-4 shrink-0" />
+                                <span className="truncate">{child.label}</span>
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </li>
+                  );
+                })}
               </>
             ) : (
               <li>
-                <Link
-                  to="/login"
-                  onClick={() => setMobileOpen(false)}
-                  className="btn-primary w-full justify-start"
-                >
-                  <FaSignInAlt /> {!collapsed && "Login"}
+                <Link to="/login" className="btn-primary w-full justify-start">
+                  <FaSignInAlt />
+                  <span className={collapsed ? "md:hidden" : ""}>Iniciar sesión</span>
                 </Link>
               </li>
             )}
           </ul>
         </nav>
+
+        <div className="sidebar-footer">
+          <button
+            type="button"
+            className="sidebar-collapse-button"
+            onClick={() => setCollapsed((current) => !current)}
+            aria-label={collapsed ? "Expandir menú" : "Colapsar menú"}
+          >
+            {collapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
+            <span className={collapsed ? "md:hidden" : ""}>Colapsar menú</span>
+          </button>
+        </div>
       </aside>
     </>
   );

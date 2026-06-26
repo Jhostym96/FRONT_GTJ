@@ -47,6 +47,7 @@ export function ConductorProvider({ children }) {
         page: params.page ?? 1,
         limit: params.limit ?? 10,
         search: params.search,
+        estado: params.estado,
       });
       const res = await getConductoresRequest(requestParams);
       const data = normalizeCollection(res.data, ["conductores"]);
@@ -78,6 +79,7 @@ export function ConductorProvider({ children }) {
           page,
           limit,
           search: params.search,
+          estado: params.estado,
         });
         const res = await getConductoresRequest(requestParams);
         const data = normalizeCollection(res.data, ["conductores"]);

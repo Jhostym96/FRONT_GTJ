@@ -2,6 +2,7 @@ import { useAuth } from "../context/AuthContext";
 import { useUsuarios } from "../context/UserContext"; // 👈 usamos el contexto
 import { useState } from "react";
 import { notify } from "../utils/notify";
+import { FieldMessage } from "../components/ui/Accessibility";
 
 function ProfilePage() {
   const { user } = useAuth();
@@ -58,8 +59,11 @@ function ProfilePage() {
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
           {/* Nombre (solo lectura, pero lo puedes habilitar si quieres editarlo) */}
           <div>
-            <label className="block text-sm text-text-secondary">Nombre</label>
+            <label htmlFor="profile-name" className="field-label">
+              Nombre
+            </label>
             <input
+              id="profile-name"
               type="text"
               name="name"
               value={form.name}
@@ -71,8 +75,11 @@ function ProfilePage() {
 
           {/* Correo editable */}
           <div>
-            <label className="block text-sm text-text-secondary">Correo</label>
+            <label htmlFor="profile-email" className="field-label">
+              Correo
+            </label>
             <input
+              id="profile-email"
               type="email"
               name="email"
               value={form.email}
@@ -84,20 +91,22 @@ function ProfilePage() {
 
           {/* Contraseña */}
           <div>
-            <label className="block text-sm text-text-secondary">
+            <label htmlFor="profile-password" className="field-label">
               Nueva contraseña
             </label>
             <input
+              id="profile-password"
               type="password"
               name="password"
               value={form.password}
               onChange={handleChange}
               placeholder="••••••••"
               className="input"
+              aria-describedby="profile-password-help"
             />
-            <p className="text-xs text-text-secondary mt-1">
+            <FieldMessage id="profile-password-help">
               Deja en blanco si no quieres cambiarla.
-            </p>
+            </FieldMessage>
           </div>
 
           {/* Botón */}

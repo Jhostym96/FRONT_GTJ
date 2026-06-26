@@ -110,6 +110,7 @@ export const ClienteProvider = ({ children }) => {
         page: params.page ?? 1,
         limit: params.limit ?? 10,
         search: params.search,
+        activo: params.activo,
       });
       const res = await getClientesRequest(requestParams);
 
@@ -149,6 +150,7 @@ export const ClienteProvider = ({ children }) => {
           page,
           limit,
           search: params.search,
+          activo: params.activo,
         });
         const res = await getClientesRequest(requestParams);
         const data = normalizeCollection(res.data, ["clientes"]);
