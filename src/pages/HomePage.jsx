@@ -18,7 +18,7 @@ import {
   Users,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { getAllowedRoutes, hasAction } from "../utils/permissions";
+import { flattenMenuItems, getAllowedRoutes, hasAction } from "../utils/permissions";
 
 const iconByPath = {
   "/dashboard": LayoutDashboard,
@@ -102,9 +102,9 @@ const HomePage = () => {
   const { user } = useAuth();
   const allowedMenus = getAllowedRoutes(user);
   const modules = allowedMenus.flatMap((menu) =>
-    menu.children.map((child) => ({
+    flattenMenuItems(menu.children).map((child) => ({
       ...child,
-      section: menu.label,
+      section: [menu.label, ...child.parentLabels].join(" / "),
       description: moduleDescriptions[child.path] || "Acceso autorizado.",
       Icon: iconByPath[child.path] || LayoutDashboard,
     }))

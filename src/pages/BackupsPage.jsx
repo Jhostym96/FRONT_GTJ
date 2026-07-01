@@ -26,6 +26,8 @@ const initialSchedule = {
   retentionDays: 14,
 };
 
+const APP_TIME_ZONE = "America/Lima";
+
 const dayOptions = [
   { value: 0, label: "Domingo" },
   { value: 1, label: "Lunes" },
@@ -55,6 +57,7 @@ const formatDateTime = (value) => {
   if (Number.isNaN(date.getTime())) return "Sin registro";
 
   return new Intl.DateTimeFormat("es-PE", {
+    timeZone: APP_TIME_ZONE,
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
@@ -399,7 +402,7 @@ function BackupsPage() {
 
                     <label className="space-y-1">
                       <span className="text-muted text-xs font-semibold uppercase">
-                        Hora
+                        Hora Perú/Lima
                       </span>
                       <input
                         type="time"

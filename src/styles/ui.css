@@ -90,6 +90,16 @@
     --tw-ring-color: color-mix(in srgb, var(--app-primary) 34%, transparent);
   }
 
+  .sidebar-submenu-heading {
+    @apply flex min-h-8 items-center gap-2.5 px-3 py-1.5 text-[11px] font-extrabold uppercase;
+    color: var(--app-faint);
+  }
+
+  .sidebar-submenu-nested {
+    @apply mb-1 ml-3 space-y-0.5 border-l pl-2;
+    border-color: var(--app-border);
+  }
+
   .sidebar-submenu-item:hover {
     background: var(--app-surface-muted);
     color: var(--app-text);

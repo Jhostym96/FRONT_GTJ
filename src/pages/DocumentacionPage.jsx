@@ -5,7 +5,6 @@ import {
   Download,
   FilePlus2,
   FileText,
-  MessageCircle,
   Upload,
   Pencil,
   Power,
@@ -26,7 +25,6 @@ import {
   getResumenDocumentacionRequest,
   getTiposDocumentacionRequest,
   importDocumentosOperativosRequest,
-  sendAlertaDocumentacionWhatsappRequest,
   updateTipoDocumentacionRequest,
   updateDocumentoOperativoRequest,
 } from "../api/documentacion";
@@ -1172,37 +1170,6 @@ function DocumentacionPage() {
     }
   };
 
-  const enviarAlertaWhatsapp = async () => {
-    const confirmed = await confirm({
-      title: "Enviar alerta WhatsApp",
-      message:
-        "Se enviará al grupo de operaciones el resumen consolidado de documentos por vencer. ¿Deseas continuar?",
-      confirmText: "Enviar alerta",
-      cancelText: "Cancelar",
-      variant: "primary",
-    });
-
-    if (!confirmed) return;
-
-    try {
-      setSaving(true);
-      const res = await sendAlertaDocumentacionWhatsappRequest();
-      if (res.data?.enviado) {
-        notify.success(
-          `Alerta enviada: ${res.data.totalDocumentos || 0} documentos`
-        );
-      } else {
-        notify.info(res.data?.message || "No hay documentos por alertar");
-      }
-    } catch (error) {
-      notify.error(
-        obtenerMensajeErrorApi(error, "Error al enviar alerta por WhatsApp")
-      );
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const guardarTipo = async (payload) => {
     try {
       setSaving(true);
@@ -1358,17 +1325,6 @@ function DocumentacionPage() {
                 >
                   <Upload className="h-4 w-4" />
                   Carga masiva
-                </button>
-              )}
-              {activeTab === "documentos" && (
-                <button
-                  type="button"
-                  onClick={enviarAlertaWhatsapp}
-                  className="btn-secondary px-3 py-2"
-                  disabled={saving}
-                >
-                  <MessageCircle className="h-4 w-4" />
-                  Enviar alerta
                 </button>
               )}
             </div>

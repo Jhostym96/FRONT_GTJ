@@ -17,8 +17,13 @@ function Sidebar({ collapsed, setCollapsed }) {
   const isPathActive = (path) =>
     location.pathname === path || location.pathname.startsWith(`${path}/`);
 
+  const isItemActive = (item) =>
+    item.children?.length
+      ? item.children.some(isItemActive)
+      : isPathActive(item.path);
+
   const isMenuActive = (menu) =>
-    menu.children?.some((child) => isPathActive(child.path));
+    menu.children?.some(isItemActive);
 
   useEffect(() => {
     const currentMenu = rolePermissions.find(isMenuActive);
@@ -108,7 +113,7 @@ function Sidebar({ collapsed, setCollapsed }) {
                 {rolePermissions.map((menu) => {
                   const menuActive = isMenuActive(menu);
                   const isOpen = activeDropdown === menu.id;
-                  const singleChild = menu.children.length === 1;
+                  const singleChild = menu.children.length === 1 && !menu.children[0].children;
 
                   if (singleChild) {
                     const child = menu.children[0];
@@ -155,22 +160,55 @@ function Sidebar({ collapsed, setCollapsed }) {
 
                       {isOpen && (
                         <ul className={`${collapsed ? "md:hidden" : ""} sidebar-submenu`}>
-                          {menu.children.map((child) => (
-                            <li key={child.path}>
-                              <Link
-                                to={child.path}
-                                className={`sidebar-submenu-item ${
-                                  isPathActive(child.path) ? "sidebar-submenu-item-active" : ""
-                                }`}
-                                aria-current={
-                                  isPathActive(child.path) ? "page" : undefined
-                                }
-                              >
-                                <child.icon className="h-4 w-4 shrink-0" />
-                                <span className="truncate">{child.label}</span>
-                              </Link>
-                            </li>
-                          ))}
+                          {menu.children.map((child) =>
+                            child.children?.length ? (
+                              <li key={child.id || child.label}>
+                                <div className="sidebar-submenu-heading">
+                                  <child.icon className="h-4 w-4 shrink-0" />
+                                  <span className="truncate">{child.label}</span>
+                                </div>
+                                <ul className="sidebar-submenu-nested">
+                                  {child.children.map((nestedChild) => (
+                                    <li key={nestedChild.path}>
+                                      <Link
+                                        to={nestedChild.path}
+                                        className={`sidebar-submenu-item ${
+                                          isPathActive(nestedChild.path)
+                                            ? "sidebar-submenu-item-active"
+                                            : ""
+                                        }`}
+                                        aria-current={
+                                          isPathActive(nestedChild.path)
+                                            ? "page"
+                                            : undefined
+                                        }
+                                      >
+                                        <nestedChild.icon className="h-4 w-4 shrink-0" />
+                                        <span className="truncate">{nestedChild.label}</span>
+                                      </Link>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </li>
+                            ) : (
+                              <li key={child.path}>
+                                <Link
+                                  to={child.path}
+                                  className={`sidebar-submenu-item ${
+                                    isPathActive(child.path)
+                                      ? "sidebar-submenu-item-active"
+                                      : ""
+                                  }`}
+                                  aria-current={
+                                    isPathActive(child.path) ? "page" : undefined
+                                  }
+                                >
+                                  <child.icon className="h-4 w-4 shrink-0" />
+                                  <span className="truncate">{child.label}</span>
+                                </Link>
+                              </li>
+                            )
+                          )}
                         </ul>
                       )}
                     </li>

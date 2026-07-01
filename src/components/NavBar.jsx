@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
-import { getAllowedRoutes } from "../utils/permissions";
+import { flattenMenuItems, getAllowedRoutes } from "../utils/permissions";
 import { Tooltip } from "./ui/Accessibility";
 
 const normalizeText = (value) =>
@@ -38,9 +38,9 @@ function Navbar({ collapsed }) {
   const modules = useMemo(
     () =>
       allowedMenus.flatMap((menu) =>
-        menu.children.map((child) => ({
+        flattenMenuItems(menu.children).map((child) => ({
           ...child,
-          section: menu.label,
+          section: [menu.label, ...child.parentLabels].join(" / "),
         }))
       ),
     [allowedMenus]

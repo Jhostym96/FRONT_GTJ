@@ -18,9 +18,6 @@ export const createDocumentoOperativoRequest = (data) =>
 export const importDocumentosOperativosRequest = (documentos) =>
   axios.post("/documentacion/importar", { documentos });
 
-export const sendAlertaDocumentacionWhatsappRequest = () =>
-  axios.post("/documentacion/alertas/whatsapp");
-
 export const updateDocumentoOperativoRequest = (id, data) =>
   axios.put(`/documentacion/${id}`, data);
 

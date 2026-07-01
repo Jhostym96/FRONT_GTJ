@@ -43,8 +43,8 @@ export const profileMenu = {
 
 export const operacionesMenu = {
   id: "operaciones",
-  label: "Operaciones",
-  icon: FaClipboardList,
+  label: "Transporte",
+  icon: FaTruckMoving,
   basePath: "/operaciones",
   children: [
     {
@@ -63,14 +63,14 @@ export const operacionesMenu = {
       icon: FaFileInvoice,
     },
     {
-      path: "/documentos-facturacion",
-      label: "Recepción Documentos",
-      icon: FaFileSignature,
-    },
-    {
       path: "/devoluciones",
       label: "Devoluciones",
       icon: FaUndoAlt,
+    },
+    {
+      path: "/documentos-facturacion",
+      label: "Recepción Documentos",
+      icon: FaFileSignature,
     },
   ],
 };
@@ -136,19 +136,26 @@ export const datosMaestrosMenu = {
   basePath: "/datos-maestros",
   children: [
     {
-      path: "/clientes",
-      label: "Clientes",
-      icon: FaBuilding,
-    },
-    {
-      path: "/conductores",
-      label: "Conductores",
-      icon: FaIdCard,
-    },
-    {
-      path: "/unidades",
-      label: "Unidades",
+      id: "datos-maestros-transporte",
+      label: "Transporte",
       icon: FaTruckMoving,
+      children: [
+        {
+          path: "/clientes",
+          label: "Clientes",
+          icon: FaBuilding,
+        },
+        {
+          path: "/conductores",
+          label: "Conductores",
+          icon: FaIdCard,
+        },
+        {
+          path: "/unidades",
+          label: "Unidades",
+          icon: FaTruckMoving,
+        },
+      ],
     },
   ],
 };
@@ -252,6 +259,35 @@ function normalizePath(path) {
   return path.replace(/\/+$/, "") || "/";
 }
 
+export function flattenMenuItems(items = [], parentLabels = []) {
+  return items.flatMap((item) => {
+    if (item.children?.length) {
+      return flattenMenuItems(item.children, [...parentLabels, item.label]);
+    }
+
+    return [
+      {
+        ...item,
+        parentLabels,
+      },
+    ];
+  });
+}
+
+function filterMenuItemsByPermissions(items = [], routes = {}) {
+  return items
+    .map((item) => {
+      if (item.children?.length) {
+        const children = filterMenuItemsByPermissions(item.children, routes);
+        return children.length > 0 ? { ...item, children } : null;
+      }
+
+      const routePerms = routes[normalizePath(item.path)];
+      return routePerms?.view ? item : null;
+    })
+    .filter(Boolean);
+}
+
 function resolveLegacyPath(path) {
   const normalizedPath = normalizePath(path);
   const legacyRoutes = {
@@ -268,7 +304,7 @@ export function canAccess(user, path) {
   const normalizedPath = resolveLegacyPath(path);
 
   return allowed.some((menu) =>
-    menu.children?.some((child) => {
+    flattenMenuItems(menu.children).some((child) => {
       const childPath = normalizePath(child.path);
       return (
         normalizedPath === childPath ||
@@ -288,7 +324,7 @@ export function getDefaultUserPermissions(role = "User") {
   const routes = {};
 
   roleConfig.routes.forEach((menu) => {
-    menu.children?.forEach((child) => {
+    flattenMenuItems(menu.children).forEach((child) => {
       routes[normalizePath(child.path)] = {
         view: true,
         create: actions.includes("create"),
@@ -332,10 +368,7 @@ export function getAllowedRoutes(user) {
   return allMenus
     .map((menu) => ({
       ...menu,
-      children: menu.children.filter((child) => {
-        const routePerms = effective.routes?.[normalizePath(child.path)];
-        return Boolean(routePerms?.view);
-      }),
+      children: filterMenuItemsByPermissions(menu.children, effective.routes),
     }))
     .filter((menu) => menu.children.length > 0);
 }

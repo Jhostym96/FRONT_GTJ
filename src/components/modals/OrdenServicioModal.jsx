@@ -764,6 +764,11 @@ const OrdenServicioModal = ({
     return 0;
   };
 
+  const filtrarErroresPorStep = (errors, step) =>
+    Object.fromEntries(
+      Object.entries(errors).filter(([field]) => getStepForField(field) === step)
+    );
+
   const validateAndGoToStep = (targetStep) => {
     if (isViewMode || targetStep <= activeStep) {
       setActiveStep(targetStep);
@@ -771,16 +776,28 @@ const OrdenServicioModal = ({
     }
 
     const errors = obtenerErroresFormulario();
-    setFieldErrors(errors);
-    const currentStepErrors = Object.keys(errors).filter(
-      (field) => getStepForField(field) === activeStep
-    );
+    const currentStepErrors = filtrarErroresPorStep(errors, activeStep);
 
-    if (targetStep > activeStep && currentStepErrors.length > 0) {
+    if (targetStep > activeStep && Object.keys(currentStepErrors).length > 0) {
+      setFieldErrors((current) => ({
+        ...Object.fromEntries(
+          Object.entries(current).filter(
+            ([field]) => getStepForField(field) !== activeStep
+          )
+        ),
+        ...currentStepErrors,
+      }));
       notify.error("Completa los campos obligatorios antes de continuar");
       return;
     }
 
+    setFieldErrors((current) =>
+      Object.fromEntries(
+        Object.entries(current).filter(
+          ([field]) => getStepForField(field) !== activeStep
+        )
+      )
+    );
     setActiveStep(targetStep);
   };
 

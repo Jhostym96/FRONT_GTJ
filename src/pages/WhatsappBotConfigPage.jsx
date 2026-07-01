@@ -1,12 +1,25 @@
 import { useEffect, useState } from "react";
-import { BellRing, MessageCircle, RefreshCw, Save, Send } from "lucide-react";
+import {
+  BellRing,
+  Building2,
+  CalendarClock,
+  MessageCircle,
+  Package,
+  RefreshCw,
+  Save,
+  Send,
+} from "lucide-react";
 import { useEmpresaConfig } from "../context/EmpresaConfigContext";
 import {
+  enviarAlertaContenedoresWhatsappRequest,
+  enviarAlertaDocumentacionWhatsappRequest,
   enviarWhatsappPruebaRequest,
   listarWhatsappGruposRequest,
   obtenerWhatsappStatusRequest,
 } from "../api/whatsapp";
+import { useConfirm } from "../context/ConfirmContext";
 import { notify } from "../utils/notify";
+import { obtenerMensajeErrorApi } from "../utils/apiErrorMessages";
 
 const initialTest = {
   number: "",
@@ -24,6 +37,7 @@ const initialAlertasRules = {
   ordenes: true,
   programaciones: true,
   contenedores: true,
+  contenedoresEventos: true,
 };
 
 const getGroupJid = (group) =>
@@ -35,6 +49,7 @@ const getGroupName = (group) =>
 function WhatsappBotConfigPage() {
   const { config, loading, obtenerConfig, actualizarConfig } =
     useEmpresaConfig();
+  const confirm = useConfirm();
   const [status, setStatus] = useState(null);
   const [checkingStatus, setCheckingStatus] = useState(false);
   const [groups, setGroups] = useState([]);
@@ -45,6 +60,8 @@ function WhatsappBotConfigPage() {
   const [savingAlertasWhatsapp, setSavingAlertasWhatsapp] = useState(false);
   const [test, setTest] = useState(initialTest);
   const [sendingTest, setSendingTest] = useState(false);
+  const [sendingManualAlert, setSendingManualAlert] = useState("");
+  const [manualAlertPreview, setManualAlertPreview] = useState(null);
 
   useEffect(() => {
     obtenerConfig().catch((error) => {
@@ -77,6 +94,8 @@ function WhatsappBotConfigPage() {
       ordenes: config?.ordenesAlertasWhatsappActivo ?? true,
       programaciones: config?.programacionesAlertasWhatsappActivo ?? true,
       contenedores: config?.contenedoresAlertasWhatsappActivo ?? true,
+      contenedoresEventos:
+        config?.contenedoresAlertasWhatsappEventosActivo ?? true,
     });
   }, [config]);
 
@@ -141,6 +160,8 @@ function WhatsappBotConfigPage() {
         ordenesAlertasWhatsappActivo: alertasWhatsapp.ordenes,
         programacionesAlertasWhatsappActivo: alertasWhatsapp.programaciones,
         contenedoresAlertasWhatsappActivo: alertasWhatsapp.contenedores,
+        contenedoresAlertasWhatsappEventosActivo:
+          alertasWhatsapp.contenedoresEventos,
         contenedoresAlertasWhatsappHora: alertasWhatsapp.contenedoresHora,
         contenedoresAlertasWhatsappDiasInicio:
           Number(alertasWhatsapp.contenedoresDiasInicio) || 7,
@@ -174,6 +195,78 @@ function WhatsappBotConfigPage() {
     } finally {
       setSendingTest(false);
     }
+  };
+
+  const enviarAlertaManual = async (tipo) => {
+    const configByTipo = {
+      documentacion: {
+        title: "Enviar alerta de documentación",
+        message:
+          "Se enviará al grupo operativo el resumen consolidado de documentos por vencer. ¿Deseas continuar?",
+        request: enviarAlertaDocumentacionWhatsappRequest,
+        success: (data) =>
+          `Alerta enviada: ${data.totalDocumentos || 0} documentos`,
+      },
+      contenedores: {
+        title: "Enviar alerta de devoluciones",
+        message:
+          "Se enviará al grupo operativo el resumen de contenedores próximos a vencer. ¿Deseas continuar?",
+        request: enviarAlertaContenedoresWhatsappRequest,
+        success: (data) =>
+          `Alerta enviada: ${data.totalContenedores || 0} contenedores`,
+      },
+    }[tipo];
+
+    if (!configByTipo) return;
+
+    const confirmed = await confirm({
+      title: configByTipo.title,
+      message: configByTipo.message,
+      confirmText: "Enviar alerta",
+      cancelText: "Cancelar",
+      variant: "primary",
+    });
+
+    if (!confirmed) return;
+
+    try {
+      setSendingManualAlert(tipo);
+      setManualAlertPreview(null);
+      const res = await configByTipo.request();
+      if (res.data?.enviado) {
+        if (tipo === "contenedores") {
+          setManualAlertPreview({
+            tipo,
+            totalContenedores: res.data.totalContenedores || 0,
+            items: Array.isArray(res.data.items) ? res.data.items : [],
+            diasAlertados: Array.isArray(res.data.diasAlertados)
+              ? res.data.diasAlertados
+              : [],
+          });
+        }
+        notify.success(configByTipo.success(res.data));
+      } else {
+        notify.info(res.data?.message || "No hay registros por alertar");
+      }
+    } catch (error) {
+      notify.error(
+        obtenerMensajeErrorApi(error, "No se pudo enviar la alerta manual")
+      );
+    } finally {
+      setSendingManualAlert("");
+    }
+  };
+
+  const formatDateOnly = (value) => {
+    if (!value) return "-";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "-";
+
+    return date.toLocaleDateString("es-PE", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
   };
 
   const usarGrupoConfigurado = () => {
@@ -425,11 +518,11 @@ function WhatsappBotConfigPage() {
                         </span>
                         <input
                           type="time"
-                          value={alertasWhatsapp.contenedoresHora}
+                          value={alertasWhatsapp.hora}
                           onChange={(event) =>
                             setAlertasWhatsapp((prev) => ({
                               ...prev,
-                              contenedoresHora: event.target.value,
+                              hora: event.target.value,
                             }))
                           }
                           className="input"
@@ -444,11 +537,11 @@ function WhatsappBotConfigPage() {
                           type="number"
                           min="1"
                           max="365"
-                          value={alertasWhatsapp.contenedoresDiasInicio}
+                          value={alertasWhatsapp.diasInicio}
                           onChange={(event) =>
                             setAlertasWhatsapp((prev) => ({
                               ...prev,
-                              contenedoresDiasInicio: event.target.value,
+                              diasInicio: event.target.value,
                             }))
                           }
                           className="input"
@@ -582,7 +675,7 @@ function WhatsappBotConfigPage() {
                     <label className="info-tile flex cursor-pointer items-start justify-between gap-4 text-sm transition hover:border-[var(--app-primary)]">
                       <div>
                         <p className="text-main font-semibold">
-                          Activar alerta
+                          Activar alerta diaria
                         </p>
                         <p className="text-muted mt-1 text-xs leading-5">
                           Resumen diario de contenedores por vencer.
@@ -602,6 +695,30 @@ function WhatsappBotConfigPage() {
                       />
                     </label>
 
+                    <label className="info-tile flex cursor-pointer items-start justify-between gap-4 text-sm transition hover:border-[var(--app-primary)]">
+                      <div>
+                        <p className="text-main font-semibold">
+                          Activar alerta por evento
+                        </p>
+                        <p className="text-muted mt-1 text-xs leading-5">
+                          Aviso inmediato cuando una devolución nueva o editada
+                          vence dentro del rango configurado.
+                        </p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={alertasWhatsapp.contenedoresEventos}
+                        onChange={(event) =>
+                          setAlertasWhatsapp((prev) => ({
+                            ...prev,
+                            contenedoresEventos: event.target.checked,
+                          }))
+                        }
+                        className="h-4 w-4 shrink-0"
+                        aria-label="Activar alerta por evento de contenedores"
+                      />
+                    </label>
+
                     <div className="grid gap-4 md:grid-cols-2">
                       <label className="space-y-1">
                         <span className="text-muted text-xs font-semibold uppercase tracking-wide">
@@ -609,11 +726,11 @@ function WhatsappBotConfigPage() {
                         </span>
                         <input
                           type="time"
-                          value={alertasWhatsapp.hora}
+                          value={alertasWhatsapp.contenedoresHora}
                           onChange={(event) =>
                             setAlertasWhatsapp((prev) => ({
                               ...prev,
-                              hora: event.target.value,
+                              contenedoresHora: event.target.value,
                             }))
                           }
                           className="input"
@@ -628,11 +745,11 @@ function WhatsappBotConfigPage() {
                           type="number"
                           min="1"
                           max="365"
-                          value={alertasWhatsapp.diasInicio}
+                          value={alertasWhatsapp.contenedoresDiasInicio}
                           onChange={(event) =>
                             setAlertasWhatsapp((prev) => ({
                               ...prev,
-                              diasInicio: event.target.value,
+                              contenedoresDiasInicio: event.target.value,
                             }))
                           }
                           className="input"
@@ -643,6 +760,128 @@ function WhatsappBotConfigPage() {
                 </div>
               </section>
             </div>
+
+            <section className="panel p-5 sm:p-6">
+              <h2 className="text-main text-base font-extrabold">
+                Envíos manuales
+              </h2>
+              <p className="text-muted mt-1 text-sm">
+                Ejecuta alertas consolidadas hacia el grupo operativo cuando
+                necesites reenviar o probar el resumen del día.
+              </p>
+
+              <div className="mt-5 grid gap-3">
+                <button
+                  type="button"
+                  onClick={() => enviarAlertaManual("documentacion")}
+                  disabled={Boolean(sendingManualAlert)}
+                  className="btn-secondary w-full justify-between px-4 py-3"
+                >
+                  <span className="flex items-center gap-2">
+                    <BellRing className="h-4 w-4" />
+                    Documentación por vencer
+                  </span>
+                  <span className="text-xs">
+                    {sendingManualAlert === "documentacion"
+                      ? "Enviando..."
+                      : "Enviar"}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => enviarAlertaManual("contenedores")}
+                  disabled={Boolean(sendingManualAlert)}
+                  className="btn-secondary w-full justify-between px-4 py-3"
+                >
+                  <span className="flex items-center gap-2">
+                    <BellRing className="h-4 w-4" />
+                    Devoluciones de contenedores
+                  </span>
+                  <span className="text-xs">
+                    {sendingManualAlert === "contenedores"
+                      ? "Enviando..."
+                      : "Enviar"}
+                  </span>
+                </button>
+              </div>
+
+              {manualAlertPreview?.tipo === "contenedores" && (
+                <div className="mt-5 rounded-lg border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-4">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="text-faint text-xs font-bold uppercase">
+                        Resultado enviado
+                      </p>
+                      <h3 className="text-main mt-1 text-base font-extrabold">
+                        Devoluciones de contenedores
+                      </h3>
+                      <p className="text-muted mt-1 text-sm">
+                        {manualAlertPreview.totalContenedores} contenedor
+                        {manualAlertPreview.totalContenedores === 1 ? "" : "es"} en el resumen.
+                      </p>
+                    </div>
+                    <span className="inline-flex items-center gap-2 rounded-full border border-[var(--app-primary)]/20 bg-[var(--app-primary-soft)] px-3 py-1 text-xs font-bold text-[var(--app-primary)]">
+                      <BellRing className="h-4 w-4" />
+                      Manual
+                    </span>
+                  </div>
+
+                  <div className="mt-4 grid gap-3">
+                    {manualAlertPreview.items.map((item) => (
+                      <article
+                        key={`${item.contenedor}-${item.fechaVencimiento}`}
+                        className="rounded-md border border-[var(--app-border)] bg-[var(--app-surface)] p-3"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border bg-[var(--app-surface-muted)] text-[var(--app-primary)]">
+                            <Package className="h-5 w-5" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <h4 className="text-main truncate text-sm font-extrabold">
+                                Contenedor {item.contenedor}
+                              </h4>
+                              <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-300">
+                                {item.diasRestantes < 0
+                                  ? "Vencido"
+                                  : item.diasRestantes === 0
+                                    ? "Vence hoy"
+                                    : `En ${item.diasRestantes} días`}
+                              </span>
+                            </div>
+                            <div className="mt-2 grid gap-2 text-sm sm:grid-cols-2">
+                              <div className="flex items-start gap-2">
+                                <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-[var(--app-primary)]" />
+                                <div className="min-w-0">
+                                  <p className="text-faint text-[11px] font-bold uppercase">
+                                    Cliente
+                                  </p>
+                                  <p className="text-main truncate font-semibold">
+                                    {item.cliente || "-"}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-start gap-2">
+                                <CalendarClock className="mt-0.5 h-4 w-4 shrink-0 text-[var(--app-primary)]" />
+                                <div className="min-w-0">
+                                  <p className="text-faint text-[11px] font-bold uppercase">
+                                    Vencimiento
+                                  </p>
+                                  <p className="text-main font-semibold">
+                                    {formatDateOnly(item.fechaVencimiento)}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </section>
 
             <section className="panel p-5 sm:p-6">
               <h2 className="text-main text-base font-extrabold">

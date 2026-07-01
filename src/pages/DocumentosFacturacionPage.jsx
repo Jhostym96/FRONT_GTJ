@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  AlertCircle,
   CheckCircle2,
   ClipboardCheck,
   LoaderCircle,
@@ -19,10 +20,11 @@ import { notify } from "../utils/notify";
 import { useAuth } from "../context/AuthContext";
 
 const estados = [
-  { value: "", label: "Todos" },
-  { value: "PENDIENTE", label: "Pendiente" },
-  { value: "ENTREGADO", label: "Entregado" },
+  { value: "ATENCION", label: "Requieren atención" },
+  { value: "PENDIENTE", label: "Pendiente entrega" },
+  { value: "ENTREGADO", label: "Pendiente recepción" },
   { value: "RECEPCIONADO", label: "Recepcionado" },
+  { value: "", label: "Todos" },
 ];
 
 const estadoConfig = {
@@ -87,6 +89,8 @@ const EstadoBadge = ({ estado }) => {
   );
 };
 
+const requiereAtencion = (estado) => ["PENDIENTE", "ENTREGADO"].includes(estado);
+
 const DocumentosFacturacionPage = () => {
   const { user } = useAuth();
   const [documentos, setDocumentos] = useState([]);
@@ -98,7 +102,14 @@ const DocumentosFacturacionPage = () => {
   });
   const [loading, setLoading] = useState(false);
   const [actualizando, setActualizando] = useState({});
-  const [estado, setEstado] = useState("");
+  const [estado, setEstado] = useState("ATENCION");
+  const [counts, setCounts] = useState({
+    PENDIENTE: 0,
+    ENTREGADO: 0,
+    RECEPCIONADO: 0,
+    ATENCION: 0,
+    TOTAL: 0,
+  });
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
   const [modal, setModal] = useState(null);
@@ -121,6 +132,10 @@ const DocumentosFacturacionPage = () => {
         ...prev,
         ...(res.data?.pagination || {}),
       }));
+      setCounts((prev) => ({
+        ...prev,
+        ...(res.data?.counts || {}),
+      }));
     } catch (error) {
       notify.error(
         error.response?.data?.message ||
@@ -136,7 +151,7 @@ const DocumentosFacturacionPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [estado, query]);
 
-  const counts = useMemo(() => {
+  const pageCounts = useMemo(() => {
     return documentos.reduce((acc, item) => {
       acc[item.estado] = (acc[item.estado] || 0) + 1;
       return acc;
@@ -270,22 +285,22 @@ const DocumentosFacturacionPage = () => {
               </p>
             </div>
             <div className="summary-grid lg:min-w-[420px]">
-              <div className="info-tile">
-                <p className="mobile-card-subtitle">Entregados</p>
+              <div className="info-tile border-[var(--app-primary)]">
+                <p className="mobile-card-subtitle">Requieren atención</p>
                 <p className="text-main text-xl font-bold">
-                  {counts.ENTREGADO || 0}
+                  {counts.ATENCION || 0}
                 </p>
               </div>
               <div className="info-tile">
-                <p className="mobile-card-subtitle">Pendientes</p>
+                <p className="mobile-card-subtitle">Pendientes entrega</p>
                 <p className="text-main text-xl font-bold">
-                  {counts.PENDIENTE || 0}
+                  {counts.PENDIENTE || pageCounts.PENDIENTE || 0}
                 </p>
               </div>
               <div className="info-tile">
-                <p className="mobile-card-subtitle">Recepcionados</p>
+                <p className="mobile-card-subtitle">Pendientes recepción</p>
                 <p className="text-main text-xl font-bold">
-                  {counts.RECEPCIONADO || 0}
+                  {counts.ENTREGADO || pageCounts.ENTREGADO || 0}
                 </p>
               </div>
             </div>
@@ -349,6 +364,13 @@ const DocumentosFacturacionPage = () => {
               </button>
             </form>
           </div>
+          <div className="mt-3 flex items-start gap-2 rounded-md border px-3 py-2 text-xs">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--app-primary)]" />
+            <p className="text-muted">
+              La lista prioriza documentos pendientes de entrega, luego pendientes
+              de recepción y finalmente recepcionados.
+            </p>
+          </div>
         </section>
 
         {loading ? (
@@ -382,7 +404,14 @@ const DocumentosFacturacionPage = () => {
                         {documento.tipoGuia === "SUNAT" ? "Guía SUNAT" : "Guía sistema"}
                       </p>
                     </div>
-                    <EstadoBadge estado={documento.estado} />
+                    <div className="flex flex-col items-end gap-2">
+                      {requiereAtencion(documento.estado) && (
+                        <span className="rounded-full bg-[var(--app-primary-soft)] px-2 py-1 text-[10px] font-extrabold uppercase text-[var(--app-primary)]">
+                          Atención
+                        </span>
+                      )}
+                      <EstadoBadge estado={documento.estado} />
+                    </div>
                   </div>
 
                   <div className="mobile-detail-grid">
@@ -443,7 +472,14 @@ const DocumentosFacturacionPage = () => {
                   </thead>
                   <tbody>
                     {documentos.map((documento) => (
-                      <tr key={getDocumentoKey(documento)}>
+                      <tr
+                        key={getDocumentoKey(documento)}
+                        className={
+                          requiereAtencion(documento.estado)
+                            ? "bg-[color-mix(in_srgb,var(--app-primary)_5%,transparent)]"
+                            : undefined
+                        }
+                      >
                         <td className="px-4 py-4">
                           <p className="text-main font-bold">
                             {documento.numeroGuia}
